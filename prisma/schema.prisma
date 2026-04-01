@@ -1,0 +1,210 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("admin")
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  slug        String     @unique
+  description String?
+  image       String?
+  parentId    String?    @db.ObjectId
+  order       Int        @default(0)
+  isActive    Boolean    @default(true)
+  metaTitle   String?
+  metaDesc    String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  products    Product[]
+}
+
+model Product {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  slug         String   @unique
+  sku          String?  @unique
+  description  String?
+  content      String?  // Rich text content
+  price        Float
+  salePrice    Float?
+  images       String[] // Array of media URLs
+  thumbnail    String?
+  
+  // Filter attributes
+  colors       String[] // hex colors
+  colorNames   String[] // color display names
+  prescription String[] // e.g. ["-0.25", "-0.50", ... "-20.00"]
+  gender       String   // "nam", "nu", "unisex"
+  faceShapes   String[] // "tron", "vuong", "oval", "tim", "dai"
+  frameStyles  String[] // "tron", "vuong", "cat-eye", "aviator", "rectangle", "browline"
+  materials    String[] // "kim-loai", "nhua", "titan", "go", "acetate", "tr90"
+  
+  // Product details
+  brand        String?
+  weight       String?
+  frameWidth   String?
+  lensWidth    String?
+  lensHeight   String?
+  bridgeWidth  String?
+  templeLength String?
+  
+  // Relations
+  categoryId   String?  @db.ObjectId
+  category     Category? @relation(fields: [categoryId], references: [id])
+  
+  // SEO
+  metaTitle    String?
+  metaDesc     String?
+  metaKeywords String?
+  ogImage      String?
+  
+  // Status
+  isActive     Boolean  @default(true)
+  isFeatured   Boolean  @default(false)
+  isNew        Boolean  @default(false)
+  stock        Int      @default(0)
+  sold         Int      @default(0)
+  views        Int      @default(0)
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Media {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  filename    String
+  originalName String
+  path        String
+  url         String
+  mimeType    String
+  size        Int
+  width       Int?
+  height      Int?
+  alt         String?
+  folder      String   @default("general")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Menu {
+  id       String  @id @default(auto()) @map("_id") @db.ObjectId
+  name     String
+  url      String?
+  target   String  @default("_self") // _self | _blank
+  icon     String?
+  parentId String? @db.ObjectId
+  position String  @default("header") // header | footer
+  order    Int     @default(0)
+  depth    Int     @default(0)
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Banner {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  subtitle    String?
+  image       String
+  imageMobile String?
+  url         String?
+  position    String   @default("hero") // hero | sidebar | popup | footer | category
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Setting {
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
+  key   String @unique
+  value String
+  group String @default("general") // general | seo | social | api | contact
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Article {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  slug        String   @unique
+  excerpt     String?
+  content     String?
+  thumbnail   String?
+  author      String?
+  tags        String[]
+  isPublished Boolean  @default(false)
+  isFeatured  Boolean  @default(false)
+  metaTitle   String?
+  metaDesc    String?
+  metaKeywords String?
+  ogImage     String?
+  views       Int      @default(0)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Page {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  slug        String  @unique
+  content     String?
+  template    String  @default("default")
+  isPublished Boolean @default(true)
+  metaTitle   String?
+  metaDesc    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Order {
+  id           String      @id @default(auto()) @map("_id") @db.ObjectId
+  orderNumber  String      @unique
+  customerName String
+  customerEmail String?
+  customerPhone String
+  address      String
+  city         String?
+  district     String?
+  ward         String?
+  items        OrderItem[]
+  subtotal     Float
+  shipping     Float       @default(0)
+  discount     Float       @default(0)
+  total        Float
+  status       String      @default("pending") // pending | confirmed | shipping | delivered | cancelled
+  paymentMethod String     @default("cod") // cod | bank_transfer
+  paymentStatus String     @default("unpaid") // unpaid | paid
+  note         String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+type OrderItem {
+  productId   String
+  name        String
+  slug        String
+  image       String?
+  price       Float
+  quantity    Int
+  prescription String?
+}

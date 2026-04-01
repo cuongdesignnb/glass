@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: glass_mysql
+    restart: unless-stopped
+    ports:
+      - "33069:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: glass2026
+      MYSQL_DATABASE: glass_eyewear
+      MYSQL_USER: glass_user
+      MYSQL_PASSWORD: glass_pass
+    volumes:
+      - glass_mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: glass_phpmyadmin
+    restart: unless-stopped
+    ports:
+      - "58089:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: glass2026
+    depends_on:
+      - mysql
+
+volumes:
+  glass_mysql_data:

@@ -1,0 +1,407 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCart } from '@/lib/useCart';
+import { publicApi } from '@/lib/api';
+import { formatPrice, PAYMENT_METHODS } from '@/lib/constants';
+import Breadcrumb from '@/components/layout/Breadcrumb';
+import Link from 'next/link';
+import { FiCheck, FiArrowLeft, FiShoppingBag, FiCopy, FiRefreshCw, FiClock } from 'react-icons/fi';
+import { RiGlassesLine } from 'react-icons/ri';
+import './checkout.css';
+
+const SHIPPING_THRESHOLD = 500000;
+const SHIPPING_FEE = 30000;
+
+export default function CheckoutPage() {
+  const router = useRouter();
+  const { items, subtotal, clearCart } = useCart();
+  const [submitting, setSubmitting] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState<any>(null);
+  const [error, setError] = useState('');
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'paid'>('pending');
+  const [copied, setCopied] = useState<string | null>(null);
+  const pollingRef = useRef<any>(null);
+
+  // Cleanup polling khi unmount tránh memory leak
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, []);
+
+  const [form, setForm] = useState({
+    customer_name: '',
+    customer_email: '',
+    customer_phone: '',
+    address: '',
+    city: '',
+    district: '',
+    ward: '',
+    payment_method: 'cod',
+    note: '',
+  });
+
+  const shipping = subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
+  const total = subtotal + shipping;
+
+  const updateForm = (key: string, value: string) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (items.length === 0) return;
+
+    setSubmitting(true);
+    setError('');
+
+    try {
+      const orderData = {
+        ...form,
+        subtotal,
+        shipping,
+        discount: 0,
+        total,
+        items: items.map(item => ({
+          product_id: item.productId,
+          name: item.name,
+          slug: item.slug,
+          image: item.image,
+          price: item.salePrice || item.price,
+          quantity: item.quantity,
+          color: item.color,
+          color_name: item.colorName,
+        })),
+      };
+
+      const result = await publicApi.createOrder(orderData);
+      setOrderSuccess(result);
+      clearCart();
+
+      // Nếu là bank_transfer → bắt đầu polling kiểm tra thanh toán
+      if (form.payment_method === 'bank_transfer' && result?.id) {
+        pollingRef.current = setInterval(async () => {
+          try {
+            const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+            const res = await fetch(`${API}/public/orders/${result.id}/payment-status`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data.payment_status === 'paid') {
+                setPaymentStatus('paid');
+                clearInterval(pollingRef.current);
+              }
+            }
+          } catch {}
+        }, 5000); // Check every 5 seconds
+      }
+    } catch (err: any) {
+      setError(err.message || 'Có lỗi xảy ra. Vui lòng thử lại.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const breadcrumbItems = [
+    { name: 'Trang chủ', url: '/' },
+    { name: 'Giỏ hàng', url: '/gio-hang' },
+    { name: 'Thanh toán', url: '/thanh-toan' },
+  ];
+
+  // Order success state
+  if (orderSuccess) {
+    const isBankTransfer = orderSuccess.payment_method === 'bank_transfer';
+    const bankName    = process.env.NEXT_PUBLIC_SEPAY_BANK_NAME    || '';
+    const accountNo   = process.env.NEXT_PUBLIC_SEPAY_ACCOUNT_NUMBER || '';
+    const accountName = process.env.NEXT_PUBLIC_SEPAY_ACCOUNT_NAME  || '';
+    const paymentCode = orderSuccess.payment_code || orderSuccess.order_number;
+    const amount      = orderSuccess.total;
+
+    // VietQR URL (no external SDK needed)
+    const qrUrl = accountNo && bankName
+      ? `https://img.vietqr.io/image/${bankName}-${accountNo}-compact.png?amount=${amount}&addInfo=${paymentCode}&accountName=${encodeURIComponent(accountName)}`
+      : null;
+
+    const copyToClipboard = (text: string, key: string) => {
+      navigator.clipboard.writeText(text);
+      setCopied(key);
+      setTimeout(() => setCopied(null), 2000);
+    };
+
+    return (
+      <div style={{ paddingTop: 'var(--header-height)' }}>
+        <div className="container" style={{ paddingTop: 'var(--space-xl)', paddingBottom: 'var(--space-4xl)', maxWidth: '760px' }}>
+
+          {paymentStatus === 'paid' ? (
+            /* Đã thanh toán */
+            <div className="order-success">
+              <div className="order-success__icon"><FiCheck /></div>
+              <h1>Thanh toán thành công!</h1>
+              <p>Chúng tôi đã nhận được tiền của bạn. Đơn hàng đang được xử lý.</p>
+              <div className="order-success__number">Mã đơn: <strong>{orderSuccess.order_number}</strong></div>
+              <div className="order-success__actions">
+                <Link href="/san-pham" className="btn btn-primary btn-lg"><FiShoppingBag /> Tiếp tục mua sắm</Link>
+                <Link href="/" className="btn btn-secondary btn-lg">Về trang chủ</Link>
+              </div>
+            </div>
+          ) : isBankTransfer ? (
+            /* Hướng dẫn chuyển khoản */
+            <div className="order-success">
+              <div className="order-success__icon" style={{ background: 'rgba(212,86,122,0.1)', color: 'var(--color-rose)', border: '2px solid var(--color-rose)' }}>
+                <FiClock />
+              </div>
+              <h1>Đặt hàng thành công!</h1>
+              <p style={{ color: 'var(--color-gray-600)', marginBottom: 'var(--space-xl)' }}>Vui lòng chuyển khoản để hoàn tất đơn hàng</p>
+
+              {/* QR Code */}
+              {qrUrl && (
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 'var(--space-xl)' }}>
+                  <div style={{ background: 'white', padding: '16px', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', display: 'inline-block' }}>
+                    <img src={qrUrl} alt="QR Chuyển khoản" style={{ width: '220px', height: '220px', display: 'block' }} />
+                    <p style={{ textAlign: 'center', fontSize: '0.75rem', color: '#666', marginTop: '8px' }}>Quét mã để chuyển khoản</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Thông tin chuyển khoản */}
+              <div style={{ background: 'var(--color-gray-50)', border: '1.5px solid var(--color-gray-200)', borderRadius: '12px', padding: 'var(--space-xl)', marginBottom: 'var(--space-xl)', width: '100%', textAlign: 'left' }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 'var(--space-lg)', color: 'var(--color-gray-900)' }}>Thông tin chuyển khoản</h3>
+
+                {[{ label: 'Ngân hàng', value: bankName }, { label: 'Số tài khoản', value: accountNo }, { label: 'Tên tài khoản', value: accountName }].filter(r => r.value).map(row => (
+                  <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--color-gray-200)' }}>
+                    <span style={{ fontSize: '0.875rem', color: 'var(--color-gray-500)' }}>{row.label}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <strong style={{ fontSize: '0.9375rem', color: 'var(--color-gray-900)' }}>{row.value}</strong>
+                      <button onClick={() => copyToClipboard(row.value, row.label)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: copied === row.label ? 'var(--color-rose)' : 'var(--color-gray-400)', fontSize: '0.875rem' }}>
+                        <FiCopy />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Số tiền */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--color-gray-200)' }}>
+                  <span style={{ fontSize: '0.875rem', color: 'var(--color-gray-500)' }}>Số tiền</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <strong style={{ fontSize: '1.0625rem', color: 'var(--color-rose)', fontWeight: 700 }}>{amount?.toLocaleString('vi-VN')}đ</strong>
+                    <button onClick={() => copyToClipboard(String(amount), 'amount')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: copied === 'amount' ? 'var(--color-rose)' : 'var(--color-gray-400)', fontSize: '0.875rem' }}>
+                      <FiCopy />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Mã thanh toán — quan trọng nhất */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', background: 'rgba(212,86,122,0.04)', borderRadius: '8px', marginTop: '4px' }}>
+                  <div>
+                    <div style={{ fontSize: '0.8125rem', color: 'var(--color-gray-500)', marginBottom: '2px' }}>Nội dung chuyển khoản</div>
+                    <div style={{ fontSize: '1.125rem', fontWeight: 800, color: 'var(--color-rose)', letterSpacing: '0.05em' }}>{paymentCode}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-400)', marginTop: '2px' }}>Chú ý: Điền đúng nội dung để tự động xác nhận</div>
+                  </div>
+                  <button onClick={() => copyToClipboard(paymentCode, 'code')} style={{ padding: '8px 14px', background: copied === 'code' ? 'var(--color-rose)' : 'var(--color-gray-100)', color: copied === 'code' ? 'white' : 'var(--color-gray-600)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <FiCopy /> {copied === 'code' ? 'Đã sao chép!' : 'Sao chép'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Trạng thái chờ */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--color-gray-500)', fontSize: '0.875rem', marginBottom: 'var(--space-xl)' }}>
+                <FiRefreshCw style={{ animation: 'spin 2s linear infinite' }} />
+                Đang chờ xác nhận thanh toán tự động...
+              </div>
+
+              <div className="order-success__actions">
+                <Link href="/san-pham" className="btn btn-primary btn-lg"><FiShoppingBag /> Tiếp tục mua sắm</Link>
+                <Link href="/" className="btn btn-secondary btn-lg">Về trang chủ</Link>
+              </div>
+            </div>
+          ) : (
+            /* COD success */
+            <div className="order-success">
+              <div className="order-success__icon"><FiCheck /></div>
+              <h1>Đặt hàng thành công!</h1>
+              <p>Cảm ơn bạn đã mua sắm tại Glass Eyewear</p>
+              <div className="order-success__number">Mã đơn hàng: <strong>{orderSuccess.order_number}</strong></div>
+              <p className="order-success__note">Chúng tôi sẽ liên hệ với bạn qua số điện thoại để xác nhận đơn hàng.</p>
+              <div className="order-success__actions">
+                <Link href="/san-pham" className="btn btn-primary btn-lg"><FiShoppingBag /> Tiếp tục mua sắm</Link>
+                <Link href="/" className="btn btn-secondary btn-lg">Về trang chủ</Link>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Empty cart redirect
+  if (items.length === 0 && !orderSuccess) {
+    return (
+      <div style={{ paddingTop: 'var(--header-height)' }}>
+        <div className="container" style={{ paddingTop: 'var(--space-xl)', paddingBottom: 'var(--space-4xl)' }}>
+          <Breadcrumb items={breadcrumbItems} />
+          <div className="cart-empty">
+            <RiGlassesLine style={{ fontSize: '64px', color: 'rgba(201,169,110,0.2)', marginBottom: '24px' }} />
+            <h2>Giỏ hàng trống</h2>
+            <p style={{ color: 'rgba(255,255,255,0.4)', marginBottom: '24px' }}>Vui lòng thêm sản phẩm vào giỏ hàng trước khi thanh toán</p>
+            <Link href="/san-pham" className="btn btn-primary">Mua sắm ngay</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ paddingTop: 'var(--header-height)' }}>
+      <div className="container" style={{ paddingTop: 'var(--space-xl)', paddingBottom: 'var(--space-4xl)' }}>
+        <Breadcrumb items={breadcrumbItems} />
+        <h1 className="checkout-title">Thanh Toán</h1>
+
+        <form onSubmit={handleSubmit} className="checkout-layout">
+          {/* Checkout Form */}
+          <div className="checkout-form">
+            {/* Customer Info */}
+            <div className="checkout-section">
+              <h2 className="checkout-section__title">Thông tin người nhận</h2>
+              <div className="checkout-grid">
+                <div className="checkout-field">
+                  <label>Họ và tên *</label>
+                  <input type="text" required placeholder="Nguyễn Văn A"
+                    value={form.customer_name} onChange={e => updateForm('customer_name', e.target.value)} />
+                </div>
+                <div className="checkout-field">
+                  <label>Số điện thoại *</label>
+                  <input type="tel" required placeholder="0901234567"
+                    value={form.customer_phone} onChange={e => updateForm('customer_phone', e.target.value)} />
+                </div>
+                <div className="checkout-field checkout-field--full">
+                  <label>Email</label>
+                  <input type="email" placeholder="email@example.com"
+                    value={form.customer_email} onChange={e => updateForm('customer_email', e.target.value)} />
+                </div>
+              </div>
+            </div>
+
+            {/* Shipping Address */}
+            <div className="checkout-section">
+              <h2 className="checkout-section__title">Địa chỉ giao hàng</h2>
+              <div className="checkout-grid">
+                <div className="checkout-field checkout-field--full">
+                  <label>Địa chỉ *</label>
+                  <input type="text" required placeholder="Số nhà, đường, phường/xã"
+                    value={form.address} onChange={e => updateForm('address', e.target.value)} />
+                </div>
+                <div className="checkout-field">
+                  <label>Tỉnh / Thành phố *</label>
+                  <input type="text" required placeholder="TP. Hồ Chí Minh"
+                    value={form.city} onChange={e => updateForm('city', e.target.value)} />
+                </div>
+                <div className="checkout-field">
+                  <label>Quận / Huyện</label>
+                  <input type="text" placeholder="Quận 1"
+                    value={form.district} onChange={e => updateForm('district', e.target.value)} />
+                </div>
+                <div className="checkout-field">
+                  <label>Phường / Xã</label>
+                  <input type="text" placeholder="Phường Bến Nghé"
+                    value={form.ward} onChange={e => updateForm('ward', e.target.value)} />
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Method */}
+            <div className="checkout-section">
+              <h2 className="checkout-section__title">Phương thức thanh toán</h2>
+              <div className="checkout-payment-methods">
+                {PAYMENT_METHODS.map(method => (
+                  <label key={method.value} className={`payment-method ${form.payment_method === method.value ? 'payment-method--active' : ''}`}>
+                    <input
+                      type="radio"
+                      name="payment_method"
+                      value={method.value}
+                      checked={form.payment_method === method.value}
+                      onChange={e => updateForm('payment_method', e.target.value)}
+                    />
+                    <div className="payment-method__radio" />
+                    <span>{method.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Note */}
+            <div className="checkout-section">
+              <h2 className="checkout-section__title">Ghi chú</h2>
+              <textarea
+                placeholder="Ghi chú cho đơn hàng (không bắt buộc)"
+                rows={3}
+                value={form.note}
+                onChange={e => updateForm('note', e.target.value)}
+                className="checkout-textarea"
+              />
+            </div>
+          </div>
+
+          {/* Order Summary Sidebar */}
+          <div className="checkout-summary">
+            <h3 className="checkout-summary__title">Đơn hàng của bạn</h3>
+            <div className="checkout-summary__items">
+              {items.map(item => (
+                <div key={`${item.productId}-${item.color}`} className="checkout-summary__item">
+                  <div className="checkout-summary__item-image">
+                    {item.image ? (
+                      <img src={item.image} alt={item.name} />
+                    ) : (
+                      <RiGlassesLine />
+                    )}
+                    <span className="checkout-summary__item-qty">{item.quantity}</span>
+                  </div>
+                  <div className="checkout-summary__item-info">
+                    <div className="checkout-summary__item-name">{item.name}</div>
+                    {item.colorName && (
+                      <div className="checkout-summary__item-variant">
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: item.color, display: 'inline-block' }} />
+                        {item.colorName}
+                      </div>
+                    )}
+                  </div>
+                  <div className="checkout-summary__item-price">
+                    {formatPrice((item.salePrice || item.price) * item.quantity)}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="checkout-summary__divider" />
+
+            <div className="checkout-summary__row">
+              <span>Tạm tính</span>
+              <span>{formatPrice(subtotal)}</span>
+            </div>
+            <div className="checkout-summary__row">
+              <span>Phí vận chuyển</span>
+              <span>{shipping === 0 ? <em style={{ color: '#10b981' }}>Miễn phí</em> : formatPrice(shipping)}</span>
+            </div>
+            <div className="checkout-summary__divider" />
+            <div className="checkout-summary__row checkout-summary__total">
+              <span>Tổng cộng</span>
+              <span>{formatPrice(total)}</span>
+            </div>
+
+            {error && (
+              <div className="checkout-error">{error}</div>
+            )}
+
+            <button type="submit" className="btn btn-primary btn-lg checkout-summary__submit" disabled={submitting}>
+              {submitting ? 'Đang xử lý...' : `Đặt hàng — ${formatPrice(total)}`}
+            </button>
+
+            <Link href="/gio-hang" className="checkout-summary__back">
+              <FiArrowLeft /> Quay lại giỏ hàng
+            </Link>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
