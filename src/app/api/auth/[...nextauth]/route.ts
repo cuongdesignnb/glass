@@ -1,7 +1,7 @@
 import NextAuth, { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import bcrypt from 'bcryptjs';
-import prisma from '@/lib/prisma';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -16,25 +16,28 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Email và mật khẩu là bắt buộc');
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+        // Gọi Laravel API để xác thực
+        const res = await fetch(`${API_BASE}/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({
+            email: credentials.email,
+            password: credentials.password,
+          }),
         });
 
-        if (!user) {
-          throw new Error('Tài khoản không tồn tại');
-        }
+        const data = await res.json();
 
-        const isValid = await bcrypt.compare(credentials.password, user.password);
-
-        if (!isValid) {
-          throw new Error('Mật khẩu không đúng');
+        if (!res.ok || !data.token) {
+          throw new Error(data.message || 'Đăng nhập thất bại');
         }
 
         return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.name,
+          role: data.user.role,
+          token: data.token,
         };
       },
     }),
@@ -48,6 +51,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = (user as any).role;
         token.id = user.id;
+        token.apiToken = (user as any).token;
       }
       return token;
     },
@@ -55,6 +59,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as any).role = token.role;
         (session.user as any).id = token.id;
+        (session.user as any).token = token.apiToken;
       }
       return session;
     },
