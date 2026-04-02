@@ -45,4 +45,58 @@ class SettingController extends Controller
             'data' => Setting::getAllSettings(),
         ]);
     }
+
+    /**
+     * Upload custom font file
+     */
+    public function uploadFont(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|max:5120|mimes:ttf,otf,woff,woff2',
+        ]);
+
+        $file = $request->file('file');
+        $originalName = $file->getClientOriginalName();
+        $extension = $file->getClientOriginalExtension();
+        $filename = 'custom-font-' . time() . '.' . $extension;
+
+        // Lưu vào public/fonts
+        $file->move(public_path('fonts'), $filename);
+
+        $fontUrl = '/fonts/' . $filename;
+
+        // Lưu setting
+        Setting::setValue('custom_font_name', pathinfo($originalName, PATHINFO_FILENAME), 'font');
+        Setting::setValue('custom_font_url', $fontUrl, 'font');
+        Setting::setValue('custom_font_format', $extension, 'font');
+        Setting::setValue('custom_font_enabled', '1', 'font');
+
+        return response()->json([
+            'message' => 'Upload font thành công',
+            'font_name' => pathinfo($originalName, PATHINFO_FILENAME),
+            'font_url' => $fontUrl,
+        ]);
+    }
+
+    /**
+     * Delete custom font
+     */
+    public function deleteFont()
+    {
+        $fontUrl = Setting::getValue('custom_font_url');
+
+        if ($fontUrl) {
+            $filePath = public_path(ltrim($fontUrl, '/'));
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+        }
+
+        Setting::setValue('custom_font_name', '', 'font');
+        Setting::setValue('custom_font_url', '', 'font');
+        Setting::setValue('custom_font_format', '', 'font');
+        Setting::setValue('custom_font_enabled', '0', 'font');
+
+        return response()->json(['message' => 'Đã xóa font tùy chỉnh']);
+    }
 }

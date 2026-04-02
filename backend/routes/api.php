@@ -115,6 +115,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Settings
     Route::get('/settings', [SettingController::class, 'index']);
     Route::put('/settings', [SettingController::class, 'update']);
+    Route::post('/settings/font-upload', [SettingController::class, 'uploadFont']);
+    Route::delete('/settings/font-delete', [SettingController::class, 'deleteFont']);
 
     // Articles
     Route::apiResource('articles', ArticleController::class);

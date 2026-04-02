@@ -7,7 +7,7 @@ import MediaPicker from '@/components/admin/MediaPicker';
 import {
   FiSave, FiGlobe, FiMail, FiPhone, FiMapPin, FiSearch, FiShare2,
   FiKey, FiImage, FiX, FiHome, FiToggleLeft, FiToggleRight, FiEye, FiEyeOff,
-  FiCreditCard,
+  FiCreditCard, FiType, FiUpload, FiTrash2,
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { invalidateSettings } from '@/lib/useSettings';
@@ -84,6 +84,7 @@ export default function AdminSettingsPage() {
     if (key.startsWith('contact_')) return 'contact';
     if (key.startsWith('hero_') || key.startsWith('stat_') || key.startsWith('homepage_')) return 'homepage';
     if (key.startsWith('payment_')) return 'payment';
+    if (key.startsWith('font_') || key.startsWith('custom_font_')) return 'font';
     if (key.startsWith('gemini_') || key.startsWith('openai_') || key.startsWith('google_') || key.startsWith('facebook_')) return 'api';
     if (key.includes('api_key') || key.includes('analytics') || key.includes('pixel')) return 'api';
     return 'general';
@@ -96,6 +97,7 @@ export default function AdminSettingsPage() {
     { id: 'seo',      label: 'SEO',            icon: <FiSearch /> },
     { id: 'social',   label: 'Mạng xã hội',   icon: <FiShare2 /> },
     { id: 'payment',  label: 'Thanh toán',     icon: <FiCreditCard /> },
+    { id: 'font',     label: 'Font chữ',       icon: <FiType /> },
     { id: 'api',      label: 'API & Tích hợp', icon: <FiKey /> },
   ];
 
@@ -455,6 +457,145 @@ export default function AdminSettingsPage() {
             </div>
           </div>
         ))}
+
+        {/* Font Upload Section */}
+        {activeTab === 'font' && (
+          <div className="admin-card" style={{ marginBottom: '20px' }}>
+            <div style={{
+              padding: '14px 20px',
+              borderBottom: '1px solid rgba(255,255,255,0.06)',
+              fontSize: '0.8125rem', fontWeight: 700,
+              letterSpacing: '0.06em', textTransform: 'uppercase',
+              color: 'var(--color-gold)',
+            }}>
+              Tải Lên Font Chữ Tùy Chỉnh
+            </div>
+            <div className="admin-form">
+              {/* Current font info */}
+              {settings['custom_font_name'] && (
+                <div className="admin-form__group">
+                  <label className="admin-form__label">Font hiện tại</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <span style={{
+                      padding: '8px 16px',
+                      background: 'rgba(212,175,55,0.1)',
+                      border: '1px solid rgba(212,175,55,0.3)',
+                      borderRadius: '8px',
+                      color: 'var(--color-gold)',
+                      fontWeight: 600,
+                      fontSize: '0.95rem',
+                    }}>
+                      {settings['custom_font_name']}.{settings['custom_font_format'] || 'ttf'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => toggleSetting('custom_font_enabled')}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '8px',
+                        background: 'none', border: 'none', cursor: 'pointer',
+                        color: settings['custom_font_enabled'] === '1' ? '#10b981' : 'rgba(255,255,255,0.3)',
+                        fontSize: '1.3rem', transition: 'color 0.2s',
+                      }}
+                    >
+                      {settings['custom_font_enabled'] === '1' ? <FiToggleRight /> : <FiToggleLeft />}
+                      <span style={{ fontSize: '0.8125rem' }}>
+                        {settings['custom_font_enabled'] === '1' ? 'Đang bật' : 'Đang tắt'}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn--sm"
+                      style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}
+                      onClick={async () => {
+                        if (!confirm('Xóa font tùy chỉnh? Website sẽ dùng font mặc định.')) return;
+                        try {
+                          await adminApi.deleteFont(token!);
+                          updateSetting('custom_font_name', '');
+                          updateSetting('custom_font_url', '');
+                          updateSetting('custom_font_format', '');
+                          updateSetting('custom_font_enabled', '0');
+                          toast.success('Đã xóa font');
+                        } catch (err: any) {
+                          toast.error(err.message);
+                        }
+                      }}
+                    >
+                      <FiTrash2 /> Xóa font
+                    </button>
+                  </div>
+                  {/* Preview */}
+                  {settings['custom_font_url'] && settings['custom_font_enabled'] === '1' && (
+                    <div style={{
+                      marginTop: '12px',
+                      padding: '16px 20px',
+                      background: 'rgba(255,255,255,0.03)',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                    }}>
+                      <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginBottom: '8px' }}>Xem trước (sau khi build lại):</p>
+                      <p style={{ fontSize: '1.5rem', color: 'rgba(255,255,255,0.8)' }}>
+                        Kính Mắt Thời Trang Cao Cấp - Glass Eyewear
+                      </p>
+                      <p style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.5)' }}>
+                        ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Upload */}
+              <div className="admin-form__group">
+                <label className="admin-form__label">
+                  {settings['custom_font_name'] ? 'Thay đổi font' : 'Chọn file font'}
+                </label>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <input
+                    type="file"
+                    accept=".ttf,.otf,.woff,.woff2"
+                    id="font-upload-input"
+                    style={{ display: 'none' }}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const maxSize = 5 * 1024 * 1024;
+                      if (file.size > maxSize) {
+                        toast.error('File font không được vượt quá 5MB');
+                        return;
+                      }
+                      const loadingToast = toast.loading('Đang upload font...');
+                      try {
+                        const res = await adminApi.uploadFont(token!, file);
+                        updateSetting('custom_font_name', res.font_name);
+                        updateSetting('custom_font_url', res.font_url);
+                        updateSetting('custom_font_enabled', '1');
+                        const ext = file.name.split('.').pop() || 'ttf';
+                        updateSetting('custom_font_format', ext);
+                        toast.success('Upload font thành công!', { id: loadingToast });
+                      } catch (err: any) {
+                        toast.error(err.message || 'Upload thất bại', { id: loadingToast });
+                      }
+                      e.target.value = '';
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="admin-btn admin-btn--secondary admin-btn--sm"
+                    onClick={() => document.getElementById('font-upload-input')?.click()}
+                  >
+                    <FiUpload /> Chọn File Font
+                  </button>
+                  <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)' }}>
+                    Hỗ trợ: .ttf, .otf, .woff, .woff2 (tối đa 5MB)
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginTop: '8px', lineHeight: 1.5 }}>
+                  Gợi ý: Font sẽ được áp dụng cho toàn bộ website sau khi bật. Cần build lại trên server để có hiệu lực hoàn toàn.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       <MediaPicker

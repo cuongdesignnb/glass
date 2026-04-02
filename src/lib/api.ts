@@ -226,6 +226,22 @@ export const adminApi = {
     fetchApi('/settings', { token }),
   updateSettings: (token: string, settings: any[]) =>
     fetchApi('/settings', { method: 'PUT', body: JSON.stringify({ settings }), token }),
+  uploadFont: async (token: string, file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API_BASE}/settings/font-upload`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Upload font thất bại');
+    }
+    return res.json();
+  },
+  deleteFont: (token: string) =>
+    fetchApi('/settings/font-delete', { method: 'DELETE', token }),
 
   // Articles
   getArticles: (token: string, params?: Record<string, string>) => {

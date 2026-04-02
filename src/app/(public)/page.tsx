@@ -41,12 +41,39 @@ export default async function HomePage() {
     { name: 'Gọng Kính', slug: 'gong-kinh', emoji: <RiPriceTag3Line />, count: 200, desc: 'Chất liệu cao cấp' },
   ];
 
-  const featuredProducts = [
-    { id: '1', name: 'Aviator Classic Gold', slug: 'aviator-classic-gold', price: 2500000, salePrice: 1990000, thumbnail: null, category: 'Kính Râm', colors: ['#FFD700', '#C0C0C0', '#000000'], isNew: true },
-    { id: '2', name: 'Rectangle Titan Pro', slug: 'rectangle-titan-pro', price: 3200000, thumbnail: null, category: 'Kính Cận', colors: ['#000000', '#8B4513', '#C0C0C0'], isFeatured: true },
-    { id: '3', name: 'Cat-Eye Vintage Rose', slug: 'cat-eye-vintage-rose', price: 1800000, salePrice: 1490000, thumbnail: null, category: 'Kính Thời Trang', colors: ['#B76E79', '#000000', '#FF69B4'], isNew: true },
-    { id: '4', name: 'Browline Heritage', slug: 'browline-heritage', price: 2800000, thumbnail: null, category: 'Gọng Kính', colors: ['#D2691E', '#000000', '#8B4513'], isFeatured: true },
-  ];
+  // Lấy sản phẩm nổi bật từ API
+  let dbProducts: any[] = [];
+  try {
+    const res = await publicApi.getProducts({ per_page: '8', featured: '1' });
+    dbProducts = res?.data || res || [];
+    if (!Array.isArray(dbProducts)) dbProducts = [];
+    // Nếu không có featured, lấy mới nhất
+    if (dbProducts.length === 0) {
+      const res2 = await publicApi.getProducts({ per_page: '8', sort: 'newest' });
+      dbProducts = res2?.data || res2 || [];
+      if (!Array.isArray(dbProducts)) dbProducts = [];
+    }
+  } catch (err) {}
+
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || '';
+  const getImageUrl = (path: string | null) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    return `${API_BASE}${path}`;
+  };
+
+  const featuredProducts = dbProducts.slice(0, 8).map((p: any) => ({
+    id: p.id?.toString() || '',
+    name: p.name || '',
+    slug: p.slug || '',
+    price: p.price || 0,
+    salePrice: p.sale_price || null,
+    thumbnail: getImageUrl(p.thumbnail),
+    category: p.category?.name || '',
+    colors: [],
+    isNew: p.is_new || false,
+    isFeatured: p.is_featured || false,
+  }));
 
   const faceShapes = [
     { shape: 'Oval', icon: <FiCircle style={{ transform: 'scaleX(0.7)' }} />, desc: 'Hợp với hầu hết mọi kiểu', param: 'oval', recommended: 'Rectangle, Browline' },

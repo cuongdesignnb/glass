@@ -1,9 +1,9 @@
-import NextAuth, { NextAuthOptions } from 'next-auth';
+import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
-export const authOptions: NextAuthOptions = {
+const handler = NextAuth({
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -16,7 +16,6 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Email và mật khẩu là bắt buộc');
         }
 
-        // Gọi Laravel API để xác thực
         const res = await fetch(`${API_BASE}/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -44,7 +43,7 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60,
   },
   callbacks: {
     async jwt({ token, user }) {
@@ -69,7 +68,6 @@ export const authOptions: NextAuthOptions = {
     error: '/admin/login',
   },
   secret: process.env.NEXTAUTH_SECRET,
-};
+});
 
-const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
