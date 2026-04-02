@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { FiUser, FiMail, FiLock, FiPhone, FiArrowRight, FiEye, FiEyeOff, FiGift } from 'react-icons/fi';
 import { useAuth } from '@/lib/useAuth';
 import LocationPicker from '@/components/ui/LocationPicker';
-import './auth.css';
+import '../dang-nhap/auth.css';
 
 export default function RegisterPage() {
   const router = useRouter();
