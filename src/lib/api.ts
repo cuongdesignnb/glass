@@ -1,5 +1,9 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
+// SSR sử dụng internal URL (127.0.0.1) để tránh DNS/SSL timeout
+const INTERNAL_API = process.env.INTERNAL_API_URL || '';
+const API_HOST = process.env.API_HOST || '';
+
 interface FetchOptions extends RequestInit {
   token?: string;
 }
@@ -7,10 +11,19 @@ interface FetchOptions extends RequestInit {
 async function fetchApi(endpoint: string, options: FetchOptions = {}) {
   const { token, ...fetchOptions } = options;
   
+  // Server-side: dùng internal URL, Browser: dùng public URL
+  const isServer = typeof window === 'undefined';
+  const baseUrl = (isServer && INTERNAL_API) ? INTERNAL_API : API_BASE;
+
   const headers: Record<string, string> = {
     'Accept': 'application/json',
     ...(fetchOptions.headers as Record<string, string> || {}),
   };
+
+  // Thêm Host header cho internal calls
+  if (isServer && API_HOST && INTERNAL_API) {
+    headers['Host'] = API_HOST;
+  }
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
@@ -21,7 +34,7 @@ async function fetchApi(endpoint: string, options: FetchOptions = {}) {
     headers['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
+  const response = await fetch(`${baseUrl}${endpoint}`, {
     ...fetchOptions,
     headers,
   });
