@@ -2,6 +2,8 @@ import { notFound } from 'next/navigation';
 import { generateMeta, generateBreadcrumbSchema } from '@/lib/seo';
 import { Metadata } from 'next';
 
+export const dynamic = 'force-dynamic';
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 

@@ -2,6 +2,7 @@
 const nextConfig = {
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
+  staticPageGenerationTimeout: 120,
   images: {
     formats: ['image/webp', 'image/avif'],
     remotePatterns: [

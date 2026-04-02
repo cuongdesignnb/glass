@@ -4,6 +4,8 @@ import { generateMeta, generateProductSchema, generateBreadcrumbSchema } from '@
 import Breadcrumb from '@/components/layout/Breadcrumb';
 import ProductDetailClient from './ProductDetailClient';
 
+export const dynamic = 'force-dynamic';
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 const API_MEDIA_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace('/api', '');
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';

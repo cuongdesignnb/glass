@@ -2,6 +2,8 @@ import { Metadata } from 'next';
 import FaqClient from './FaqClient';
 import { generateBreadcrumbSchema } from '@/lib/seo';
 
+export const dynamic = 'force-dynamic';
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 export const metadata: Metadata = {

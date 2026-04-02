@@ -5,6 +5,8 @@ import { RiGlassesLine, RiSunLine, RiVipCrownLine, RiPriceTag3Line } from 'react
 import { publicApi } from '@/lib/api';
 import './home.css';
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Glass Eyewear - Kính Mắt Thời Trang Cao Cấp',
   description: 'Cửa hàng kính mắt thời trang cao cấp - Đa dạng kiểu dáng, chất liệu premium. Thử kính ảo AI tiên tiến.',
