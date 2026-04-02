@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { FiSearch, FiShoppingBag, FiMenu, FiX, FiChevronDown } from 'react-icons/fi';
+import { usePathname, useRouter } from 'next/navigation';
+import { FiSearch, FiShoppingBag, FiMenu, FiX, FiChevronDown, FiUser, FiBell, FiLogOut, FiShoppingCart, FiStar } from 'react-icons/fi';
 import { RiGlassesLine } from 'react-icons/ri';
 import { useSettings } from '@/lib/useSettings';
+import { useAuth } from '@/lib/useAuth';
 
 interface MenuItem {
   id: string | number;
@@ -23,10 +24,13 @@ const TRANSPARENT_PAGES = ['/'];
 
 export default function Header({ menus }: HeaderProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { settings } = useSettings();
+  const { user, logout } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   // Header chỉ transparent nếu đang ở trang được phép VÀ chưa scroll
   const allowTransparent = TRANSPARENT_PAGES.includes(pathname);
@@ -134,6 +138,59 @@ export default function Header({ menus }: HeaderProps) {
                 }}>{cartCount > 99 ? '99+' : cartCount}</span>
               )}
             </Link>
+
+            {/* User Auth */}
+            {user ? (
+              <div className="header__dropdown" style={{ position: 'relative' }}>
+                <button className="header__action-btn" onClick={() => setShowUserMenu(!showUserMenu)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', position: 'relative' }}>
+                  <FiUser />
+                  {(user.unread_notifications || 0) > 0 && (
+                    <span style={{
+                      position: 'absolute', top: '-4px', right: '-4px',
+                      width: '16px', height: '16px', borderRadius: '50%',
+                      background: '#ef4444', color: '#fff',
+                      fontSize: '0.6rem', fontWeight: 700,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>{user.unread_notifications}</span>
+                  )}
+                </button>
+                {showUserMenu && (
+                  <div className="header__dropdown-menu" style={{ right: 0, left: 'auto', minWidth: '200px' }}>
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-neutral-100)', marginBottom: '4px' }}>
+                      <div style={{ fontWeight: 700, fontSize: '.875rem' }}>{user.name}</div>
+                      <div style={{ fontSize: '.75rem', color: 'var(--color-neutral-400)' }}>{user.email}</div>
+                    </div>
+                    <Link href="/tai-khoan" className="header__dropdown-item" onClick={() => setShowUserMenu(false)}>
+                      <FiUser style={{ marginRight: 8 }} /> Tài khoản
+                    </Link>
+                    <Link href="/tai-khoan" className="header__dropdown-item" onClick={() => setShowUserMenu(false)}>
+                      <FiShoppingCart style={{ marginRight: 8 }} /> Đơn hàng
+                    </Link>
+                    <Link href="/tai-khoan" className="header__dropdown-item" onClick={() => setShowUserMenu(false)}>
+                      <FiStar style={{ marginRight: 8 }} /> Điểm: {user.points || 0}
+                    </Link>
+                    <Link href="/tai-khoan" className="header__dropdown-item" onClick={() => setShowUserMenu(false)}>
+                      <FiBell style={{ marginRight: 8 }} /> Thông báo
+                      {(user.unread_notifications || 0) > 0 && (
+                        <span style={{ marginLeft: 'auto', background: '#ef4444', color: '#fff', fontSize: '.6875rem', padding: '1px 6px', borderRadius: '99px' }}>
+                          {user.unread_notifications}
+                        </span>
+                      )}
+                    </Link>
+                    <button className="header__dropdown-item" style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', borderTop: '1px solid var(--color-neutral-100)', marginTop: '4px', paddingTop: '8px' }}
+                      onClick={() => { logout(); setShowUserMenu(false); router.push('/'); }}>
+                      <FiLogOut style={{ marginRight: 8 }} /> Đăng xuất
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link href="/dang-nhap" className="header__action-btn" aria-label="Đăng nhập" title="Đăng nhập">
+                <FiUser />
+              </Link>
+            )}
+
             <button
               className="header__mobile-toggle"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

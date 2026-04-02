@@ -1,6 +1,7 @@
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { CartProvider } from '@/lib/useCart';
+import { AuthProvider } from '@/lib/useAuth';
 
 export default function PublicLayout({
   children,
@@ -8,10 +9,12 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   return (
-    <CartProvider>
-      <Header />
-      <main>{children}</main>
-      <Footer />
-    </CartProvider>
+    <AuthProvider>
+      <CartProvider>
+        <Header />
+        <main>{children}</main>
+        <Footer />
+      </CartProvider>
+    </AuthProvider>
   );
 }

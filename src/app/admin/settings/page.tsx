@@ -7,7 +7,7 @@ import MediaPicker from '@/components/admin/MediaPicker';
 import {
   FiSave, FiGlobe, FiMail, FiPhone, FiMapPin, FiSearch, FiShare2,
   FiKey, FiImage, FiX, FiHome, FiToggleLeft, FiToggleRight, FiEye, FiEyeOff,
-  FiCreditCard, FiType, FiUpload, FiTrash2,
+  FiCreditCard, FiType, FiUpload, FiTrash2, FiGift,
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { invalidateSettings } from '@/lib/useSettings';
@@ -87,6 +87,7 @@ export default function AdminSettingsPage() {
     if (key.startsWith('font_') || key.startsWith('custom_font_')) return 'font';
     if (key.startsWith('gemini_') || key.startsWith('openai_') || key.startsWith('google_') || key.startsWith('facebook_')) return 'api';
     if (key.includes('api_key') || key.includes('analytics') || key.includes('pixel')) return 'api';
+    if (key.startsWith('reward_') || key.startsWith('voucher_') || key.startsWith('points_') || key.startsWith('register_') || key.startsWith('min_redeem')) return 'rewards';
     return 'general';
   };
 
@@ -97,6 +98,7 @@ export default function AdminSettingsPage() {
     { id: 'seo',      label: 'SEO',            icon: <FiSearch /> },
     { id: 'social',   label: 'Mạng xã hội',   icon: <FiShare2 /> },
     { id: 'payment',  label: 'Thanh toán',     icon: <FiCreditCard /> },
+    { id: 'rewards',   label: 'Phần thưởng',    icon: <FiGift /> },
     { id: 'font',     label: 'Font chữ',       icon: <FiType /> },
     { id: 'api',      label: 'API & Tích hợp', icon: <FiKey /> },
   ];
@@ -593,6 +595,114 @@ export default function AdminSettingsPage() {
                   Gợi ý: Font sẽ được áp dụng cho toàn bộ website sau khi bật. Cần build lại trên server để có hiệu lực hoàn toàn.
                 </p>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Rewards Config Section */}
+        {activeTab === 'rewards' && (
+          <div className="admin-card" style={{ marginBottom: '20px' }}>
+            <div style={{
+              padding: '14px 20px',
+              borderBottom: '1px solid rgba(255,255,255,0.06)',
+              fontSize: '0.8125rem', fontWeight: 700,
+              letterSpacing: '0.06em', textTransform: 'uppercase',
+              color: 'var(--color-gold)',
+            }}>
+              Phần Thưởng Đăng Ký
+            </div>
+            <div className="admin-form">
+              <div className="admin-form__group">
+                <label className="admin-form__label">Loại phần thưởng</label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {['none', 'voucher', 'product', 'points'].map(t => (
+                    <button key={t} type="button"
+                      onClick={() => updateSetting('reward_type', t)}
+                      className={`admin-btn admin-btn--sm ${settings['reward_type'] === t ? 'admin-btn--primary' : 'admin-btn--secondary'}`}>
+                      {t === 'none' ? 'Không' : t === 'voucher' ? '🎟️ Voucher' : t === 'product' ? '🎁 Sản phẩm' : '⭐ Điểm'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {settings['reward_type'] === 'voucher' && (
+                <>
+                  <div className="admin-form__group">
+                    <label className="admin-form__label">Loại voucher</label>
+                    <select className="admin-form__input" value={settings['voucher_type'] || 'percent'}
+                      onChange={e => updateSetting('voucher_type', e.target.value)}>
+                      <option value="percent">Giảm theo %</option>
+                      <option value="fixed">Giảm cố định (VNĐ)</option>
+                    </select>
+                  </div>
+                  <div className="admin-form__group">
+                    <label className="admin-form__label">Giá trị giảm</label>
+                    <input className="admin-form__input" type="number" value={settings['voucher_discount'] || ''}
+                      onChange={e => updateSetting('voucher_discount', e.target.value)}
+                      placeholder={settings['voucher_type'] === 'percent' ? 'VD: 10 (%)' : 'VD: 50000 (VNĐ)'} />
+                  </div>
+                  <div className="admin-form__group">
+                    <label className="admin-form__label">Đơn hàng tối thiểu (VNĐ)</label>
+                    <input className="admin-form__input" type="number" value={settings['voucher_min_order'] || ''}
+                      onChange={e => updateSetting('voucher_min_order', e.target.value)} placeholder="0 = không giới hạn" />
+                  </div>
+                </>
+              )}
+
+              {settings['reward_type'] === 'product' && (
+                <div className="admin-form__group">
+                  <label className="admin-form__label">ID sản phẩm tặng</label>
+                  <input className="admin-form__input" type="number" value={settings['reward_product_id'] || ''}
+                    onChange={e => updateSetting('reward_product_id', e.target.value)}
+                    placeholder="Nhập ID sản phẩm muốn tặng" />
+                  <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginTop: '5px' }}>
+                    Vào trang Sản phẩm để lấy ID sản phẩm
+                  </p>
+                </div>
+              )}
+
+              {settings['reward_type'] === 'points' && (
+                <div className="admin-form__group">
+                  <label className="admin-form__label">Số điểm thưởng đăng ký</label>
+                  <input className="admin-form__input" type="number" value={settings['register_bonus_points'] || ''}
+                    onChange={e => updateSetting('register_bonus_points', e.target.value)} placeholder="VD: 50" />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Loyalty Points Config */}
+        {activeTab === 'rewards' && (
+          <div className="admin-card" style={{ marginBottom: '20px' }}>
+            <div style={{
+              padding: '14px 20px',
+              borderBottom: '1px solid rgba(255,255,255,0.06)',
+              fontSize: '0.8125rem', fontWeight: 700,
+              letterSpacing: '0.06em', textTransform: 'uppercase',
+              color: 'var(--color-gold)',
+            }}>
+              Cài Đặt Tích Điểm
+            </div>
+            <div className="admin-form">
+              <div className="admin-form__group">
+                <label className="admin-form__label">Tỷ lệ tích điểm: X VNĐ = 1 điểm</label>
+                <input className="admin-form__input" type="number" value={settings['points_per_vnd'] || ''}
+                  onChange={e => updateSetting('points_per_vnd', e.target.value)} placeholder="VD: 10000 (mỗi 10.000đ = 1 điểm)" />
+              </div>
+              <div className="admin-form__group">
+                <label className="admin-form__label">Quy đổi: 1 điểm = X VNĐ</label>
+                <input className="admin-form__input" type="number" value={settings['vnd_per_point'] || ''}
+                  onChange={e => updateSetting('vnd_per_point', e.target.value)} placeholder="VD: 1000 (1 điểm = 1.000đ)" />
+              </div>
+              <div className="admin-form__group">
+                <label className="admin-form__label">Tối thiểu điểm để đổi thưởng</label>
+                <input className="admin-form__input" type="number" value={settings['min_redeem_points'] || ''}
+                  onChange={e => updateSetting('min_redeem_points', e.target.value)} placeholder="VD: 100" />
+              </div>
+              <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', padding: '0 20px 16px', lineHeight: 1.5 }}>
+                💡 Điểm được cộng tự động khi đơn hàng có trạng thái "Đã giao". Khách hàng có thể đổi điểm → voucher giảm giá.
+              </p>
             </div>
           </div>
         )}

@@ -7,7 +7,7 @@ import { RiGlassesLine } from 'react-icons/ri';
 import {
   FiGrid, FiPackage, FiTag, FiImage, FiMenu, FiLayout,
   FiSettings, FiFileText, FiShoppingCart, FiUsers, FiLogOut,
-  FiCpu, FiFile, FiChevronLeft, FiStar, FiHelpCircle
+  FiCpu, FiFile, FiChevronLeft, FiStar, FiHelpCircle, FiBell
 } from 'react-icons/fi';
 import { Toaster } from 'react-hot-toast';
 import './admin.css';
@@ -28,6 +28,8 @@ const adminMenuItems = [
   { section: 'Kinh Doanh' },
   { name: 'Đơn Hàng', icon: <FiShoppingCart />, href: '/admin/orders' },
   { name: 'Đánh Giá', icon: <FiStar />, href: '/admin/reviews' },
+  { name: 'Khách Hàng', icon: <FiUsers />, href: '/admin/users' },
+  { name: 'Thông Báo', icon: <FiBell />, href: '/admin/notifications' },
   { section: 'AI & Công Cụ' },
   { name: 'AI Content', icon: <FiCpu />, href: '/admin/ai-content' },
   { section: 'Hệ Thống' },

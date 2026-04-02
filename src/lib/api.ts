@@ -99,6 +99,16 @@ export const publicApi = {
     method: 'POST',
     body: JSON.stringify(data),
   }),
+  validateVoucher: (code: string, subtotal?: number) =>
+    fetchApi('/public/orders/validate-voucher', {
+      method: 'POST',
+      body: JSON.stringify({ code, subtotal }),
+    }),
+  lookupOrder: (orderNumber: string, phone: string) =>
+    fetchApi('/public/orders/lookup', {
+      method: 'POST',
+      body: JSON.stringify({ order_number: orderNumber, phone }),
+    }),
 
   // Reviews
   getProductReviews: (productId: number, params?: Record<string, string>) => {
@@ -126,6 +136,52 @@ export const publicApi = {
     method: 'POST',
     body: JSON.stringify(data),
   }),
+};
+
+// ==========================================
+// USER API (customer auth)
+// ==========================================
+
+export const userApi = {
+  // Auth
+  login: (email: string, password: string) =>
+    fetchApi('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  register: (data: { name: string; email: string; password: string; password_confirmation: string; phone?: string; province?: string; ward?: string; address_detail?: string }) =>
+    fetchApi('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+  logout: (token: string) =>
+    fetchApi('/auth/logout', { method: 'POST', token }),
+  me: (token: string) =>
+    fetchApi('/auth/me', { token }),
+
+  // Profile
+  getProfile: (token: string) => fetchApi('/user/profile', { token }),
+  updateProfile: (token: string, data: any) =>
+    fetchApi('/user/profile', { method: 'PUT', body: JSON.stringify(data), token }),
+  changePassword: (token: string, data: { current_password: string; password: string; password_confirmation: string }) =>
+    fetchApi('/user/change-password', { method: 'PUT', body: JSON.stringify(data), token }),
+  changeEmail: (token: string, data: { email: string; password: string }) =>
+    fetchApi('/user/change-email', { method: 'PUT', body: JSON.stringify(data), token }),
+
+  // Orders
+  getMyOrders: (token: string, params?: Record<string, string>) => {
+    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+    return fetchApi(`/user/orders${query}`, { token });
+  },
+
+  // Loyalty
+  getPoints: (token: string) => fetchApi('/user/points', { token }),
+  redeemPoints: (token: string, points: number) =>
+    fetchApi('/user/redeem', { method: 'POST', body: JSON.stringify({ points }), token }),
+
+  // Vouchers
+  getMyVouchers: (token: string) => fetchApi('/user/vouchers', { token }),
+
+  // Notifications
+  getNotifications: (token: string) => fetchApi('/user/notifications', { token }),
+  markNotificationRead: (token: string, id: number) =>
+    fetchApi(`/user/notifications/${id}/read`, { method: 'PUT', token }),
+  markAllRead: (token: string) =>
+    fetchApi('/user/notifications/read-all', { method: 'PUT', token }),
 };
 
 // ==========================================
@@ -321,4 +377,26 @@ export const adminApi = {
     }),
   aiGenerateContent: (token: string, data: { topic: string; type?: string; keywords?: string; tone?: string; length?: string }) =>
     fetchApi('/ai/content', { method: 'POST', body: JSON.stringify(data), token }),
+
+  // === Admin: Users ===
+  getUsers: (token: string, params?: Record<string, string>) => {
+    const query = params ? '?' + new URLSearchParams(params).toString() : '';
+    return fetchApi(`/admin/users${query}`, { token });
+  },
+  getUser: (token: string, id: number) =>
+    fetchApi(`/admin/users/${id}`, { token }),
+  adjustUserPoints: (token: string, id: number, data: { points: number; description: string }) =>
+    fetchApi(`/admin/users/${id}/points`, { method: 'PUT', body: JSON.stringify(data), token }),
+  toggleUserActive: (token: string, id: number) =>
+    fetchApi(`/admin/users/${id}/toggle-active`, { method: 'PUT', token }),
+  searchUsers: (token: string, q: string) =>
+    fetchApi(`/admin/users/search?q=${encodeURIComponent(q)}`, { token }),
+
+  // === Admin: Notifications ===
+  getNotifications: (token: string) =>
+    fetchApi('/admin/notifications', { token }),
+  createNotification: (token: string, data: any) =>
+    fetchApi('/admin/notifications', { method: 'POST', body: JSON.stringify(data), token }),
+  deleteNotification: (token: string, id: number) =>
+    fetchApi(`/admin/notifications/${id}`, { method: 'DELETE', token }),
 };

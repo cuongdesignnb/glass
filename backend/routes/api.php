@@ -15,6 +15,8 @@ use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\PageController;
 use App\Http\Controllers\Api\SepayWebhookController;
 use App\Http\Controllers\Api\FaqController;
+use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\AdminUserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,56 +25,46 @@ use App\Http\Controllers\Api\FaqController;
 */
 
 // ==========================================
-// SEPAY WEBHOOK (public, xác thực bằng API Key trong header)
+// SEPAY WEBHOOK
 // ==========================================
 Route::post('/webhook/sepay', [SepayWebhookController::class, 'handle']);
 
+// ==========================================
+// PUBLIC ROUTES
+// ==========================================
 Route::prefix('public')->group(function () {
-    // Products (public listing)
     Route::get('/products', [ProductController::class, 'index']);
     Route::get('/products/{slugOrId}', [ProductController::class, 'show']);
-
-    // Categories
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/categories/{slugOrId}', [CategoryController::class, 'show']);
-
-    // Articles
     Route::get('/articles', [ArticleController::class, 'index']);
     Route::get('/articles/{slugOrId}', [ArticleController::class, 'show']);
-
-    // Pages (static pages)
     Route::get('/pages/{slugOrId}', [PageController::class, 'show']);
-
-    // Banners (active only)
     Route::get('/banners', [BannerController::class, 'index']);
-
-    // Menus (by position)
     Route::get('/menus', [MenuController::class, 'index']);
-
-    // Settings (public readable)
     Route::get('/settings', [SettingController::class, 'index']);
-
-    // FAQs (public active)
     Route::get('/faqs', [FaqController::class, 'index']);
 
-    // Orders (create from frontend)
+    // Orders (public create)
     Route::post('/orders', [OrderController::class, 'store']);
-
-    // Kiểm tra trạng thái thanh toán (polling từ frontend)
+    Route::post('/orders/validate-voucher', [OrderController::class, 'validateVoucher']);
     Route::get('/orders/{id}/payment-status', function ($id) {
         $order = \App\Models\Order::findOrFail($id);
         return response()->json([
-            'id'             => $order->id,
+            'id' => $order->id,
             'payment_status' => $order->payment_status,
-            'status'         => $order->status,
+            'status' => $order->status,
         ]);
     });
+
+    // Tra cứu đơn hàng (không cần login)
+    Route::post('/orders/lookup', [UserController::class, 'lookupOrder']);
 
     // Reviews
     Route::get('/products/{productId}/reviews', [ReviewController::class, 'productReviews']);
     Route::post('/reviews', [ReviewController::class, 'store']);
 
-    // AI Virtual Try-On (public, không cần đăng nhập)
+    // AI
     Route::post('/ai/try-on', [AiController::class, 'tryOn']);
 });
 
@@ -80,9 +72,27 @@ Route::prefix('public')->group(function () {
 // AUTH ROUTES
 // ==========================================
 Route::post('/auth/login', [AuthController::class, 'login']);
+Route::post('/auth/register', [AuthController::class, 'register']);
 
 // ==========================================
-// PROTECTED ROUTES (admin auth required)
+// CUSTOMER AUTH ROUTES
+// ==========================================
+Route::middleware('auth:sanctum')->prefix('user')->group(function () {
+    Route::get('/profile', [UserController::class, 'getProfile']);
+    Route::put('/profile', [UserController::class, 'updateProfile']);
+    Route::put('/change-password', [UserController::class, 'changePassword']);
+    Route::put('/change-email', [UserController::class, 'changeEmail']);
+    Route::get('/orders', [UserController::class, 'getMyOrders']);
+    Route::get('/points', [UserController::class, 'getPoints']);
+    Route::post('/redeem', [UserController::class, 'redeemPoints']);
+    Route::get('/vouchers', [UserController::class, 'getMyVouchers']);
+    Route::get('/notifications', [UserController::class, 'getNotifications']);
+    Route::put('/notifications/{id}/read', [UserController::class, 'markNotificationRead']);
+    Route::put('/notifications/read-all', [UserController::class, 'markAllNotificationsRead']);
+});
+
+// ==========================================
+// ADMIN ROUTES (auth required)
 // ==========================================
 Route::middleware('auth:sanctum')->group(function () {
     // Auth
@@ -127,7 +137,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // FAQs
     Route::apiResource('faqs', FaqController::class);
 
-    // Orders
+    // Orders (admin)
     Route::get('/orders', [OrderController::class, 'index']);
     Route::get('/orders/{order}', [OrderController::class, 'show']);
     Route::put('/orders/{order}/status', [OrderController::class, 'updateStatus']);
@@ -143,7 +153,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/ai/try-on', [AiController::class, 'tryOn']);
     Route::post('/ai/content', [AiController::class, 'generateContent']);
 
-    // SePay Transactions (admin xem log)
+    // === ADMIN: Users ===
+    Route::get('/admin/users', [AdminUserController::class, 'index']);
+    Route::get('/admin/users/search', [AdminUserController::class, 'searchUsers']);
+    Route::get('/admin/users/{id}', [AdminUserController::class, 'show']);
+    Route::put('/admin/users/{id}/points', [AdminUserController::class, 'adjustPoints']);
+    Route::put('/admin/users/{id}/toggle-active', [AdminUserController::class, 'toggleActive']);
+
+    // === ADMIN: Notifications ===
+    Route::get('/admin/notifications', [AdminUserController::class, 'getNotifications']);
+    Route::post('/admin/notifications', [AdminUserController::class, 'storeNotification']);
+    Route::delete('/admin/notifications/{id}', [AdminUserController::class, 'destroyNotification']);
+
+    // SePay Transactions
     Route::get('/sepay/transactions', function () {
         $txns = \App\Models\SepayTransaction::with('order:id,order_number,customer_name,total')
             ->orderBy('created_at', 'desc')
