@@ -1,39 +1,36 @@
 #!/bin/bash
-# Deploy script for Glass Eyewear
-# Usage: bash deploy.sh
+# ============================================
+# Glass Eyewear — Deploy Script
+# Chạy: bash deploy.sh
+# ============================================
 
 set -e
 
-echo "=== GLASS DEPLOY ==="
+echo "🚀 Bắt đầu deploy Glass Eyewear..."
 
-cd /www/wwwroot/glass.cuongdesign.net
+# 1. Pull code mới
+echo "📥 Pull code từ Git..."
+git fetch origin && git reset --hard origin/main
 
-echo "[1/5] Pull code..."
-git pull origin main
-
-echo "[2/5] Backend..."
+# 2. Backend: migrate + clear ALL cache
+echo "🔧 Backend: migrate + clear cache..."
 cd backend
-php artisan migrate --force 2>/dev/null || true
+php artisan migrate --force
+php artisan route:clear
 php artisan config:clear
-php artisan config:cache
-php artisan route:cache
+php artisan cache:clear 2>/dev/null || true
+php artisan view:clear
 cd ..
 
-echo "[3/5] Build frontend..."
+# 3. Frontend: rebuild
+echo "🏗️ Frontend: rebuild Next.js..."
 rm -rf .next
-npm install --production=false
 npm run build
 
-echo "[4/5] Restart PM2..."
-pm2 delete glass 2>/dev/null || true
-pkill -f "next start" 2>/dev/null || true
-sleep 2
-pm2 start "npx next start -p 3222" --name glass
-sleep 3
-
-echo "[5/5] Reload Nginx..."
-nginx -s reload
+# 4. Restart PM2
+echo "♻️ Restart PM2..."
+pm2 restart glass
 
 echo ""
-echo "=== DEPLOY DONE ==="
-echo "Test: curl -s http://127.0.0.1:3222/ | head -c 200"
+echo "✅ Deploy hoàn tất!"
+echo "🌐 Website: https://glass.cuongdesign.net"
