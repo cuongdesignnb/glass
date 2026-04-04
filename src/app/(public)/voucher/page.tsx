@@ -65,30 +65,31 @@ export default function VoucherPage() {
             <div className="voucher-grid">
               {vouchers.map((v: any) => (
                 <div key={v.id} className="voucher-card">
-                  <div className="voucher-card__code-label">
-                    Mã: <strong>{v.code}</strong>
-                  </div>
-
-                  <div className="voucher-card__value-area">
+                  {/* Left: Discount Value */}
+                  <div className="voucher-card__left">
+                    <span className="voucher-card__value-prefix">Giảm</span>
                     {v.type === 'percent' ? (
-                      <div className="voucher-card__value">
-                        <span className="voucher-card__value-prefix">Giảm</span>
-                        <span className="voucher-card__value-number">{v.value}<span className="voucher-card__value-unit">%</span></span>
-                      </div>
+                      <span className="voucher-card__value-number">{v.value}<span className="voucher-card__value-unit">%</span></span>
                     ) : (
-                      <div className="voucher-card__value">
-                        <span className="voucher-card__value-prefix">Giảm</span>
-                        <span className="voucher-card__value-number">
-                          {v.value >= 1000000
-                            ? (v.value / 1000000).toFixed(v.value % 1000000 === 0 ? 0 : 1) + 'M'
-                            : Math.round(v.value / 1000) + 'K'
-                          }
-                        </span>
-                      </div>
+                      <span className="voucher-card__value-number">
+                        {v.value >= 1000000
+                          ? (v.value / 1000000).toFixed(v.value % 1000000 === 0 ? 0 : 1) + 'M'
+                          : Math.round(v.value / 1000) + 'K'
+                        }
+                      </span>
                     )}
                   </div>
 
-                  <div className="voucher-card__info">
+                  {/* Cut line with scissors */}
+                  <div className="voucher-card__cutline">
+                    <span className="voucher-card__scissors">✂</span>
+                  </div>
+
+                  {/* Right: Info + Copy */}
+                  <div className="voucher-card__right">
+                    <div className="voucher-card__code-label">
+                      Mã: <strong>{v.code}</strong>
+                    </div>
                     <p className="voucher-card__condition">
                       {v.description
                         ? v.description
@@ -106,18 +107,17 @@ export default function VoucherPage() {
                         HSD: {new Date(v.expires_at).toLocaleDateString('vi-VN')}
                       </p>
                     )}
-                  </div>
-
-                  <div className="voucher-card__actions">
-                    <button className="voucher-card__terms">
-                      Điều kiện áp dụng
-                    </button>
-                    <button
-                      className={`voucher-card__copy ${copiedId === v.id ? 'voucher-card__copy--copied' : ''}`}
-                      onClick={() => copyCode(v.code, v.id)}
-                    >
-                      {copiedId === v.id ? <><FiCheck /> Đã sao chép</> : <><FiCopy /> Sao chép mã</>}
-                    </button>
+                    <div className="voucher-card__actions">
+                      <button className="voucher-card__terms">
+                        Điều kiện áp dụng
+                      </button>
+                      <button
+                        className={`voucher-card__copy ${copiedId === v.id ? 'voucher-card__copy--copied' : ''}`}
+                        onClick={() => copyCode(v.code, v.id)}
+                      >
+                        {copiedId === v.id ? <><FiCheck /> Đã sao chép</> : <><FiCopy /> Sao chép mã</>}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

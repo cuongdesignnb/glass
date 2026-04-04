@@ -266,10 +266,8 @@ export function DynamicVouchers() {
       <div className="voucher-slider__track">
         {vouchers.map((v: any) => (
           <div key={v.id} className="voucher-slide">
-            <div className="voucher-slide__header">
-              <span className="voucher-slide__code">Mã: <strong>{v.code}</strong></span>
-            </div>
-            <div className="voucher-slide__value">
+            {/* Left: Discount Value */}
+            <div className="voucher-slide__left">
               <span className="voucher-slide__prefix">Giảm</span>
               {v.type === 'percent' ? (
                 <span className="voucher-slide__number">{v.value}<span className="voucher-slide__unit">%</span></span>
@@ -282,22 +280,30 @@ export function DynamicVouchers() {
                 </span>
               )}
             </div>
-            <div className="voucher-slide__info">
+
+            {/* Cut line with scissors */}
+            <div className="voucher-slide__cutline">
+              <span className="voucher-slide__scissors">✂</span>
+            </div>
+
+            {/* Right: Info + Copy */}
+            <div className="voucher-slide__right">
+              <span className="voucher-slide__code">Mã: <strong>{v.code}</strong></span>
               <p className="voucher-slide__condition">
-                {v.description || (v.min_order > 0 ? `Giảm giá ${v.type === 'percent' ? v.value + '%' : formatVND(v.value)} cho đơn từ ${formatVND(v.min_order)}` : 'Áp dụng mọi đơn hàng')}
+                {v.description || (v.min_order > 0 ? `Cho đơn từ ${formatVND(v.min_order)}` : 'Áp dụng mọi đơn hàng')}
               </p>
               {v.type === 'percent' && v.max_discount > 0 && (
                 <p className="voucher-slide__max">Tối đa {formatVND(v.max_discount)}</p>
               )}
-            </div>
-            <div className="voucher-slide__footer">
-              <span className="voucher-slide__terms">Điều kiện áp dụng</span>
-              <button
-                className={`voucher-slide__copy ${copiedId === v.id ? 'voucher-slide__copy--copied' : ''}`}
-                onClick={() => copyCode(v.code, v.id)}
-              >
-                {copiedId === v.id ? <><FiCheck /> Đã copy</> : <><FiCopy /> Sao chép mã</>}
-              </button>
+              <div className="voucher-slide__footer">
+                <span className="voucher-slide__terms">Điều kiện áp dụng</span>
+                <button
+                  className={`voucher-slide__copy ${copiedId === v.id ? 'voucher-slide__copy--copied' : ''}`}
+                  onClick={() => copyCode(v.code, v.id)}
+                >
+                  {copiedId === v.id ? <><FiCheck /> Đã copy</> : <><FiCopy /> Sao chép mã</>}
+                </button>
+              </div>
             </div>
           </div>
         ))}

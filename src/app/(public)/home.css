@@ -998,7 +998,7 @@
 }
 
 /* ============================================
-   VOUCHER SLIDER — nous.vn inspired
+   VOUCHER SLIDER — Realistic Coupon Design
    ============================================ */
 
 .voucher-home-section {
@@ -1016,60 +1016,128 @@
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding: 4px 0 12px;
+  padding: 8px 0 16px;
 }
 
 .voucher-slider__track::-webkit-scrollbar {
   display: none;
 }
 
+/* ── Coupon Card — 2 panel layout ── */
 .voucher-slide {
-  flex: 0 0 280px;
+  flex: 0 0 340px;
   scroll-snap-align: start;
+  display: flex;
+  flex-direction: row;
   background: linear-gradient(145deg, #faf8f5 0%, #f3ede5 100%);
-  border: 1px solid rgba(0,0,0,0.06);
   border-radius: 16px;
-  padding: 20px 24px;
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.25s, box-shadow 0.25s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.voucher-slide:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.1);
+}
+
+/* Left panel — Discount Value */
+.voucher-slide__left {
+  flex: 0 0 110px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 14px;
+  background: linear-gradient(145deg, #f0e8dc 0%, #e8dece 100%);
   position: relative;
-  overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
 }
 
-/* Notch decorations */
-.voucher-slide::before {
+/* Edge notch holes on the right edge of left panel */
+.voucher-slide__left::before,
+.voucher-slide__left::after {
   content: '';
   position: absolute;
-  top: 50%;
-  left: -8px;
-  width: 16px;
-  height: 16px;
-  background: var(--color-bg);
-  border-radius: 50%;
-  transform: translateY(-50%);
-}
-
-.voucher-slide::after {
-  content: '';
-  position: absolute;
-  top: 50%;
   right: -8px;
   width: 16px;
   height: 16px;
   background: var(--color-bg);
   border-radius: 50%;
-  transform: translateY(-50%);
+  z-index: 2;
 }
 
-.voucher-slide:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+.voucher-slide__left::before {
+  top: -8px;
 }
 
-.voucher-slide__header {
-  margin-bottom: 2px;
+.voucher-slide__left::after {
+  bottom: -8px;
+}
+
+.voucher-slide__prefix {
+  font-size: 0.8125rem;
+  color: #78716c;
+  letter-spacing: 0.04em;
+}
+
+.voucher-slide__number {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 2.5rem;
+  font-weight: 300;
+  color: #1c1917;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  margin-top: 2px;
+}
+
+.voucher-slide__unit {
+  font-size: 1.25rem;
+}
+
+/* ── Cut line (vertical dashed + scissors) ── */
+.voucher-slide__cutline {
+  position: relative;
+  width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.voucher-slide__cutline::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  width: 0;
+  border-left: 2px dashed rgba(0,0,0,0.12);
+}
+
+.voucher-slide__scissors {
+  position: relative;
+  z-index: 3;
+  width: 20px;
+  height: 20px;
+  background: #ede5d8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: #a8a29e;
+  border-radius: 50%;
+  transform: rotate(90deg);
+  line-height: 1;
+}
+
+/* Right panel — Info */
+.voucher-slide__right {
+  flex: 1;
+  padding: 16px 16px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .voucher-slide__code {
@@ -1083,58 +1151,29 @@
   letter-spacing: 0.06em;
 }
 
-.voucher-slide__value {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  padding-bottom: 10px;
-  border-bottom: 1px dashed rgba(0,0,0,0.08);
-}
-
-.voucher-slide__prefix {
-  font-size: 0.9375rem;
-  color: #78716c;
-}
-
-.voucher-slide__number {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 2.75rem;
-  font-weight: 300;
-  color: #1c1917;
-  line-height: 1;
-  letter-spacing: -0.02em;
-}
-
-.voucher-slide__unit {
-  font-size: 1.5rem;
-}
-
-.voucher-slide__info {
-  flex: 1;
-}
-
 .voucher-slide__condition {
   font-size: 0.8125rem;
   color: #57534e;
   margin: 0;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .voucher-slide__max {
   font-size: 0.75rem;
   color: #a8a29e;
-  margin: 4px 0 0;
+  margin: 0;
 }
 
 .voucher-slide__footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 4px;
+  margin-top: auto;
+  padding-top: 4px;
 }
 
 .voucher-slide__terms {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: #a8a29e;
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -1150,9 +1189,9 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 7px 14px;
+  padding: 6px 12px;
   border-radius: 8px;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
   cursor: pointer;
   border: 1px solid var(--color-brand, #8b6e4e);
@@ -1176,12 +1215,16 @@
 
 @media (max-width: 768px) {
   .voucher-slide {
-    flex: 0 0 240px;
-    padding: 16px 20px;
+    flex: 0 0 300px;
+  }
+
+  .voucher-slide__left {
+    flex: 0 0 90px;
+    padding: 14px 10px;
   }
 
   .voucher-slide__number {
-    font-size: 2.25rem;
+    font-size: 2rem;
   }
 
   .voucher-home-section {
