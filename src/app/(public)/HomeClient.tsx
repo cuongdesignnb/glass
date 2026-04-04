@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, ReactNode } from 'react';
 import Link from 'next/link';
 import { publicApi } from '@/lib/api';
 import { RiGlassesLine, RiSunLine, RiVipCrownLine, RiPriceTag3Line } from 'react-icons/ri';
-import { FiArrowRight, FiCopy, FiCheck, FiGift } from 'react-icons/fi';
+import { FiArrowRight, FiCopy, FiCheck, FiGift, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || '';
 
@@ -12,6 +12,22 @@ function getImageUrl(path: string | null) {
   if (!path) return null;
   if (path.startsWith('http')) return path;
   return `${API_BASE}${path}`;
+}
+
+// ── Reusable Slider with Navigation Arrows ──
+function SliderWrap({ children, scrollRef }: { children: ReactNode; scrollRef: React.RefObject<HTMLDivElement | null> }) {
+  const scroll = (dir: 'left' | 'right') => {
+    if (!scrollRef.current) return;
+    const amount = scrollRef.current.clientWidth * 0.7;
+    scrollRef.current.scrollBy({ left: dir === 'left' ? -amount : amount, behavior: 'smooth' });
+  };
+  return (
+    <div className="slider-wrap">
+      <button className="slider-nav slider-nav--prev" onClick={() => scroll('left')} aria-label="Previous"><FiChevronLeft /></button>
+      {children}
+      <button className="slider-nav slider-nav--next" onClick={() => scroll('right')} aria-label="Next"><FiChevronRight /></button>
+    </div>
+  );
 }
 
 const formatPrice = (price: number) =>
@@ -85,6 +101,7 @@ export function DynamicCategories() {
 export function DynamicProducts() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const sliderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     publicApi.getProducts({ per_page: '8', featured: '1' })
@@ -131,44 +148,46 @@ export function DynamicProducts() {
   if (products.length === 0) return null;
 
   return (
-    <div className="product-slider">
-      {products.map((p: any) => (
-        <Link key={p.id} href={`/san-pham/${p.slug}`} className="product-card">
-          <div className="product-card__image">
-            {p.thumbnail ? (
-              <img src={getImageUrl(p.thumbnail)!} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <div className="product-card__placeholder">
-                <div className="product-card__placeholder-glasses">
-                  <div className="placeholder-lens placeholder-lens--l" />
-                  <div className="placeholder-bridge" />
-                  <div className="placeholder-lens placeholder-lens--r" />
+    <SliderWrap scrollRef={sliderRef}>
+      <div className="product-slider" ref={sliderRef}>
+        {products.map((p: any) => (
+          <Link key={p.id} href={`/san-pham/${p.slug}`} className="product-card">
+            <div className="product-card__image">
+              {p.thumbnail ? (
+                <img src={getImageUrl(p.thumbnail)!} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <div className="product-card__placeholder">
+                  <div className="product-card__placeholder-glasses">
+                    <div className="placeholder-lens placeholder-lens--l" />
+                    <div className="placeholder-bridge" />
+                    <div className="placeholder-lens placeholder-lens--r" />
+                  </div>
                 </div>
-              </div>
-            )}
-            <div className="product-card__badge">
-              {p.is_new && <span className="badge-new">Mới</span>}
-              {p.sale_price && <span className="badge-sale">Sale</span>}
-              {p.is_featured && <span className="badge-featured">Hot</span>}
-            </div>
-          </div>
-          <div className="product-card__info">
-            <div className="product-card__category">{p.category?.name || ''}</div>
-            <h3 className="product-card__name">{p.name}</h3>
-            <div className="product-card__price">
-              <span className="product-card__price-current">
-                {formatPrice(p.sale_price || p.price)}
-              </span>
-              {p.sale_price && (
-                <span className="product-card__price-original">
-                  {formatPrice(p.price)}
-                </span>
               )}
+              <div className="product-card__badge">
+                {p.is_new && <span className="badge-new">Mới</span>}
+                {p.sale_price && <span className="badge-sale">Sale</span>}
+                {p.is_featured && <span className="badge-featured">Hot</span>}
+              </div>
             </div>
-          </div>
-        </Link>
-      ))}
-    </div>
+            <div className="product-card__info">
+              <div className="product-card__category">{p.category?.name || ''}</div>
+              <h3 className="product-card__name">{p.name}</h3>
+              <div className="product-card__price">
+                <span className="product-card__price-current">
+                  {formatPrice(p.sale_price || p.price)}
+                </span>
+                {p.sale_price && (
+                  <span className="product-card__price-original">
+                    {formatPrice(p.price)}
+                  </span>
+                )}
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </SliderWrap>
   );
 }
 
@@ -184,6 +203,7 @@ const DEFAULT_COLLECTIONS = [
 export function DynamicCollections() {
   const [collections, setCollections] = useState<any[]>(DEFAULT_COLLECTIONS);
   const [loaded, setLoaded] = useState(false);
+  const sliderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     publicApi.getCollections()
@@ -197,48 +217,50 @@ export function DynamicCollections() {
   }, []);
 
   return (
-    <div className="style-masonry">
-      {collections.map((col: any, index: number) => (
-        <Link
-          key={col.slug || index}
-          href={`/san-pham?style=${col.slug}`}
-          className={`style-card style-card--${col.size || 'normal'}`}
-          style={{ '--card-index': index } as React.CSSProperties}
-        >
-          {/* Background image */}
-          {col.image ? (
-            <img
-              src={col.image.startsWith('http') ? col.image : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${col.image}`}
-              alt={col.name}
-              className="style-card__img"
-              loading="lazy"
-            />
-          ) : (
-            <div
-              className="style-card__img style-card__img--placeholder"
-              style={{
-                background: (col.gradient_from && col.gradient_to)
-                  ? `linear-gradient(160deg, ${col.gradient_from} 0%, ${col.gradient_to} 100%)`
-                  : '#e8e0d4',
-              }}
-            />
-          )}
+    <SliderWrap scrollRef={sliderRef}>
+      <div className="style-masonry" ref={sliderRef}>
+        {collections.map((col: any, index: number) => (
+          <Link
+            key={col.slug || index}
+            href={`/san-pham?style=${col.slug}`}
+            className={`style-card style-card--${col.size || 'normal'}`}
+            style={{ '--card-index': index } as React.CSSProperties}
+          >
+            {/* Background image */}
+            {col.image ? (
+              <img
+                src={col.image.startsWith('http') ? col.image : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${col.image}`}
+                alt={col.name}
+                className="style-card__img"
+                loading="lazy"
+              />
+            ) : (
+              <div
+                className="style-card__img style-card__img--placeholder"
+                style={{
+                  background: (col.gradient_from && col.gradient_to)
+                    ? `linear-gradient(160deg, ${col.gradient_from} 0%, ${col.gradient_to} 100%)`
+                    : '#e8e0d4',
+                }}
+              />
+            )}
 
-          {/* Overlay (always visible, darker on hover) */}
-          <div className="style-card__overlay" />
+            {/* Overlay (always visible, darker on hover) */}
+            <div className="style-card__overlay" />
 
-          {/* Title (always visible at bottom) */}
-          <h3 className="style-card__name">{col.name}</h3>
+            {/* Title (always visible at bottom) */}
+            <h3 className="style-card__name">{col.name}</h3>
 
-          {/* Hover content */}
-          <div className="style-card__hover-info">
-            {col.tag && <span className="style-card__tag">{col.tag}</span>}
-            <p className="style-card__desc">{col.description}</p>
-            <span className="style-card__cta">Khám phá <FiArrowRight /></span>
-          </div>
-        </Link>
-      ))}
-    </div>
+            {/* Hover content */}
+            <div className="style-card__hover-info">
+              {col.tag && <span className="style-card__tag">{col.tag}</span>}
+              <p className="style-card__desc">{col.description}</p>
+              <span className="style-card__cta">Khám phá <FiArrowRight /></span>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </SliderWrap>
   );
 }
 
@@ -249,6 +271,7 @@ const formatVND = (n: number) =>
 export function DynamicVouchers() {
   const [vouchers, setVouchers] = useState<any[]>([]);
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const sliderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     publicApi.getVouchers()
@@ -269,52 +292,54 @@ export function DynamicVouchers() {
   };
 
   return (
-    <div className="voucher-slider">
-      <div className="voucher-slider__track">
-        {vouchers.map((v: any) => (
-          <div key={v.id} className="voucher-slide">
-            {/* Left: Discount Value */}
-            <div className="voucher-slide__left">
-              <span className="voucher-slide__prefix">Giảm</span>
-              {v.type === 'percent' ? (
-                <span className="voucher-slide__number">{v.value}<span className="voucher-slide__unit">%</span></span>
-              ) : (
-                <span className="voucher-slide__number">
-                  {v.value >= 1000000
-                    ? (v.value / 1000000).toFixed(v.value % 1000000 === 0 ? 0 : 1) + 'M'
-                    : Math.round(v.value / 1000) + 'K'
-                  }
-                </span>
-              )}
-            </div>
+    <SliderWrap scrollRef={sliderRef}>
+      <div className="voucher-slider">
+        <div className="voucher-slider__track" ref={sliderRef}>
+          {vouchers.map((v: any) => (
+            <div key={v.id} className="voucher-slide">
+              {/* Left: Discount Value */}
+              <div className="voucher-slide__left">
+                <span className="voucher-slide__prefix">Giảm</span>
+                {v.type === 'percent' ? (
+                  <span className="voucher-slide__number">{v.value}<span className="voucher-slide__unit">%</span></span>
+                ) : (
+                  <span className="voucher-slide__number">
+                    {v.value >= 1000000
+                      ? (v.value / 1000000).toFixed(v.value % 1000000 === 0 ? 0 : 1) + 'M'
+                      : Math.round(v.value / 1000) + 'K'
+                    }
+                  </span>
+                )}
+              </div>
 
-            {/* Cut line with scissors */}
-            <div className="voucher-slide__cutline">
-              <span className="voucher-slide__scissors">✂</span>
-            </div>
+              {/* Cut line with scissors */}
+              <div className="voucher-slide__cutline">
+                <span className="voucher-slide__scissors">✂</span>
+              </div>
 
-            {/* Right: Info + Copy */}
-            <div className="voucher-slide__right">
-              <span className="voucher-slide__code">Mã: <strong>{v.code}</strong></span>
-              <p className="voucher-slide__condition">
-                {v.description || (v.min_order > 0 ? `Cho đơn từ ${formatVND(v.min_order)}` : 'Áp dụng mọi đơn hàng')}
-              </p>
-              {v.type === 'percent' && v.max_discount > 0 && (
-                <p className="voucher-slide__max">Tối đa {formatVND(v.max_discount)}</p>
-              )}
-              <div className="voucher-slide__footer">
-                <span className="voucher-slide__terms">Điều kiện áp dụng</span>
-                <button
-                  className={`voucher-slide__copy ${copiedId === v.id ? 'voucher-slide__copy--copied' : ''}`}
-                  onClick={() => copyCode(v.code, v.id)}
-                >
-                  {copiedId === v.id ? <><FiCheck /> Đã copy</> : <><FiCopy /> Sao chép mã</>}
-                </button>
+              {/* Right: Info + Copy */}
+              <div className="voucher-slide__right">
+                <span className="voucher-slide__code">Mã: <strong>{v.code}</strong></span>
+                <p className="voucher-slide__condition">
+                  {v.description || (v.min_order > 0 ? `Cho đơn từ ${formatVND(v.min_order)}` : 'Áp dụng mọi đơn hàng')}
+                </p>
+                {v.type === 'percent' && v.max_discount > 0 && (
+                  <p className="voucher-slide__max">Tối đa {formatVND(v.max_discount)}</p>
+                )}
+                <div className="voucher-slide__footer">
+                  <span className="voucher-slide__terms">Điều kiện áp dụng</span>
+                  <button
+                    className={`voucher-slide__copy ${copiedId === v.id ? 'voucher-slide__copy--copied' : ''}`}
+                    onClick={() => copyCode(v.code, v.id)}
+                  >
+                    {copiedId === v.id ? <><FiCheck /> Đã copy</> : <><FiCopy /> Sao chép mã</>}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
+    </SliderWrap>
   );
 }
