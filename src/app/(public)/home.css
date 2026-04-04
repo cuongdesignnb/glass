@@ -217,7 +217,7 @@
   .trust-badges__grid { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 640px) {
-  .trust-badges__grid { grid-template-columns: 1fr; gap: var(--space-md); }
+  .trust-badges__grid { grid-template-columns: repeat(2, 1fr); gap: var(--space-md); }
   .trust-badge { padding: var(--space-sm) 0; }
 }
 
@@ -347,7 +347,7 @@
 }
 
 /* ---- Style Collection — Masonry Grid ---- */
-.style-collection { background: var(--color-bg); }
+.style-collection { background: var(--color-bg); padding-bottom: var(--space-2xl); }
 
 /* Desktop: Masonry grid with 3 columns */
 .style-masonry {
@@ -1156,5 +1156,46 @@
 
   .voucher-home-section {
     padding-bottom: 0;
+  }
+}
+
+/* ============================================
+   PRODUCT SLIDER (Horizontal scroll — PC + Mobile)
+   ============================================ */
+.product-slider {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  gap: 16px;
+  padding-bottom: var(--space-md);
+  margin: 0 calc(-1 * var(--space-lg));
+  padding-left: var(--space-lg);
+  padding-right: var(--space-lg);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.product-slider::-webkit-scrollbar {
+  display: none;
+}
+
+.product-slider .product-card {
+  flex: 0 0 220px;
+  min-width: 220px;
+  scroll-snap-align: start;
+}
+
+@media (min-width: 769px) {
+  .product-slider .product-card {
+    flex: 0 0 260px;
+    min-width: 260px;
+  }
+}
+
+@media (max-width: 640px) {
+  .product-slider .product-card {
+    flex: 0 0 170px;
+    min-width: 170px;
   }
 }

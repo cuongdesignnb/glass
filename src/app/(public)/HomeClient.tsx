@@ -131,7 +131,7 @@ export function DynamicProducts() {
   if (products.length === 0) return null;
 
   return (
-    <div className="product-grid">
+    <div className="product-slider">
       {products.map((p: any) => (
         <Link key={p.id} href={`/san-pham/${p.slug}`} className="product-card">
           <div className="product-card__image">

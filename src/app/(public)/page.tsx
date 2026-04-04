@@ -92,7 +92,7 @@ export default function HomePage() {
         <div className="container">
           <div className="section__header">
             <span className="section__tag">Danh Mục</span>
-            <h2 className="section__title">Khám Phá Bộ Sưu Tập</h2>
+            <h2 className="section__title">Sản Phẩm Theo Danh Mục</h2>
             <p className="section__subtitle">Tìm kiếm kiểu kính phù hợp với phong cách và nhu cầu của bạn</p>
           </div>
           <DynamicCategories />
@@ -127,7 +127,7 @@ export default function HomePage() {
       </section>
 
       {/* Voucher Slider */}
-      <section className="section voucher-home-section">
+      <section className="section voucher-home-section" style={{ paddingTop: 'var(--space-2xl)' }}>
         <div className="container">
           <div className="section__header">
             <span className="section__tag">Ưu Đãi</span>
