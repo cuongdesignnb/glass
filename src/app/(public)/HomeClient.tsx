@@ -208,7 +208,7 @@ export function DynamicCollections() {
           {/* Background image */}
           {col.image ? (
             <img
-              src={col.image}
+              src={col.image.startsWith('http') ? col.image : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${col.image}`}
               alt={col.name}
               className="style-card__img"
               loading="lazy"
