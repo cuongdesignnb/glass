@@ -12,18 +12,19 @@ class ProductAddonOption extends Model
     protected $fillable = [
         'group_id',
         'name',
-        'additional_price',
-        'is_default',
         'sort_order',
-    ];
-
-    protected $casts = [
-        'additional_price' => 'float',
-        'is_default' => 'boolean',
     ];
 
     public function group()
     {
         return $this->belongsTo(ProductAddonGroup::class, 'group_id');
+    }
+
+    /**
+     * Get product-specific prices for this option
+     */
+    public function prices()
+    {
+        return $this->hasMany(ProductAddonPrice::class, 'option_id');
     }
 }

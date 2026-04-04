@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\CollectionController;
 use App\Http\Controllers\Api\VoucherController;
+use App\Http\Controllers\Api\AddonGroupController;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,6 +50,7 @@ Route::prefix('public')->group(function () {
     Route::get('/collections', [CollectionController::class, 'index']);
     Route::get('/collections/{slugOrId}', [CollectionController::class, 'show']);
     Route::get('/vouchers', [VoucherController::class, 'publicIndex']);
+    Route::get('/addon-groups', [AddonGroupController::class, 'index']);
 
     // Orders (public create)
     Route::post('/orders', [OrderController::class, 'store']);
@@ -148,6 +150,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Vouchers
     Route::apiResource('vouchers', VoucherController::class);
+
+    // Addon Groups (global variants)
+    Route::apiResource('addon-groups', AddonGroupController::class)->parameters([
+        'addon-groups' => 'addonGroup',
+    ]);
 
     // Orders (admin)
     Route::get('/orders', [OrderController::class, 'index']);

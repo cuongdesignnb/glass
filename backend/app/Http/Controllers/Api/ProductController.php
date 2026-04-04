@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductAddonGroup;
+use App\Models\ProductAddonPrice;
 use App\Helpers\VietnameseSlug;
 use Illuminate\Http\Request;
 
@@ -93,7 +94,7 @@ class ProductController extends Controller
     {
         $product = Product::with(['category', 'faqs' => function($q) {
             $q->where('is_active', true)->orderBy('order', 'asc');
-        }, 'addonGroups.options'])
+        }, 'addonGroups.options', 'addonPrices'])
             ->where('slug', $slugOrId)
             ->orWhere('id', is_numeric($slugOrId) ? $slugOrId : 0)
             ->firstOrFail();
@@ -167,12 +168,15 @@ class ProductController extends Controller
             }
         }
 
-        // Handle addon groups
+        // Handle addon groups + prices
         if ($request->has('addon_groups') && is_array($request->addon_groups)) {
             $this->syncAddonGroups($product, $request->addon_groups);
         }
+        if ($request->has('addon_prices') && is_array($request->addon_prices)) {
+            $this->syncAddonPrices($product, $request->addon_prices);
+        }
 
-        return response()->json($product->load(['faqs', 'addonGroups.options']), 201);
+        return response()->json($product->load(['faqs', 'addonGroups.options', 'addonPrices']), 201);
     }
 
     /**
@@ -239,12 +243,15 @@ class ProductController extends Controller
             }
         }
 
-        // Handle addon groups
+        // Handle addon groups + prices
         if ($request->has('addon_groups') && is_array($request->addon_groups)) {
             $this->syncAddonGroups($product, $request->addon_groups);
         }
+        if ($request->has('addon_prices') && is_array($request->addon_prices)) {
+            $this->syncAddonPrices($product, $request->addon_prices);
+        }
 
-        return response()->json($product->load(['faqs', 'addonGroups.options']));
+        return response()->json($product->load(['faqs', 'addonGroups.options', 'addonPrices']));
     }
 
     /**
@@ -569,34 +576,44 @@ class ProductController extends Controller
     }
 
     /**
-     * Sync addon groups and options for a product
+     * Sync addon group IDs for a product (pivot table)
      */
-    private function syncAddonGroups(Product $product, array $groups): void
+    private function syncAddonGroups(Product $product, array $groupIds): void
     {
-        // Delete existing groups (cascade deletes options)
-        $product->addonGroups()->delete();
+        $product->addonGroups()->sync($groupIds);
 
-        foreach ($groups as $i => $groupData) {
-            if (empty($groupData['name'])) continue;
+        // Remove prices for options no longer in selected groups
+        $validOptionIds = ProductAddonGroup::whereIn('id', $groupIds)
+            ->with('options')
+            ->get()
+            ->pluck('options.*.id')
+            ->flatten()
+            ->toArray();
 
-            $group = $product->addonGroups()->create([
-                'name' => $groupData['name'],
-                'is_required' => $groupData['is_required'] ?? false,
-                'sort_order' => $groupData['sort_order'] ?? $i,
-            ]);
+        $product->addonPrices()
+            ->whereNotIn('option_id', $validOptionIds)
+            ->delete();
+    }
 
-            if (!empty($groupData['options']) && is_array($groupData['options'])) {
-                foreach ($groupData['options'] as $j => $optionData) {
-                    if (empty($optionData['name'])) continue;
+    /**
+     * Sync per-product addon prices
+     * Expected: [{option_id: 1, additional_price: 200000, is_available: true}, ...]
+     */
+    private function syncAddonPrices(Product $product, array $prices): void
+    {
+        foreach ($prices as $priceData) {
+            if (empty($priceData['option_id'])) continue;
 
-                    $group->options()->create([
-                        'name' => $optionData['name'],
-                        'additional_price' => $optionData['additional_price'] ?? 0,
-                        'is_default' => $optionData['is_default'] ?? ($j === 0),
-                        'sort_order' => $optionData['sort_order'] ?? $j,
-                    ]);
-                }
-            }
+            ProductAddonPrice::updateOrCreate(
+                [
+                    'product_id' => $product->id,
+                    'option_id' => $priceData['option_id'],
+                ],
+                [
+                    'additional_price' => $priceData['additional_price'] ?? 0,
+                    'is_available' => $priceData['is_available'] ?? true,
+                ]
+            );
         }
     }
 }

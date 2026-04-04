@@ -93,6 +93,33 @@ export default function ProductDetailClient({ product, reviewData, apiMediaUrl }
   };
 
   const handleAddToCart = () => {
+    // Build addon details from selected addons
+    const addonDetails: { groupName: string; optionName: string; price: number }[] = [];
+    let addonTotal = 0;
+
+    if (product.addon_groups && product.addon_prices) {
+      const priceMap: Record<number, number> = {};
+      (product.addon_prices || []).forEach((p: any) => {
+        priceMap[p.option_id] = p.additional_price || 0;
+      });
+
+      product.addon_groups.forEach((group: any) => {
+        const selectedOptionId = selectedAddons[group.id];
+        if (selectedOptionId) {
+          const opt = (group.options || []).find((o: any) => o.id === selectedOptionId);
+          if (opt) {
+            const price = priceMap[opt.id] || 0;
+            addonDetails.push({
+              groupName: group.name,
+              optionName: opt.name,
+              price,
+            });
+            addonTotal += price;
+          }
+        }
+      });
+    }
+
     const cartItem = {
       productId: product.id,
       name: product.name,
@@ -103,13 +130,18 @@ export default function ProductDetailClient({ product, reviewData, apiMediaUrl }
       quantity,
       color: selectedColor,
       colorName: selectedColorName,
+      addons: addonDetails,
+      addonTotal,
     };
 
     // Get existing cart
     const cart = JSON.parse(localStorage.getItem('glass_cart') || '[]');
-    const existingIndex = cart.findIndex((item: any) =>
-      item.productId === cartItem.productId && item.color === cartItem.color
-    );
+    // Match by product + color + same addons
+    const addonKey = JSON.stringify(addonDetails.map(a => `${a.groupName}:${a.optionName}`).sort());
+    const existingIndex = cart.findIndex((item: any) => {
+      const itemAddonKey = JSON.stringify((item.addons || []).map((a: any) => `${a.groupName}:${a.optionName}`).sort());
+      return item.productId === cartItem.productId && item.color === cartItem.color && itemAddonKey === addonKey;
+    });
 
     if (existingIndex >= 0) {
       cart[existingIndex].quantity += quantity;
@@ -301,36 +333,57 @@ export default function ProductDetailClient({ product, reviewData, apiMediaUrl }
           </div>
 
           {/* Product Addons / Variants */}
-          {product.addon_groups && product.addon_groups.length > 0 && (
-            <div className="product-addons">
-              <h4 className="product-addons__title">Tuỳ chọn thêm</h4>
-              {product.addon_groups.map((group: any) => (
-                <div key={group.id} className="product-addon-group">
-                  <label className="product-addon-group__label">
-                    {group.name}
-                    {group.is_required && <span className="addon-required">*</span>}
-                  </label>
-                  <div className="product-addon-group__options">
-                    {group.options?.map((opt: any) => {
-                      const isSelected = selectedAddons[group.id] === opt.id;
-                      return (
-                        <button
-                          key={opt.id}
-                          className={`addon-option ${isSelected ? 'addon-option--active' : ''}`}
-                          onClick={() => setSelectedAddons(prev => ({ ...prev, [group.id]: isSelected ? null : opt.id }))}
-                        >
-                          <span className="addon-option__name">{opt.name}</span>
-                          <span className="addon-option__price">
-                            {opt.additional_price > 0 ? `+${formatPrice(opt.additional_price)}` : 'Miễn phí'}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          {product.addon_groups && product.addon_groups.length > 0 && (() => {
+            // Build price map from product-specific prices
+            const priceMap: Record<number, { additional_price: number; is_available: boolean }> = {};
+            (product.addon_prices || []).forEach((p: any) => {
+              priceMap[p.option_id] = { additional_price: p.additional_price || 0, is_available: p.is_available ?? true };
+            });
+
+            return (
+              <div className="product-addons">
+                <h4 className="product-addons__title">Tuỳ chọn thêm</h4>
+                {product.addon_groups.map((group: any) => {
+                  // Filter to only available options
+                  const availableOptions = (group.options || []).filter(
+                    (opt: any) => priceMap[opt.id]?.is_available !== false
+                  );
+                  if (availableOptions.length === 0) return null;
+
+                  return (
+                    <div key={group.id} className="product-addon-group">
+                      <label className="product-addon-group__label">
+                        {group.name}
+                        {group.is_required && <span className="addon-required">*</span>}
+                      </label>
+                      <div className="product-addon-group__options">
+                        {availableOptions.map((opt: any) => {
+                          const isSelected = selectedAddons[group.id] === opt.id;
+                          const price = priceMap[opt.id]?.additional_price || 0;
+                          // Check if any option in this group has a price > 0
+                          const groupHasPricing = availableOptions.some((o: any) => (priceMap[o.id]?.additional_price || 0) > 0);
+                          return (
+                            <button
+                              key={opt.id}
+                              className={`addon-option ${isSelected ? 'addon-option--active' : ''}`}
+                              onClick={() => setSelectedAddons(prev => ({ ...prev, [group.id]: isSelected ? null : opt.id }))}
+                            >
+                              <span className="addon-option__name">{opt.name}</span>
+                              {groupHasPricing && (
+                                <span className="addon-option__price">
+                                  {price > 0 ? `+${formatPrice(price)}` : 'Miễn phí'}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           {/* Trust badges inline */}
           <div className="product-info__trust">

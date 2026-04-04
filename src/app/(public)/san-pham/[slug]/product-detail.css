@@ -72,6 +72,33 @@
   z-index: 2;
 }
 
+.product-gallery__badges .badge-new,
+.product-gallery__badges .badge-sale,
+.product-gallery__badges .badge-featured {
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 1px solid rgba(255,255,255,0.2);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.product-gallery__badges .badge-new {
+  background: rgba(59,130,246,0.85);
+  color: #fff;
+}
+.product-gallery__badges .badge-sale {
+  background: rgba(239,68,68,0.85);
+  color: #fff;
+}
+.product-gallery__badges .badge-featured {
+  background: rgba(201,169,110,0.9);
+  color: #fff;
+}
+
 .product-gallery__thumbs {
   display: flex;
   gap: 8px;
@@ -301,25 +328,29 @@
   .product-info__trust {
     grid-template-columns: 1fr 1fr;
     gap: 8px;
-    padding: 12px;
+    padding: 10px;
   }
   .product-trust-item {
-    flex-direction: column;
-    text-align: center;
-    gap: 4px;
-    font-size: 0.6875rem;
-    padding: 8px 4px;
+    font-size: 0.75rem;
+    gap: 6px;
+    padding: 6px 8px;
     background: var(--color-white);
-    border-radius: 10px;
+    border-radius: 8px;
     border: 1px solid var(--color-gray-100);
   }
   .product-trust-item svg {
-    width: 28px;
-    height: 28px;
-    padding: 5px;
+    width: 22px;
+    height: 22px;
+    padding: 3px;
     background: var(--color-brand-soft);
     border-radius: 50%;
-    font-size: 1rem;
+    font-size: 0.875rem;
+  }
+  .product-gallery__badges .badge-new,
+  .product-gallery__badges .badge-sale,
+  .product-gallery__badges .badge-featured {
+    padding: 3px 10px;
+    font-size: 0.5625rem;
   }
 }
 

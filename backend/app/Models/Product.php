@@ -142,8 +142,15 @@ class Product extends Model
         return $this->hasMany(Faq::class)->orderBy('order', 'asc');
     }
 
-    public function addonGroups(): HasMany
+    public function addonGroups()
     {
-        return $this->hasMany(ProductAddonGroup::class)->orderBy('sort_order');
+        return $this->belongsToMany(ProductAddonGroup::class, 'product_addon_group_product', 'product_id', 'group_id')
+                    ->with('options')
+                    ->orderBy('sort_order');
+    }
+
+    public function addonPrices(): HasMany
+    {
+        return $this->hasMany(ProductAddonPrice::class);
     }
 }

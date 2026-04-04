@@ -429,4 +429,14 @@ export const adminApi = {
     fetchApi('/admin/notifications', { method: 'POST', body: JSON.stringify(data), token }),
   deleteNotification: (token: string, id: number) =>
     fetchApi(`/admin/notifications/${id}`, { method: 'DELETE', token }),
+
+  // === Admin: Addon Groups (Variants) ===
+  getAddonGroups: (token: string) =>
+    fetchApi('/addon-groups', { token }),
+  createAddonGroup: (token: string, data: any) =>
+    fetchApi('/addon-groups', { method: 'POST', body: JSON.stringify(data), token }),
+  updateAddonGroup: (token: string, id: number, data: any) =>
+    fetchApi(`/addon-groups/${id}`, { method: 'PUT', body: JSON.stringify(data), token }),
+  deleteAddonGroup: (token: string, id: number) =>
+    fetchApi(`/addon-groups/${id}`, { method: 'DELETE', token }),
 };

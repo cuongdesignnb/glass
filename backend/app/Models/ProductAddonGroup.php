@@ -10,7 +10,6 @@ class ProductAddonGroup extends Model
     use HasFactory;
 
     protected $fillable = [
-        'product_id',
         'name',
         'is_required',
         'sort_order',
@@ -20,14 +19,14 @@ class ProductAddonGroup extends Model
         'is_required' => 'boolean',
     ];
 
-    public function product()
-    {
-        return $this->belongsTo(Product::class);
-    }
-
     public function options()
     {
         return $this->hasMany(ProductAddonOption::class, 'group_id')
                     ->orderBy('sort_order');
+    }
+
+    public function products()
+    {
+        return $this->belongsToMany(Product::class, 'product_addon_group_product', 'group_id', 'product_id');
     }
 }

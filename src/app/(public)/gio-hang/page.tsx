@@ -49,8 +49,10 @@ export default function CartPage() {
         <div className="cart-layout">
           {/* Cart Items */}
           <div className="cart-items">
-            {items.map((item) => (
-              <div key={`${item.productId}-${item.color}`} className="cart-item">
+            {items.map((item) => {
+              const unitPrice = (item.salePrice || item.price) + (item.addonTotal || 0);
+              return (
+              <div key={`${item.productId}-${item.color}-${JSON.stringify(item.addons || [])}`} className="cart-item">
                 <Link href={`/san-pham/${item.slug}`} className="cart-item__image">
                   {item.image ? (
                     <img src={item.image} alt={item.name} />
@@ -66,8 +68,15 @@ export default function CartPage() {
                       {item.colorName}
                     </div>
                   )}
+                  {item.addons && item.addons.length > 0 && (
+                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>
+                      {item.addons.map((a, i) => (
+                        <div key={i}>{a.groupName}: <span style={{ color: 'var(--color-gold)' }}>{a.optionName}</span>{a.price > 0 && ` (+${formatPrice(a.price)})`}</div>
+                      ))}
+                    </div>
+                  )}
                   <div className="cart-item__price-mobile">
-                    {formatPrice(item.salePrice || item.price)}
+                    {formatPrice(unitPrice)}
                   </div>
                 </div>
                 <div className="cart-item__quantity">
@@ -80,7 +89,7 @@ export default function CartPage() {
                   </button>
                 </div>
                 <div className="cart-item__price">
-                  {formatPrice((item.salePrice || item.price) * item.quantity)}
+                  {formatPrice(unitPrice * item.quantity)}
                   {item.salePrice && (
                     <div className="cart-item__price-original">
                       {formatPrice(item.price * item.quantity)}
@@ -91,7 +100,8 @@ export default function CartPage() {
                   <FiTrash2 />
                 </button>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Cart Summary */}

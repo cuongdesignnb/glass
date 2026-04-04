@@ -40,12 +40,20 @@ export default function ProductFormPage() {
     meta_title: '', meta_desc: '', meta_keywords: '', og_image: '',
     is_active: true, is_featured: false, is_new: false, stock: '0',
     faqs: [] as { question: string, answer: string, is_active: boolean }[],
-    addon_groups: [] as { name: string, is_required: boolean, sort_order: number, options: { name: string, additional_price: string, is_default: boolean, sort_order: number }[] }[],
+    addon_group_ids: [] as number[],
+    addon_prices: {} as Record<number, { additional_price: string; is_available: boolean }>,
   });
+
+  const [allAddonGroups, setAllAddonGroups] = useState<any[]>([]);
 
   useEffect(() => {
     if (isEdit && token) {
       loadProduct();
+    }
+    if (token) {
+      adminApi.getAddonGroups(token).then((data: any) => {
+        setAllAddonGroups(Array.isArray(data) ? data : []);
+      }).catch(() => {});
     }
   }, [isEdit, token]);
 
@@ -72,17 +80,11 @@ export default function ProductFormPage() {
           is_active: product.is_active ?? true, is_featured: product.is_featured ?? false,
           is_new: product.is_new ?? false, stock: String(product.stock || 0),
           faqs: product.faqs || [],
-          addon_groups: (product.addon_groups || []).map((g: any, gi: number) => ({
-            name: g.name || '',
-            is_required: g.is_required ?? false,
-            sort_order: g.sort_order ?? gi,
-            options: (g.options || []).map((o: any, oi: number) => ({
-              name: o.name || '',
-              additional_price: String(o.additional_price || 0),
-              is_default: o.is_default ?? false,
-              sort_order: o.sort_order ?? oi,
-            })),
-          })),
+          addon_group_ids: (product.addon_groups || []).map((g: any) => g.id),
+          addon_prices: (product.addon_prices || []).reduce((acc: any, p: any) => {
+            acc[p.option_id] = { additional_price: String(p.additional_price || 0), is_available: p.is_available ?? true };
+            return acc;
+          }, {}),
         });
       }
     } catch (err) { console.error(err); }
@@ -99,16 +101,11 @@ export default function ProductFormPage() {
         sale_price: form.sale_price ? Number(form.sale_price) : null,
         category_id: form.category_id ? Number(form.category_id) : null,
         stock: Number(form.stock),
-        addon_groups: form.addon_groups.map((g, gi) => ({
-          name: g.name,
-          is_required: g.is_required,
-          sort_order: gi,
-          options: g.options.map((o, oi) => ({
-            name: o.name,
-            additional_price: Number(o.additional_price || 0),
-            is_default: o.is_default,
-            sort_order: oi,
-          })),
+        addon_groups: form.addon_group_ids,
+        addon_prices: Object.entries(form.addon_prices).map(([optionId, data]) => ({
+          option_id: Number(optionId),
+          additional_price: Number(data.additional_price || 0),
+          is_available: data.is_available,
         })),
       };
 
@@ -543,90 +540,115 @@ export default function ProductFormPage() {
           {/* ============ TAB: Addons ============ */}
           {activeTab === 'addons' && (
             <div className="admin-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{ color: '#fff', fontSize: '1rem', margin: 0 }}>Nhóm tuỳ chọn (Biến thể)</h3>
-                <button className="admin-btn admin-btn--secondary"
-                  onClick={() => setForm(f => ({
-                    ...f,
-                    addon_groups: [...f.addon_groups, { name: '', is_required: false, sort_order: f.addon_groups.length, options: [{ name: '', additional_price: '0', is_default: true, sort_order: 0 }] }],
-                  }))}>
-                  <FiPlus /> Thêm nhóm
-                </button>
-              </div>
-
-              <p style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.5)', marginBottom: '16px' }}>
-                Ví dụ: Nhóm &quot;Chất liệu tròng&quot; → Tuỳ chọn: Tròng tổng hợp (miễn phí), Tròng cắt thuỷ tinh (+200.000đ)
+              <h3 style={{ color: '#fff', fontSize: '1rem', margin: '0 0 8px' }}>Chọn nhóm tuỳ chọn áp dụng</h3>
+              <p style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.5)', marginBottom: '20px' }}>
+                Tick chọn nhóm → nhập giá riêng cho từng tuỳ chọn. Quản lý nhóm tại <a href="/admin/addons" style={{ color: 'var(--color-gold)', textDecoration: 'underline' }}>Biến thể</a>
               </p>
 
-              {form.addon_groups.length === 0 && (
-                <p style={{ color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '40px 0' }}>
-                  Chưa có nhóm tuỳ chọn nào. Nhấn &quot;Thêm nhóm&quot; để bắt đầu.
-                </p>
-              )}
-
-              {form.addon_groups.map((group, gi) => (
-                <div key={gi} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '12px' }}>
-                    <div className="admin-form__group" style={{ flex: 1, marginBottom: 0 }}>
-                      <input className="admin-form__input" placeholder="Tên nhóm (VD: Chất liệu tròng)" value={group.name}
-                        onChange={e => {
-                          const g = [...form.addon_groups]; g[gi].name = e.target.value;
-                          setForm(f => ({ ...f, addon_groups: g }));
-                        }} />
-                    </div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8125rem', color: 'rgba(255,255,255,0.7)', whiteSpace: 'nowrap' }}>
-                      <input type="checkbox" checked={group.is_required}
-                        onChange={e => {
-                          const g = [...form.addon_groups]; g[gi].is_required = e.target.checked;
-                          setForm(f => ({ ...f, addon_groups: g }));
-                        }} /> Bắt buộc
-                    </label>
-                    <button onClick={() => setForm(f => ({ ...f, addon_groups: f.addon_groups.filter((_, i) => i !== gi) }))}
-                      style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}><FiTrash2 /></button>
-                  </div>
-
-                  <div style={{ paddingLeft: '12px', borderLeft: '2px solid rgba(201,169,110,0.2)' }}>
-                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '8px' }}>Các tuỳ chọn:</div>
-                    {group.options.map((opt, oi) => (
-                      <div key={oi} style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
-                        <input className="admin-form__input" placeholder="Tên tuỳ chọn" value={opt.name}
-                          style={{ flex: 1 }}
-                          onChange={e => {
-                            const g = [...form.addon_groups]; g[gi].options[oi].name = e.target.value;
-                            setForm(f => ({ ...f, addon_groups: g }));
-                          }} />
-                        <input className="admin-form__input" placeholder="+ Giá thêm" value={opt.additional_price} type="number"
-                          style={{ width: '120px' }}
-                          onChange={e => {
-                            const g = [...form.addon_groups]; g[gi].options[oi].additional_price = e.target.value;
-                            setForm(f => ({ ...f, addon_groups: g }));
-                          }} />
-                        <label style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
-                          <input type="radio" name={`default-${gi}`} checked={opt.is_default}
-                            onChange={() => {
-                              const g = [...form.addon_groups];
-                              g[gi].options = g[gi].options.map((o, idx) => ({ ...o, is_default: idx === oi }));
-                              setForm(f => ({ ...f, addon_groups: g }));
-                            }} /> Mặc định
-                        </label>
-                        <button onClick={() => {
-                          const g = [...form.addon_groups];
-                          g[gi].options = g[gi].options.filter((_, i) => i !== oi);
-                          setForm(f => ({ ...f, addon_groups: g }));
-                        }} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}><FiX /></button>
-                      </div>
-                    ))}
-                    <button className="admin-btn admin-btn--ghost" style={{ fontSize: '0.8125rem', padding: '6px 12px' }}
-                      onClick={() => {
-                        const g = [...form.addon_groups];
-                        g[gi].options.push({ name: '', additional_price: '0', is_default: false, sort_order: g[gi].options.length });
-                        setForm(f => ({ ...f, addon_groups: g }));
-                      }}>
-                      <FiPlus /> Thêm tuỳ chọn
-                    </button>
-                  </div>
+              {allAddonGroups.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.3)' }}>
+                  <p>Chưa có nhóm tuỳ chọn nào.</p>
+                  <a href="/admin/addons" className="admin-btn admin-btn--secondary" style={{ display: 'inline-flex', marginTop: '12px' }}>
+                    <FiPlus /> Tạo nhóm tuỳ chọn
+                  </a>
                 </div>
-              ))}
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {allAddonGroups.map((g: any) => {
+                    const isChecked = form.addon_group_ids.includes(g.id);
+                    return (
+                      <div key={g.id} style={{
+                        background: isChecked ? 'rgba(201,169,110,0.06)' : 'rgba(255,255,255,0.02)',
+                        border: isChecked ? '1px solid rgba(201,169,110,0.25)' : '1px solid rgba(255,255,255,0.06)',
+                        borderRadius: '12px', overflow: 'hidden', transition: 'all 0.2s',
+                      }}>
+                        {/* Group header with checkbox */}
+                        <label style={{
+                          display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px',
+                          cursor: 'pointer', borderBottom: isChecked ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                        }}>
+                          <input type="checkbox" checked={isChecked}
+                            onChange={() => {
+                              setForm(f => {
+                                const newIds = isChecked
+                                  ? f.addon_group_ids.filter(id => id !== g.id)
+                                  : [...f.addon_group_ids, g.id];
+                                // If unchecking, remove prices for this group's options
+                                const newPrices = { ...f.addon_prices };
+                                if (isChecked) {
+                                  (g.options || []).forEach((opt: any) => { delete newPrices[opt.id]; });
+                                } else {
+                                  // Init default prices (0 = free)
+                                  (g.options || []).forEach((opt: any) => {
+                                    if (!newPrices[opt.id]) {
+                                      newPrices[opt.id] = { additional_price: '0', is_available: true };
+                                    }
+                                  });
+                                }
+                                return { ...f, addon_group_ids: newIds, addon_prices: newPrices };
+                              });
+                            }}
+                          />
+                          <span style={{ color: '#fff', fontWeight: 600, fontSize: '0.875rem' }}>{g.name}</span>
+                          {g.is_required && (
+                            <span style={{ fontSize: '0.625rem', background: 'rgba(239,68,68,0.15)', color: '#f87171', padding: '2px 8px', borderRadius: '99px', fontWeight: 600 }}>Bắt buộc</span>
+                          )}
+                          <span style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.3)', marginLeft: 'auto' }}>
+                            {(g.options || []).length} tuỳ chọn
+                          </span>
+                        </label>
+
+                        {/* Price table - only show when checked */}
+                        {isChecked && (g.options || []).length > 0 && (
+                          <div style={{ padding: '12px 16px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px 60px', gap: '6px', fontSize: '0.6875rem', color: 'rgba(255,255,255,0.4)', fontWeight: 600, marginBottom: '8px', paddingLeft: '4px' }}>
+                              <span>Tuỳ chọn</span>
+                              <span>Giá thêm (đ)</span>
+                              <span style={{ textAlign: 'center' }}>Bán?</span>
+                            </div>
+                            {(g.options || []).map((opt: any) => {
+                              const price = form.addon_prices[opt.id] || { additional_price: '0', is_available: true };
+                              return (
+                                <div key={opt.id} style={{
+                                  display: 'grid', gridTemplateColumns: '1fr 140px 60px', gap: '6px',
+                                  alignItems: 'center', marginBottom: '6px',
+                                }}>
+                                  <span style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.8)', paddingLeft: '4px' }}>{opt.name}</span>
+                                  <input className="admin-form__input" type="number" value={price.additional_price} placeholder="0"
+                                    style={{ padding: '6px 10px', fontSize: '0.8125rem' }}
+                                    onChange={e => {
+                                      setForm(f => ({
+                                        ...f,
+                                        addon_prices: {
+                                          ...f.addon_prices,
+                                          [opt.id]: { ...price, additional_price: e.target.value },
+                                        },
+                                      }));
+                                    }}
+                                  />
+                                  <div style={{ textAlign: 'center' }}>
+                                    <input type="checkbox" checked={price.is_available}
+                                      onChange={e => {
+                                        setForm(f => ({
+                                          ...f,
+                                          addon_prices: {
+                                            ...f.addon_prices,
+                                            [opt.id]: { ...price, is_available: e.target.checked },
+                                          },
+                                        }));
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>

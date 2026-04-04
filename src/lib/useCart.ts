@@ -12,6 +12,8 @@ export interface CartItem {
   quantity: number;
   color: string;
   colorName: string;
+  addons?: { groupName: string; optionName: string; price: number }[];
+  addonTotal?: number;
 }
 
 interface CartContextType {
@@ -105,7 +107,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
-  const subtotal = items.reduce((sum, i) => sum + (i.salePrice || i.price) * i.quantity, 0);
+  const subtotal = items.reduce((sum, i) => sum + ((i.salePrice || i.price) + (i.addonTotal || 0)) * i.quantity, 0);
 
   return (
     <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, totalItems, subtotal }}>
