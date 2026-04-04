@@ -59,6 +59,9 @@ export const publicApi = {
   },
   getProduct: (slug: string) => fetchApi(`/public/products/${slug}`),
 
+  // Search
+  search: (q: string) => fetchApi(`/public/search?q=${encodeURIComponent(q)}`),
+
   // Categories
   getCategories: (tree = true) => fetchApi(`/public/categories?tree=${tree}`),
   getCategory: (slug: string) => fetchApi(`/public/categories/${slug}`),

@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { FiSearch, FiShoppingBag, FiMenu, FiX, FiChevronDown, FiUser, FiBell, FiLogOut, FiShoppingCart, FiStar, FiHome, FiGrid, FiGift } from 'react-icons/fi';
 import { RiGlassesLine } from 'react-icons/ri';
 import { useSettings } from '@/lib/useSettings';
 import { useAuth } from '@/lib/useAuth';
+import { publicApi } from '@/lib/api';
+import { formatPrice } from '@/lib/constants';
 
 interface MenuItem {
   id: string | number;
@@ -32,6 +34,13 @@ export default function Header({ menus }: HeaderProps) {
   const [cartCount, setCartCount] = useState(0);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showVoucherTip, setShowVoucherTip] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<{ products: any[]; articles: any[] }>({ products: [], articles: [] });
+  const [searching, setSearching] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchTimerRef = useRef<any>(null);
 
   const allowTransparent = TRANSPARENT_PAGES.includes(pathname);
   const isTransparent = allowTransparent && !isScrolled;
@@ -73,6 +82,50 @@ export default function Header({ menus }: HeaderProps) {
       document.documentElement.style.setProperty('--color-accent-light', hex);
     }
   }, [settings]);
+
+  // Search logic
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (value.trim().length < 2) {
+      setSearchResults({ products: [], articles: [] });
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        const data = await publicApi.search(value.trim());
+        setSearchResults(data);
+      } catch { setSearchResults({ products: [], articles: [] }); }
+      finally { setSearching(false); }
+    }, 300);
+  }, []);
+
+  // Close search on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowSearch(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Focus input when opening
+  useEffect(() => {
+    if (showSearch && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [showSearch]);
+
+  const navigateToResult = (url: string) => {
+    setShowSearch(false);
+    setSearchQuery('');
+    setSearchResults({ products: [], articles: [] });
+    router.push(url);
+  };
 
   const defaultMenus: MenuItem[] = menus || [
     { id: '1', name: 'Trang Chủ', url: '/' },
@@ -134,9 +187,84 @@ export default function Header({ menus }: HeaderProps) {
           </nav>
 
           <div className="header__actions">
-            <Link href="/tim-kiem" className="header__action-btn" aria-label="Tìm kiếm">
-              <FiSearch />
-            </Link>
+            {/* Search */}
+            <div ref={searchRef} style={{ position: 'relative' }}>
+              <button className="header__action-btn" aria-label="Tìm kiếm" onClick={() => setShowSearch(!showSearch)}>
+                <FiSearch />
+              </button>
+              {showSearch && (
+                <div className="search-dropdown">
+                  <div className="search-dropdown__input-wrap">
+                    <FiSearch className="search-dropdown__icon" />
+                    <input
+                      ref={searchInputRef}
+                      className="search-dropdown__input"
+                      type="text"
+                      placeholder="Tìm sản phẩm, bài viết..."
+                      value={searchQuery}
+                      onChange={e => handleSearchChange(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Escape') setShowSearch(false); }}
+                    />
+                    {searchQuery && (
+                      <button className="search-dropdown__clear" onClick={() => { setSearchQuery(''); setSearchResults({ products: [], articles: [] }); searchInputRef.current?.focus(); }}>
+                        <FiX />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Results */}
+                  {searchQuery.length >= 2 && (
+                    <div className="search-dropdown__results">
+                      {searching ? (
+                        <div className="search-dropdown__loading">Đang tìm...</div>
+                      ) : (searchResults.products.length === 0 && searchResults.articles.length === 0) ? (
+                        <div className="search-dropdown__empty">Không tìm thấy kết quả cho &ldquo;{searchQuery}&rdquo;</div>
+                      ) : (
+                        <>
+                          {searchResults.products.length > 0 && (
+                            <div className="search-dropdown__section">
+                              <div className="search-dropdown__section-title">Sản phẩm</div>
+                              {searchResults.products.map((p: any) => (
+                                <button key={p.id} className="search-dropdown__item" onClick={() => navigateToResult(`/san-pham/${p.slug}`)}>
+                                  <div className="search-dropdown__thumb">
+                                    {p.thumbnail ? <img src={p.thumbnail.startsWith('http') ? p.thumbnail : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${p.thumbnail}`} alt={p.name} /> : <RiGlassesLine />}
+                                  </div>
+                                  <div className="search-dropdown__info">
+                                    <div className="search-dropdown__name">{p.name}</div>
+                                    <div className="search-dropdown__price">
+                                      {p.sale_price ? (
+                                        <><span className="search-dropdown__sale">{formatPrice(p.sale_price)}</span> <span className="search-dropdown__original">{formatPrice(p.price)}</span></>
+                                      ) : formatPrice(p.price)}
+                                    </div>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {searchResults.articles.length > 0 && (
+                            <div className="search-dropdown__section">
+                              <div className="search-dropdown__section-title">Bài viết</div>
+                              {searchResults.articles.map((a: any) => (
+                                <button key={a.id} className="search-dropdown__item" onClick={() => navigateToResult(`/bai-viet/${a.slug}`)}>
+                                  <div className="search-dropdown__thumb">
+                                    {a.thumbnail ? <img src={a.thumbnail.startsWith('http') ? a.thumbnail : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${a.thumbnail}`} alt={a.title} /> : <FiSearch />}
+                                  </div>
+                                  <div className="search-dropdown__info">
+                                    <div className="search-dropdown__name">{a.title}</div>
+                                    {a.excerpt && <div className="search-dropdown__excerpt">{a.excerpt.slice(0, 60)}...</div>}
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          <button className="search-dropdown__viewall" onClick={() => navigateToResult(`/san-pham?search=${encodeURIComponent(searchQuery)}`)}>Xem tất cả kết quả →</button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             <Link href="/gio-hang" className="header__action-btn" aria-label="Giỏ hàng" style={{ position: 'relative' }}>
               <FiShoppingBag />
               {cartCount > 0 && (

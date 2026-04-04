@@ -52,6 +52,36 @@ Route::prefix('public')->group(function () {
     Route::get('/vouchers', [VoucherController::class, 'publicIndex']);
     Route::get('/addon-groups', [AddonGroupController::class, 'index']);
 
+    // Global search (products + articles)
+    Route::get('/search', function (\Illuminate\Http\Request $request) {
+        $q = $request->input('q', '');
+        if (strlen($q) < 2) return response()->json(['products' => [], 'articles' => []]);
+
+        $products = \App\Models\Product::where('is_active', true)
+            ->where(function ($query) use ($q) {
+                $query->where('name', 'LIKE', "%{$q}%")
+                      ->orWhere('sku', 'LIKE', "%{$q}%")
+                      ->orWhere('brand', 'LIKE', "%{$q}%");
+            })
+            ->select('id', 'name', 'slug', 'thumbnail', 'price', 'sale_price')
+            ->limit(5)
+            ->get();
+
+        $articles = \App\Models\Article::where('is_published', true)
+            ->where(function ($query) use ($q) {
+                $query->where('title', 'LIKE', "%{$q}%")
+                      ->orWhere('excerpt', 'LIKE', "%{$q}%");
+            })
+            ->select('id', 'title', 'slug', 'thumbnail', 'excerpt')
+            ->limit(3)
+            ->get();
+
+        return response()->json([
+            'products' => $products,
+            'articles' => $articles,
+        ]);
+    });
+
     // Orders (public create)
     Route::post('/orders', [OrderController::class, 'store']);
     Route::post('/orders/validate-voucher', [OrderController::class, 'validateVoucher']);
