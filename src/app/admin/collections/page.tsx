@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { adminApi } from '@/lib/api';
 import { useToken } from '@/lib/useToken';
+import MediaPicker from '@/components/admin/MediaPicker';
 import {
   FiPlus, FiTrash2, FiEdit2, FiSave, FiX, FiCheck,
-  FiArrowUp, FiArrowDown, FiEye, FiEyeOff
+  FiArrowUp, FiArrowDown, FiEye, FiEyeOff, FiImage
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
@@ -45,6 +46,7 @@ export default function AdminCollectionsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [showMediaPicker, setShowMediaPicker] = useState(false);
 
   useEffect(() => { if (token) loadCollections(); }, [token]);
 
@@ -247,44 +249,50 @@ export default function AdminCollectionsPage() {
                 </div>
               </div>
 
+              {/* Image picker */}
+              <div className="admin-form__group">
+                <label className="admin-form__label">Ảnh bộ sưu tập *</label>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  <button type="button" className="admin-btn admin-btn--secondary"
+                    onClick={() => setShowMediaPicker(true)}>
+                    <FiImage /> Chọn từ Media Library
+                  </button>
+                  {form.image && (
+                    <div style={{ position: 'relative' }}>
+                      <img src={form.image.startsWith('http') ? form.image : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${form.image}`}
+                        alt="" style={{ width: '160px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }} />
+                      <button onClick={() => setForm({ ...form, image: '' })}
+                        style={{ position: 'absolute', top: '-6px', right: '-6px', width: '20px', height: '20px', borderRadius: '50%', background: '#ef4444', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.625rem' }}>
+                        <FiX />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Preview */}
               <div className="admin-form__group">
                 <label className="admin-form__label">Xem trước</label>
                 <div style={{
-                  background: `linear-gradient(160deg, ${form.gradient_from} 0%, ${form.gradient_to} 100%)`,
-                  border: `1px solid ${form.accent_color}30`,
-                  borderRadius: '16px',
-                  padding: '24px',
-                  minHeight: form.size === 'tall' ? '200px' : '120px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'flex-end',
-                  gap: '4px',
+                  position: 'relative',
+                  borderRadius: '14px',
+                  overflow: 'hidden',
+                  minHeight: form.size === 'tall' ? '280px' : '180px',
                   maxWidth: form.size === 'wide' ? '100%' : '300px',
+                  background: form.image ? '#000' : `linear-gradient(160deg, ${form.gradient_from} 0%, ${form.gradient_to} 100%)`,
                 }}>
-                  {form.tag && (
-                    <span style={{
-                      display: 'inline-block',
-                      fontSize: '0.5625rem',
-                      fontWeight: 800,
-                      letterSpacing: '0.2em',
-                      padding: '4px 12px',
-                      borderRadius: '999px',
-                      color: form.accent_color,
-                      border: `1px solid ${form.accent_color}40`,
-                      background: `${form.accent_color}12`,
-                      alignSelf: 'flex-start',
-                      marginBottom: '8px',
-                    }}>{form.tag}</span>
+                  {form.image && (
+                    <img src={form.image.startsWith('http') ? form.image : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${form.image}`}
+                      alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                   )}
-                  <div style={{ fontFamily: 'Georgia, serif', fontSize: form.size === 'tall' ? '1.75rem' : '1.25rem', fontWeight: 700, color: '#1c1917' }}>
-                    {form.name || 'Tên Bộ Sưu Tập'}
-                  </div>
-                  {form.description && (
-                    <div style={{ fontSize: '0.8125rem', color: '#78716c' }}>{form.description}</div>
-                  )}
-                  <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: form.accent_color, marginTop: '4px' }}>
-                    Khám phá →
+                  <div style={{ 
+                    position: 'absolute', inset: 0, 
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.1) 40%, transparent 100%)' 
+                  }} />
+                  <div style={{ position: 'absolute', bottom: '16px', left: '20px', right: '20px', zIndex: 2 }}>
+                    <div style={{ fontFamily: 'Georgia, serif', fontSize: form.size === 'tall' ? '1.75rem' : '1.375rem', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.04em', textShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+                      {form.name || 'Tên Bộ Sưu Tập'}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -347,13 +355,25 @@ export default function AdminCollectionsPage() {
                     </div>
                   </td>
                   <td>
-                    <div style={{
-                      width: col.size === 'wide' ? '120px' : '80px',
-                      height: col.size === 'tall' ? '80px' : '50px',
-                      background: `linear-gradient(160deg, ${col.gradient_from || '#f5f3ef'} 0%, ${col.gradient_to || '#ede4d6'} 100%)`,
-                      borderRadius: '8px',
-                      border: `1px solid ${col.accent_color || '#c9a96e'}25`,
-                    }} />
+                    {col.image ? (
+                      <img src={col.image.startsWith('http') ? col.image : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${col.image}`}
+                        alt={col.name}
+                        style={{
+                          width: col.size === 'wide' ? '120px' : '80px',
+                          height: col.size === 'tall' ? '80px' : '50px',
+                          objectFit: 'cover',
+                          borderRadius: '8px',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                        }} />
+                    ) : (
+                      <div style={{
+                        width: col.size === 'wide' ? '120px' : '80px',
+                        height: col.size === 'tall' ? '80px' : '50px',
+                        background: `linear-gradient(160deg, ${col.gradient_from || '#f5f3ef'} 0%, ${col.gradient_to || '#ede4d6'} 100%)`,
+                        borderRadius: '8px',
+                        border: `1px solid ${col.accent_color || '#c9a96e'}25`,
+                      }} />
+                    )}
                   </td>
                   <td>
                     <div style={{ fontWeight: 600, color: '#fff' }}>{col.name}</div>
@@ -400,6 +420,14 @@ export default function AdminCollectionsPage() {
           </table>
         </div>
       </div>
+
+      <MediaPicker
+        isOpen={showMediaPicker}
+        onClose={() => setShowMediaPicker(false)}
+        onSelect={(url) => {
+          setForm(f => ({ ...f, image: url }));
+        }}
+      />
     </>
   );
 }

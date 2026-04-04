@@ -174,11 +174,11 @@ export function DynamicProducts() {
 
 // ── Default collections (fallback when API unavailable) ──
 const DEFAULT_COLLECTIONS = [
-  { name: 'Thanh Lịch', slug: 'thanh-lich', description: 'Tinh tế, sang trọng, phù hợp công sở và sự kiện', tag: 'CLASSIC', variant: 'classic', size: 'tall', gradient_from: '#f7f0e8', gradient_to: '#ede4d6', accent_color: '#c9a96e' },
-  { name: 'Năng Động', slug: 'nang-dong', description: 'Trẻ trung, phóng khoáng', tag: 'SPORT', variant: 'sport', size: 'normal', gradient_from: '#e8eef7', gradient_to: '#d6e0f0', accent_color: '#3b82f6' },
-  { name: 'Vintage', slug: 'vintage', description: 'Hoài cổ, cá tính, retro', tag: 'RETRO', variant: 'vintage', size: 'normal', gradient_from: '#f0ebe3', gradient_to: '#e5ddd0', accent_color: '#8b6914' },
-  { name: 'Tối Giản', slug: 'toi-gian', description: 'Nhẹ nhàng, tinh tế, không rườm rà', tag: 'MINIMAL', variant: 'minimal', size: 'wide', gradient_from: '#f5f0ed', gradient_to: '#ebe5e2', accent_color: '#8b7064' },
-  { name: 'Sang Trọng', slug: 'sang-trong', description: 'Thương hiệu cao cấp, đẳng cấp', tag: 'PREMIUM', variant: 'luxury', size: 'normal', gradient_from: '#e8efe8', gradient_to: '#d5e0d5', accent_color: '#166534' },
+  { name: 'Thanh Lịch', slug: 'thanh-lich', description: 'Tinh tế, sang trọng', tag: 'CLASSIC', size: 'tall', image: '' },
+  { name: 'Năng Động', slug: 'nang-dong', description: 'Trẻ trung, phóng khoáng', tag: 'SPORT', size: 'normal', image: '' },
+  { name: 'Vintage', slug: 'vintage', description: 'Hoài cổ, cá tính', tag: 'RETRO', size: 'normal', image: '' },
+  { name: 'Tối Giản', slug: 'toi-gian', description: 'Nhẹ nhàng, tinh tế', tag: 'MINIMAL', size: 'wide', image: '' },
+  { name: 'Sang Trọng', slug: 'sang-trong', description: 'Đẳng cấp cao cấp', tag: 'PREMIUM', size: 'normal', image: '' },
 ];
 
 export function DynamicCollections() {
@@ -203,32 +203,39 @@ export function DynamicCollections() {
           key={col.slug || index}
           href={`/san-pham?style=${col.slug}`}
           className={`style-card style-card--${col.size || 'normal'}`}
-          style={{
-            '--card-index': index,
-            background: (col.gradient_from && col.gradient_to)
-              ? `linear-gradient(160deg, ${col.gradient_from} 0%, ${col.gradient_to} 100%)`
-              : undefined,
-            borderColor: col.accent_color ? `${col.accent_color}20` : undefined,
-          } as React.CSSProperties}
+          style={{ '--card-index': index } as React.CSSProperties}
         >
-          <div
-            className="style-card__tag"
-            style={{
-              color: col.accent_color || undefined,
-              borderColor: col.accent_color ? `${col.accent_color}40` : undefined,
-              background: col.accent_color ? `${col.accent_color}12` : undefined,
-            }}
-          >
-            {col.tag || col.name?.toUpperCase()}
-          </div>
+          {/* Background image */}
+          {col.image ? (
+            <img
+              src={col.image}
+              alt={col.name}
+              className="style-card__img"
+              loading="lazy"
+            />
+          ) : (
+            <div
+              className="style-card__img style-card__img--placeholder"
+              style={{
+                background: (col.gradient_from && col.gradient_to)
+                  ? `linear-gradient(160deg, ${col.gradient_from} 0%, ${col.gradient_to} 100%)`
+                  : '#e8e0d4',
+              }}
+            />
+          )}
+
+          {/* Overlay (always visible, darker on hover) */}
+          <div className="style-card__overlay" />
+
+          {/* Title (always visible at bottom) */}
           <h3 className="style-card__name">{col.name}</h3>
-          <p className="style-card__desc">{col.description}</p>
-          <span
-            className="style-card__cta"
-            style={{ color: col.accent_color || undefined }}
-          >
-            Khám phá <FiArrowRight />
-          </span>
+
+          {/* Hover content */}
+          <div className="style-card__hover-info">
+            {col.tag && <span className="style-card__tag">{col.tag}</span>}
+            <p className="style-card__desc">{col.description}</p>
+            <span className="style-card__cta">Khám phá <FiArrowRight /></span>
+          </div>
         </Link>
       ))}
     </div>
