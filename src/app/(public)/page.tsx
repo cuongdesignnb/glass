@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { FiArrowRight, FiTruck, FiShield, FiRefreshCw, FiAward, FiEye, FiCamera, FiPhone, FiCircle, FiSquare, FiHeart, FiMaximize } from 'react-icons/fi';
 import { RiGlassesLine, RiSunLine, RiVipCrownLine, RiPriceTag3Line } from 'react-icons/ri';
 import { publicApi } from '@/lib/api';
-import { DynamicCategories, DynamicProducts, DynamicCollections } from './HomeClient';
+import { DynamicCategories, DynamicProducts, DynamicCollections, DynamicVouchers } from './HomeClient';
 import './home.css';
 
 export const metadata = {
@@ -123,6 +123,18 @@ export default function HomePage() {
             <p className="section__subtitle">Chọn bộ sưu tập phù hợp với cá tính và lối sống của bạn</p>
           </div>
           <DynamicCollections />
+        </div>
+      </section>
+
+      {/* Voucher Slider */}
+      <section className="section voucher-home-section">
+        <div className="container">
+          <div className="section__header">
+            <span className="section__tag">Ưu Đãi</span>
+            <h2 className="section__title">Mã Giảm Giá Dành Cho Bạn</h2>
+            <p className="section__subtitle">Sao chép mã và sử dụng khi thanh toán</p>
+          </div>
+          <DynamicVouchers />
         </div>
       </section>
 

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { publicApi } from '@/lib/api';
 import { RiGlassesLine, RiSunLine, RiVipCrownLine, RiPriceTag3Line } from 'react-icons/ri';
-import { FiArrowRight } from 'react-icons/fi';
+import { FiArrowRight, FiCopy, FiCheck, FiGift } from 'react-icons/fi';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || '';
 
@@ -231,6 +231,77 @@ export function DynamicCollections() {
           </span>
         </Link>
       ))}
+    </div>
+  );
+}
+
+// ── Voucher Slider (nous.vn inspired) ──
+const formatVND = (n: number) =>
+  new Intl.NumberFormat('vi-VN').format(n) + 'đ';
+
+export function DynamicVouchers() {
+  const [vouchers, setVouchers] = useState<any[]>([]);
+  const [copiedId, setCopiedId] = useState<number | null>(null);
+
+  useEffect(() => {
+    publicApi.getVouchers()
+      .then((data: any) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setVouchers(data);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  if (vouchers.length === 0) return null;
+
+  const copyCode = (code: string, id: number) => {
+    navigator.clipboard.writeText(code);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  return (
+    <div className="voucher-slider">
+      <div className="voucher-slider__track">
+        {vouchers.map((v: any) => (
+          <div key={v.id} className="voucher-slide">
+            <div className="voucher-slide__header">
+              <span className="voucher-slide__code">Mã: <strong>{v.code}</strong></span>
+            </div>
+            <div className="voucher-slide__value">
+              <span className="voucher-slide__prefix">Giảm</span>
+              {v.type === 'percent' ? (
+                <span className="voucher-slide__number">{v.value}<span className="voucher-slide__unit">%</span></span>
+              ) : (
+                <span className="voucher-slide__number">
+                  {v.value >= 1000000
+                    ? (v.value / 1000000).toFixed(v.value % 1000000 === 0 ? 0 : 1) + 'M'
+                    : Math.round(v.value / 1000) + 'K'
+                  }
+                </span>
+              )}
+            </div>
+            <div className="voucher-slide__info">
+              <p className="voucher-slide__condition">
+                {v.description || (v.min_order > 0 ? `Giảm giá ${v.type === 'percent' ? v.value + '%' : formatVND(v.value)} cho đơn từ ${formatVND(v.min_order)}` : 'Áp dụng mọi đơn hàng')}
+              </p>
+              {v.type === 'percent' && v.max_discount > 0 && (
+                <p className="voucher-slide__max">Tối đa {formatVND(v.max_discount)}</p>
+              )}
+            </div>
+            <div className="voucher-slide__footer">
+              <span className="voucher-slide__terms">Điều kiện áp dụng</span>
+              <button
+                className={`voucher-slide__copy ${copiedId === v.id ? 'voucher-slide__copy--copied' : ''}`}
+                onClick={() => copyCode(v.code, v.id)}
+              >
+                {copiedId === v.id ? <><FiCheck /> Đã copy</> : <><FiCopy /> Sao chép mã</>}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -996,3 +996,195 @@
 @media (max-width: 768px) {
   .stats-grid { grid-template-columns: repeat(2, 1fr); gap: var(--space-2xl); }
 }
+
+/* ============================================
+   VOUCHER SLIDER — nous.vn inspired
+   ============================================ */
+
+.voucher-home-section {
+  background: var(--color-bg);
+}
+
+.voucher-slider {
+  overflow: hidden;
+}
+
+.voucher-slider__track {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding: 4px 0 12px;
+}
+
+.voucher-slider__track::-webkit-scrollbar {
+  display: none;
+}
+
+.voucher-slide {
+  flex: 0 0 280px;
+  scroll-snap-align: start;
+  background: linear-gradient(145deg, #faf8f5 0%, #f3ede5 100%);
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 16px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+/* Notch decorations */
+.voucher-slide::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -8px;
+  width: 16px;
+  height: 16px;
+  background: var(--color-bg);
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+.voucher-slide::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -8px;
+  width: 16px;
+  height: 16px;
+  background: var(--color-bg);
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+.voucher-slide:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+
+.voucher-slide__header {
+  margin-bottom: 2px;
+}
+
+.voucher-slide__code {
+  font-size: 0.8125rem;
+  color: #8b8078;
+  letter-spacing: 0.02em;
+}
+
+.voucher-slide__code strong {
+  color: var(--color-brand, #8b6e4e);
+  letter-spacing: 0.06em;
+}
+
+.voucher-slide__value {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed rgba(0,0,0,0.08);
+}
+
+.voucher-slide__prefix {
+  font-size: 0.9375rem;
+  color: #78716c;
+}
+
+.voucher-slide__number {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 2.75rem;
+  font-weight: 300;
+  color: #1c1917;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.voucher-slide__unit {
+  font-size: 1.5rem;
+}
+
+.voucher-slide__info {
+  flex: 1;
+}
+
+.voucher-slide__condition {
+  font-size: 0.8125rem;
+  color: #57534e;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.voucher-slide__max {
+  font-size: 0.75rem;
+  color: #a8a29e;
+  margin: 4px 0 0;
+}
+
+.voucher-slide__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.voucher-slide__terms {
+  font-size: 0.75rem;
+  color: #a8a29e;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.voucher-slide__terms:hover {
+  color: var(--color-brand);
+}
+
+.voucher-slide__copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--color-brand, #8b6e4e);
+  background: transparent;
+  color: var(--color-brand, #8b6e4e);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.voucher-slide__copy:hover {
+  background: var(--color-brand, #8b6e4e);
+  color: #fff;
+}
+
+.voucher-slide__copy--copied {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: #fff;
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .voucher-slide {
+    flex: 0 0 240px;
+    padding: 16px 20px;
+  }
+
+  .voucher-slide__number {
+    font-size: 2.25rem;
+  }
+
+  .voucher-home-section {
+    padding-bottom: 0;
+  }
+}
