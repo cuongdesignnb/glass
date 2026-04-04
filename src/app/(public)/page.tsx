@@ -189,7 +189,7 @@ export default function HomePage() {
       </section>
 
       {/* Services */}
-      <section className="section section--dark services-section">
+      <section className="section services-section">
         <div className="container">
           <div className="section__header">
             <span className="section__tag">Dịch Vụ</span>

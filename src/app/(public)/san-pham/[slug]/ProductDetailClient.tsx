@@ -71,6 +71,7 @@ export default function ProductDetailClient({ product, reviewData, apiMediaUrl }
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [showTryOn, setShowTryOn] = useState(false);
+  const [selectedAddons, setSelectedAddons] = useState<Record<number, number | null>>({});
 
   // Reviews pagination (client-side load more)
   const [reviews, setReviews] = useState(reviewData?.reviews?.data || []);
@@ -298,6 +299,38 @@ export default function ProductDetailClient({ product, reviewData, apiMediaUrl }
               <FiCamera /> Đeo thử kính
             </button>
           </div>
+
+          {/* Product Addons / Variants */}
+          {product.addon_groups && product.addon_groups.length > 0 && (
+            <div className="product-addons">
+              <h4 className="product-addons__title">Tuỳ chọn thêm</h4>
+              {product.addon_groups.map((group: any) => (
+                <div key={group.id} className="product-addon-group">
+                  <label className="product-addon-group__label">
+                    {group.name}
+                    {group.is_required && <span className="addon-required">*</span>}
+                  </label>
+                  <div className="product-addon-group__options">
+                    {group.options?.map((opt: any) => {
+                      const isSelected = selectedAddons[group.id] === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          className={`addon-option ${isSelected ? 'addon-option--active' : ''}`}
+                          onClick={() => setSelectedAddons(prev => ({ ...prev, [group.id]: isSelected ? null : opt.id }))}
+                        >
+                          <span className="addon-option__name">{opt.name}</span>
+                          <span className="addon-option__price">
+                            {opt.additional_price > 0 ? `+${formatPrice(opt.additional_price)}` : 'Miễn phí'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Trust badges inline */}
           <div className="product-info__trust">

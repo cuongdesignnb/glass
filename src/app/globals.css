@@ -652,6 +652,81 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--color-brand);
 }
 
+/* Voucher Tooltip near user icon */
+.voucher-tip {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: -10px;
+  width: 240px;
+  padding: 16px;
+  background: var(--color-white);
+  border: 1px solid var(--color-gray-200);
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+  text-align: center;
+  z-index: 1000;
+  animation: voucherTipIn 0.3s ease;
+}
+
+.voucher-tip::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  right: 18px;
+  width: 12px;
+  height: 12px;
+  background: var(--color-white);
+  border-top: 1px solid var(--color-gray-200);
+  border-left: 1px solid var(--color-gray-200);
+  transform: rotate(45deg);
+}
+
+@keyframes voucherTipIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.voucher-tip__close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 2px;
+}
+
+.voucher-tip__icon {
+  font-size: 1.75rem;
+  color: var(--color-brand);
+  margin-bottom: 8px;
+}
+
+.voucher-tip p {
+  font-size: 0.8125rem;
+  color: var(--color-text);
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+
+.voucher-tip__btn {
+  display: inline-block;
+  padding: 8px 24px;
+  background: var(--color-brand);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.voucher-tip__btn:hover {
+  background: var(--color-brand-dark);
+}
+
 /* Mobile Menu */
 .header__mobile-toggle {
   display: none;

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\ProductAddonGroup;
 use App\Helpers\VietnameseSlug;
 use Illuminate\Http\Request;
 
@@ -92,7 +93,7 @@ class ProductController extends Controller
     {
         $product = Product::with(['category', 'faqs' => function($q) {
             $q->where('is_active', true)->orderBy('order', 'asc');
-        }])
+        }, 'addonGroups.options'])
             ->where('slug', $slugOrId)
             ->orWhere('id', is_numeric($slugOrId) ? $slugOrId : 0)
             ->firstOrFail();
@@ -166,7 +167,12 @@ class ProductController extends Controller
             }
         }
 
-        return response()->json($product->load('faqs'), 201);
+        // Handle addon groups
+        if ($request->has('addon_groups') && is_array($request->addon_groups)) {
+            $this->syncAddonGroups($product, $request->addon_groups);
+        }
+
+        return response()->json($product->load(['faqs', 'addonGroups.options']), 201);
     }
 
     /**
@@ -233,7 +239,12 @@ class ProductController extends Controller
             }
         }
 
-        return response()->json($product->load('faqs'));
+        // Handle addon groups
+        if ($request->has('addon_groups') && is_array($request->addon_groups)) {
+            $this->syncAddonGroups($product, $request->addon_groups);
+        }
+
+        return response()->json($product->load(['faqs', 'addonGroups.options']));
     }
 
     /**
@@ -555,5 +566,37 @@ class ProductController extends Controller
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="mau-import-san-pham.csv"',
         ]);
+    }
+
+    /**
+     * Sync addon groups and options for a product
+     */
+    private function syncAddonGroups(Product $product, array $groups): void
+    {
+        // Delete existing groups (cascade deletes options)
+        $product->addonGroups()->delete();
+
+        foreach ($groups as $i => $groupData) {
+            if (empty($groupData['name'])) continue;
+
+            $group = $product->addonGroups()->create([
+                'name' => $groupData['name'],
+                'is_required' => $groupData['is_required'] ?? false,
+                'sort_order' => $groupData['sort_order'] ?? $i,
+            ]);
+
+            if (!empty($groupData['options']) && is_array($groupData['options'])) {
+                foreach ($groupData['options'] as $j => $optionData) {
+                    if (empty($optionData['name'])) continue;
+
+                    $group->options()->create([
+                        'name' => $optionData['name'],
+                        'additional_price' => $optionData['additional_price'] ?? 0,
+                        'is_default' => $optionData['is_default'] ?? ($j === 0),
+                        'sort_order' => $optionData['sort_order'] ?? $j,
+                    ]);
+                }
+            }
+        }
     }
 }

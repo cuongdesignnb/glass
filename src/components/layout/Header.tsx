@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { FiSearch, FiShoppingBag, FiMenu, FiX, FiChevronDown, FiUser, FiBell, FiLogOut, FiShoppingCart, FiStar, FiHome, FiGrid } from 'react-icons/fi';
+import { FiSearch, FiShoppingBag, FiMenu, FiX, FiChevronDown, FiUser, FiBell, FiLogOut, FiShoppingCart, FiStar, FiHome, FiGrid, FiGift } from 'react-icons/fi';
 import { RiGlassesLine } from 'react-icons/ri';
 import { useSettings } from '@/lib/useSettings';
 import { useAuth } from '@/lib/useAuth';
@@ -31,6 +31,7 @@ export default function Header({ menus }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showVoucherTip, setShowVoucherTip] = useState(false);
 
   const allowTransparent = TRANSPARENT_PAGES.includes(pathname);
   const isTransparent = allowTransparent && !isScrolled;
@@ -196,9 +197,21 @@ export default function Header({ menus }: HeaderProps) {
                 )}
               </div>
             ) : (
-              <Link href="/dang-nhap" className="header__action-btn" aria-label="Đăng nhập" title="Đăng nhập">
-                <FiUser />
-              </Link>
+              <div style={{ position: 'relative' }}>
+                <Link href="/dang-nhap" className="header__action-btn" aria-label="Đăng nhập" title="Đăng nhập"
+                  onMouseEnter={() => setShowVoucherTip(true)}
+                >
+                  <FiUser />
+                </Link>
+                {showVoucherTip && (
+                  <div className="voucher-tip">
+                    <button className="voucher-tip__close" onClick={(e) => { e.preventDefault(); setShowVoucherTip(false); }}><FiX /></button>
+                    <FiGift className="voucher-tip__icon" />
+                    <p>Đăng nhập ngay để nhận <strong>mã giảm giá</strong> dành riêng cho bạn!</p>
+                    <Link href="/dang-nhap" className="voucher-tip__btn" onClick={() => setShowVoucherTip(false)}>Đăng nhập</Link>
+                  </div>
+                )}
+              </div>
             )}
 
             <button

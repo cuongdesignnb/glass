@@ -141,4 +141,9 @@ class Product extends Model
     {
         return $this->hasMany(Faq::class)->orderBy('order', 'asc');
     }
+
+    public function addonGroups(): HasMany
+    {
+        return $this->hasMany(ProductAddonGroup::class)->orderBy('sort_order');
+    }
 }

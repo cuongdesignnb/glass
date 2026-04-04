@@ -271,19 +271,40 @@ const formatVND = (n: number) =>
 export function DynamicVouchers() {
   const [vouchers, setVouchers] = useState<any[]>([]);
   const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const sliderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const token = localStorage.getItem('glass_token');
+    setIsLoggedIn(!!token);
+
+    // Always fetch public vouchers
     publicApi.getVouchers()
       .then((data: any) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setVouchers(data);
+        const publicVouchers = Array.isArray(data) ? data : [];
+        
+        // If logged in, also fetch user-specific vouchers
+        if (token) {
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/vouchers`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+          })
+            .then(r => r.json())
+            .then((userData: any) => {
+              const userVouchers = Array.isArray(userData) ? userData : [];
+              // Merge, avoid duplicates by code
+              const codes = new Set(publicVouchers.map((v: any) => v.code));
+              const merged = [...publicVouchers, ...userVouchers.filter((v: any) => !codes.has(v.code))];
+              setVouchers(merged);
+            })
+            .catch(() => setVouchers(publicVouchers));
+        } else {
+          setVouchers(publicVouchers);
         }
       })
       .catch(() => {});
   }, []);
 
-  if (vouchers.length === 0) return null;
+  if (vouchers.length === 0 && isLoggedIn) return null;
 
   const copyCode = (code: string, id: number) => {
     navigator.clipboard.writeText(code);
@@ -292,54 +313,70 @@ export function DynamicVouchers() {
   };
 
   return (
-    <SliderWrap scrollRef={sliderRef}>
-      <div className="voucher-slider">
-        <div className="voucher-slider__track" ref={sliderRef}>
-          {vouchers.map((v: any) => (
-            <div key={v.id} className="voucher-slide">
-              {/* Left: Discount Value */}
-              <div className="voucher-slide__left">
-                <span className="voucher-slide__prefix">Giảm</span>
-                {v.type === 'percent' ? (
-                  <span className="voucher-slide__number">{v.value}<span className="voucher-slide__unit">%</span></span>
-                ) : (
-                  <span className="voucher-slide__number">
-                    {v.value >= 1000000
-                      ? (v.value / 1000000).toFixed(v.value % 1000000 === 0 ? 0 : 1) + 'M'
-                      : Math.round(v.value / 1000) + 'K'
-                    }
-                  </span>
-                )}
-              </div>
-
-              {/* Cut line with scissors */}
-              <div className="voucher-slide__cutline">
-                <span className="voucher-slide__scissors">✂</span>
-              </div>
-
-              {/* Right: Info + Copy */}
-              <div className="voucher-slide__right">
-                <span className="voucher-slide__code">Mã: <strong>{v.code}</strong></span>
-                <p className="voucher-slide__condition">
-                  {v.description || (v.min_order > 0 ? `Cho đơn từ ${formatVND(v.min_order)}` : 'Áp dụng mọi đơn hàng')}
-                </p>
-                {v.type === 'percent' && v.max_discount > 0 && (
-                  <p className="voucher-slide__max">Tối đa {formatVND(v.max_discount)}</p>
-                )}
-                <div className="voucher-slide__footer">
-                  <span className="voucher-slide__terms">Điều kiện áp dụng</span>
-                  <button
-                    className={`voucher-slide__copy ${copiedId === v.id ? 'voucher-slide__copy--copied' : ''}`}
-                    onClick={() => copyCode(v.code, v.id)}
-                  >
-                    {copiedId === v.id ? <><FiCheck /> Đã copy</> : <><FiCopy /> Sao chép mã</>}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
+    <div>
+      {/* Login prompt for non-logged-in users */}
+      {!isLoggedIn && (
+        <div className="voucher-login-prompt">
+          <FiGift className="voucher-login-prompt__icon" />
+          <div>
+            <strong>Đăng nhập để nhận mã giảm giá riêng!</strong>
+            <p>Có nhiều voucher đặc biệt dành cho thành viên</p>
+          </div>
+          <Link href="/dang-nhap" className="voucher-login-prompt__btn">Đăng nhập</Link>
         </div>
-      </div>
-    </SliderWrap>
+      )}
+
+      {vouchers.length > 0 && (
+        <SliderWrap scrollRef={sliderRef}>
+          <div className="voucher-slider">
+            <div className="voucher-slider__track" ref={sliderRef}>
+              {vouchers.map((v: any) => (
+                <div key={v.id} className="voucher-slide">
+                  {/* Left: Discount Value */}
+                  <div className="voucher-slide__left">
+                    <span className="voucher-slide__prefix">Giảm</span>
+                    {v.type === 'percent' ? (
+                      <span className="voucher-slide__number">{v.value}<span className="voucher-slide__unit">%</span></span>
+                    ) : (
+                      <span className="voucher-slide__number">
+                        {v.value >= 1000000
+                          ? (v.value / 1000000).toFixed(v.value % 1000000 === 0 ? 0 : 1) + 'M'
+                          : Math.round(v.value / 1000) + 'K'
+                        }
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Cut line with scissors */}
+                  <div className="voucher-slide__cutline">
+                    <span className="voucher-slide__scissors">✂</span>
+                  </div>
+
+                  {/* Right: Info + Copy */}
+                  <div className="voucher-slide__right">
+                    <span className="voucher-slide__code">Mã: <strong>{v.code}</strong></span>
+                    <p className="voucher-slide__condition">
+                      {v.description || (v.min_order > 0 ? `Cho đơn từ ${formatVND(v.min_order)}` : 'Áp dụng mọi đơn hàng')}
+                    </p>
+                    {v.type === 'percent' && v.max_discount > 0 && (
+                      <p className="voucher-slide__max">Tối đa {formatVND(v.max_discount)}</p>
+                    )}
+                    <div className="voucher-slide__footer">
+                      <span className="voucher-slide__terms">Điều kiện áp dụng</span>
+                      <button
+                        className={`voucher-slide__copy ${copiedId === v.id ? 'voucher-slide__copy--copied' : ''}`}
+                        onClick={() => copyCode(v.code, v.id)}
+                      >
+                        {copiedId === v.id ? <><FiCheck /> Đã copy</> : <><FiCopy /> Sao chép mã</>}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </SliderWrap>
+      )}
+    </div>
   );
 }
