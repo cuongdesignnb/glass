@@ -97,6 +97,9 @@ export const publicApi = {
   // Collections
   getCollections: () => fetchApi('/public/collections'),
 
+  // Vouchers
+  getVouchers: () => fetchApi('/public/vouchers'),
+
   // Orders
   createOrder: (data: any) => fetchApi('/public/orders', {
     method: 'POST',
@@ -360,6 +363,18 @@ export const adminApi = {
     fetchApi(`/collections/${id}`, { method: 'DELETE', token }),
   reorderCollections: (token: string, items: { id: number; order: number }[]) =>
     fetchApi('/collections-reorder', { method: 'PUT', body: JSON.stringify({ items }), token }),
+
+  // Vouchers
+  getVouchers: (token: string, params?: Record<string, string>) => {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return fetchApi(`/vouchers${qs}`, { token });
+  },
+  createVoucher: (token: string, data: any) =>
+    fetchApi('/vouchers', { method: 'POST', body: JSON.stringify(data), token }),
+  updateVoucher: (token: string, id: number, data: any) =>
+    fetchApi(`/vouchers/${id}`, { method: 'PUT', body: JSON.stringify(data), token }),
+  deleteVoucher: (token: string, id: number) =>
+    fetchApi(`/vouchers/${id}`, { method: 'DELETE', token }),
 
   // Orders
   getOrders: (token: string, params?: Record<string, string>) => {

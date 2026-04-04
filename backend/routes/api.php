@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\FaqController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\CollectionController;
+use App\Http\Controllers\Api\VoucherController;
 
 /*
 |--------------------------------------------------------------------------
@@ -47,6 +48,7 @@ Route::prefix('public')->group(function () {
     Route::get('/faqs', [FaqController::class, 'index']);
     Route::get('/collections', [CollectionController::class, 'index']);
     Route::get('/collections/{slugOrId}', [CollectionController::class, 'show']);
+    Route::get('/vouchers', [VoucherController::class, 'publicIndex']);
 
     // Orders (public create)
     Route::post('/orders', [OrderController::class, 'store']);
@@ -143,6 +145,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Collections
     Route::apiResource('collections', CollectionController::class);
     Route::put('/collections-reorder', [CollectionController::class, 'reorder']);
+
+    // Vouchers
+    Route::apiResource('vouchers', VoucherController::class);
 
     // Orders (admin)
     Route::get('/orders', [OrderController::class, 'index']);

@@ -197,7 +197,29 @@ class OrderController extends Controller
 
         $subtotal = $request->get('subtotal', 0);
         if (!$voucher->isValid($subtotal)) {
-            return response()->json(['valid' => false, 'message' => 'Mã đã hết hạn hoặc đã sử dụng'], 422);
+            return response()->json(['valid' => false, 'message' => 'Mã đã hết hạn hoặc đã sử dụng hết'], 422);
+        }
+
+        // Check user scope
+        if ($voucher->scope === 'user') {
+            $user = auth('sanctum')->user();
+            if (!$user || !$voucher->isValidForUser($user->id)) {
+                return response()->json(['valid' => false, 'message' => 'Mã này không dành cho bạn'], 422);
+            }
+            // Check per-user limit
+            if (!$voucher->isWithinUserLimit($user->id)) {
+                return response()->json(['valid' => false, 'message' => 'Bạn đã sử dụng hết lượt cho mã này'], 422);
+            }
+        }
+
+        // Check product scope
+        if ($voucher->scope === 'product' && $request->has('product_ids')) {
+            $cartProductIds = $request->product_ids;
+            $voucherProductIds = $voucher->products()->pluck('products.id')->toArray();
+            $matched = array_intersect($cartProductIds, $voucherProductIds);
+            if (empty($matched)) {
+                return response()->json(['valid' => false, 'message' => 'Mã không áp dụng cho sản phẩm trong giỏ hàng'], 422);
+            }
         }
 
         return response()->json([
@@ -207,3 +229,4 @@ class OrderController extends Controller
         ]);
     }
 }
+
