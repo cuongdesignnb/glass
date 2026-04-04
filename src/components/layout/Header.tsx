@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { FiSearch, FiShoppingBag, FiMenu, FiX, FiChevronDown, FiUser, FiBell, FiLogOut, FiShoppingCart, FiStar } from 'react-icons/fi';
+import { FiSearch, FiShoppingBag, FiMenu, FiX, FiChevronDown, FiUser, FiBell, FiLogOut, FiShoppingCart, FiStar, FiHome, FiGrid } from 'react-icons/fi';
 import { RiGlassesLine } from 'react-icons/ri';
 import { useSettings } from '@/lib/useSettings';
 import { useAuth } from '@/lib/useAuth';
@@ -19,7 +19,7 @@ interface HeaderProps {
   menus?: MenuItem[];
 }
 
-// Chỉ những trang này mới cho phép header transparent khi ở đầu trang
+// All pages now use light header
 const TRANSPARENT_PAGES = ['/'];
 
 export default function Header({ menus }: HeaderProps) {
@@ -32,7 +32,6 @@ export default function Header({ menus }: HeaderProps) {
   const [cartCount, setCartCount] = useState(0);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  // Header chỉ transparent nếu đang ở trang được phép VÀ chưa scroll
   const allowTransparent = TRANSPARENT_PAGES.includes(pathname);
   const isTransparent = allowTransparent && !isScrolled;
 
@@ -41,7 +40,6 @@ export default function Header({ menus }: HeaderProps) {
       setIsScrolled(window.scrollY > 50);
     };
     window.addEventListener('scroll', handleScroll);
-    // Kiểm tra ngay khi mount (tránh trường hợp đã scroll trước khi mount)
     setIsScrolled(window.scrollY > 50);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -62,6 +60,18 @@ export default function Header({ menus }: HeaderProps) {
       window.removeEventListener('storage', updateCartCount);
     };
   }, []);
+
+  // Apply brand color from settings
+  useEffect(() => {
+    if (settings['brand_color']) {
+      document.documentElement.style.setProperty('--color-brand', settings['brand_color']);
+      // Generate lighter/darker variants
+      const hex = settings['brand_color'];
+      document.documentElement.style.setProperty('--color-brand-soft', `${hex}14`);
+      document.documentElement.style.setProperty('--color-accent', hex);
+      document.documentElement.style.setProperty('--color-accent-light', hex);
+    }
+  }, [settings]);
 
   const defaultMenus: MenuItem[] = menus || [
     { id: '1', name: 'Trang Chủ', url: '/' },
@@ -89,7 +99,7 @@ export default function Header({ menus }: HeaderProps) {
                     : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${settings['site_logo']}`
                 }
                 alt={settings['site_name'] || 'GLASS'}
-                style={{ height: '36px', width: 'auto', objectFit: 'contain' }}
+                style={{ height: '34px', width: 'auto', objectFit: 'contain' }}
               />
             ) : (
               <>
@@ -106,7 +116,7 @@ export default function Header({ menus }: HeaderProps) {
                 <div key={item.id} className={hasChildren ? 'header__dropdown' : ''}>
                   <Link href={item.url || '#'} className="header__nav-link">
                     {item.name}
-                    {hasChildren && <FiChevronDown style={{ marginLeft: '4px', fontSize: '14px' }} />}
+                    {hasChildren && <FiChevronDown style={{ marginLeft: '4px', fontSize: '12px' }} />}
                   </Link>
                   {hasChildren && (
                     <div className="header__dropdown-menu">
@@ -130,16 +140,16 @@ export default function Header({ menus }: HeaderProps) {
               <FiShoppingBag />
               {cartCount > 0 && (
                 <span style={{
-                  position: 'absolute', top: '-6px', right: '-6px',
-                  width: '18px', height: '18px', borderRadius: '50%',
-                  background: 'var(--color-gold)', color: 'var(--color-bg)',
-                  fontSize: '0.625rem', fontWeight: 700,
+                  position: 'absolute', top: '2px', right: '2px',
+                  width: '16px', height: '16px', borderRadius: '50%',
+                  background: 'var(--color-brand)', color: '#fff',
+                  fontSize: '0.5625rem', fontWeight: 700,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>{cartCount > 99 ? '99+' : cartCount}</span>
               )}
             </Link>
 
-            {/* User Auth */}
+            {/* User Auth — hidden on mobile, shown in bottom nav */}
             {user ? (
               <div className="header__dropdown" style={{ position: 'relative' }}>
                 <button className="header__action-btn" onClick={() => setShowUserMenu(!showUserMenu)}
@@ -147,19 +157,19 @@ export default function Header({ menus }: HeaderProps) {
                   <FiUser />
                   {(user.unread_notifications || 0) > 0 && (
                     <span style={{
-                      position: 'absolute', top: '-4px', right: '-4px',
-                      width: '16px', height: '16px', borderRadius: '50%',
+                      position: 'absolute', top: '2px', right: '2px',
+                      width: '14px', height: '14px', borderRadius: '50%',
                       background: '#ef4444', color: '#fff',
-                      fontSize: '0.6rem', fontWeight: 700,
+                      fontSize: '0.5rem', fontWeight: 700,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>{user.unread_notifications}</span>
                   )}
                 </button>
                 {showUserMenu && (
-                  <div className="header__dropdown-menu" style={{ right: 0, left: 'auto', minWidth: '200px' }}>
-                    <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-neutral-100)', marginBottom: '4px' }}>
-                      <div style={{ fontWeight: 700, fontSize: '.875rem' }}>{user.name}</div>
-                      <div style={{ fontSize: '.75rem', color: 'var(--color-neutral-400)' }}>{user.email}</div>
+                  <div className="header__dropdown-menu" style={{ right: 0, left: 'auto', minWidth: '200px', opacity: 1, visibility: 'visible', transform: 'translateX(0) translateY(0)' }}>
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-gray-200)', marginBottom: '4px' }}>
+                      <div style={{ fontWeight: 700, fontSize: '.875rem', color: 'var(--color-text-heading)' }}>{user.name}</div>
+                      <div style={{ fontSize: '.75rem', color: 'var(--color-text-muted)' }}>{user.email}</div>
                     </div>
                     <Link href="/tai-khoan" className="header__dropdown-item" onClick={() => setShowUserMenu(false)}>
                       <FiUser style={{ marginRight: 8 }} /> Tài khoản
@@ -178,7 +188,7 @@ export default function Header({ menus }: HeaderProps) {
                         </span>
                       )}
                     </Link>
-                    <button className="header__dropdown-item" style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', borderTop: '1px solid var(--color-neutral-100)', marginTop: '4px', paddingTop: '8px' }}
+                    <button className="header__dropdown-item" style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', borderTop: '1px solid var(--color-gray-200)', marginTop: '4px', paddingTop: '8px' }}
                       onClick={() => { logout(); setShowUserMenu(false); router.push('/'); }}>
                       <FiLogOut style={{ marginRight: 8 }} /> Đăng xuất
                     </button>
@@ -202,20 +212,20 @@ export default function Header({ menus }: HeaderProps) {
         </div>
       </header>
 
-      {/* Mobile Menu Overlay */}
+      {/* Mobile Menu Overlay — Light theme */}
       {isMobileMenuOpen && (
         <div style={{
           position: 'fixed',
           inset: 0,
           zIndex: 999,
-          background: 'rgba(10, 10, 26, 0.98)',
+          background: 'rgba(255, 255, 255, 0.98)',
           backdropFilter: 'blur(20px)',
           display: 'flex',
           flexDirection: 'column',
           padding: '100px 32px 32px',
           animation: 'fadeInUp 0.3s ease',
         }}>
-          <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             {defaultMenus.map((item) => {
               const hasChildren = item.children && item.children.length > 0;
               return (
@@ -226,16 +236,16 @@ export default function Header({ menus }: HeaderProps) {
                     style={{
                       display: 'block',
                       padding: '16px 0',
-                      fontSize: '1.5rem',
+                      fontSize: '1.25rem',
                       fontFamily: 'var(--font-display)',
-                      color: 'var(--color-white)',
-                      borderBottom: '1px solid rgba(255,255,255,0.08)',
+                      color: 'var(--color-text-heading)',
+                      borderBottom: '1px solid var(--color-gray-200)',
                     }}
                   >
-                    {item.name} {hasChildren && <span style={{ fontSize: '1.2rem', marginLeft: '4px' }}>▾</span>}
+                    {item.name} {hasChildren && <span style={{ fontSize: '1rem', marginLeft: '4px', color: 'var(--color-text-muted)' }}>▾</span>}
                   </Link>
                   {hasChildren && (
-                    <div style={{ paddingLeft: '24px' }}>
+                    <div style={{ paddingLeft: '20px' }}>
                       {item.children!.map((child) => (
                         <Link
                           key={child.id}
@@ -244,8 +254,8 @@ export default function Header({ menus }: HeaderProps) {
                           style={{
                             display: 'block',
                             padding: '10px 0',
-                            fontSize: '1rem',
-                            color: 'rgba(255,255,255,0.6)',
+                            fontSize: '0.9375rem',
+                            color: 'var(--color-text-light)',
                           }}
                         >
                           {child.name}
@@ -259,6 +269,43 @@ export default function Header({ menus }: HeaderProps) {
           </nav>
         </div>
       )}
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="mobile-bottom-nav">
+        <div className="mobile-bottom-nav__inner">
+          <Link
+            href="/"
+            className={`mobile-bottom-nav__item ${pathname === '/' ? 'mobile-bottom-nav__item--active' : ''}`}
+          >
+            <FiHome />
+            <span>Trang chủ</span>
+          </Link>
+          <Link
+            href="/san-pham"
+            className={`mobile-bottom-nav__item ${pathname.startsWith('/san-pham') ? 'mobile-bottom-nav__item--active' : ''}`}
+          >
+            <FiGrid />
+            <span>Sản phẩm</span>
+          </Link>
+          <Link
+            href="/gio-hang"
+            className={`mobile-bottom-nav__item ${pathname === '/gio-hang' ? 'mobile-bottom-nav__item--active' : ''}`}
+          >
+            <FiShoppingBag />
+            <span>Giỏ hàng</span>
+            {cartCount > 0 && (
+              <span className="mobile-bottom-nav__badge">{cartCount > 99 ? '99+' : cartCount}</span>
+            )}
+          </Link>
+          <Link
+            href={user ? '/tai-khoan' : '/dang-nhap'}
+            className={`mobile-bottom-nav__item ${pathname.startsWith('/tai-khoan') || pathname === '/dang-nhap' ? 'mobile-bottom-nav__item--active' : ''}`}
+          >
+            <FiUser />
+            <span>{user ? 'Tài khoản' : 'Đăng nhập'}</span>
+          </Link>
+        </div>
+      </nav>
     </>
   );
 }

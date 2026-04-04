@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { FiArrowRight, FiTruck, FiShield, FiRefreshCw, FiAward, FiEye, FiCamera, FiPhone, FiCircle, FiSquare, FiHeart, FiMaximize } from 'react-icons/fi';
 import { RiGlassesLine, RiSunLine, RiVipCrownLine, RiPriceTag3Line } from 'react-icons/ri';
 import { publicApi } from '@/lib/api';
-import { DynamicCategories, DynamicProducts } from './HomeClient';
+import { DynamicCategories, DynamicProducts, DynamicCollections } from './HomeClient';
 import './home.css';
 
 export const metadata = {
@@ -19,11 +19,6 @@ const faceShapes = [
   { shape: 'Dài', icon: <FiMaximize />, desc: 'Gọng bo tròn, overlay', param: 'dai', recommended: 'Oval, Cat-eye' },
 ];
 
-const styleCollections = [
-  { name: 'Thanh Lịch', slug: 'thanh-lich', desc: 'Tinh tế, sang trọng, phù hợp công sở và sự kiện', variant: 'classic', tag: 'CLASSIC' },
-  { name: 'Năng Động', slug: 'nang-dong', desc: 'Trẻ trung, phóng khoáng, phù hợp hoạt động ngoài trời', variant: 'sport', tag: 'SPORT' },
-  { name: 'Vintage', slug: 'vintage', desc: 'Hoài cổ, cá tính, phong cách retro đặc trưng', variant: 'vintage', tag: 'RETRO' },
-];
 
 const services = [
   { icon: <FiEye />, title: 'Đo Mắt Miễn Phí', desc: 'Đo mắt chuẩn y khoa với thiết bị hiện đại, hoàn toàn miễn phí khi mua kính tại cửa hàng.' },
@@ -105,7 +100,7 @@ export default function HomePage() {
       </section>
 
       {/* Featured Products - Client Side */}
-      <section className="section section--dark">
+      <section className="section" style={{ background: 'var(--color-bg-warm)' }}>
         <div className="container">
           <div className="section__header">
             <span className="section__tag">Nổi Bật</span>
@@ -114,12 +109,12 @@ export default function HomePage() {
           </div>
           <DynamicProducts />
           <div style={{ textAlign: 'center', marginTop: 'var(--space-3xl)' }}>
-            <Link href="/san-pham" className="btn btn-primary btn-lg">Xem Tất Cả Sản Phẩm <FiArrowRight /></Link>
+            <Link href="/san-pham" className="btn btn-secondary btn-lg">Xem Tất Cả Sản Phẩm <FiArrowRight /></Link>
           </div>
         </div>
       </section>
 
-      {/* Style Collections */}
+      {/* Style Collections — Masonry Grid (Dynamic from API) */}
       <section className="section style-collection">
         <div className="container">
           <div className="section__header">
@@ -127,16 +122,7 @@ export default function HomePage() {
             <h2 className="section__title">Bộ Sưu Tập Theo Phong Cách</h2>
             <p className="section__subtitle">Chọn bộ sưu tập phù hợp với cá tính và lối sống của bạn</p>
           </div>
-          <div className="style-collection__grid">
-            {styleCollections.map((col) => (
-              <Link key={col.slug} href={`/san-pham?style=${col.slug}`} className={`style-card style-card--${col.variant}`}>
-                <div className="style-card__tag">{col.tag}</div>
-                <h3 className="style-card__name">{col.name}</h3>
-                <p className="style-card__desc">{col.desc}</p>
-                <span className="style-card__cta">Khám phá <FiArrowRight /></span>
-              </Link>
-            ))}
-          </div>
+          <DynamicCollections />
         </div>
       </section>
 
@@ -146,8 +132,8 @@ export default function HomePage() {
           <div className="ai-cta">
             <div className="ai-cta__content">
               <span className="section__tag">Công Nghệ AI</span>
-              <h2 className="heading-lg" style={{ color: 'var(--color-white)', marginBottom: 'var(--space-lg)' }}>Thử Kính Ảo Với <span className="text-gradient">Trí Tuệ Nhân Tạo</span></h2>
-              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.0625rem', lineHeight: '1.8', marginBottom: 'var(--space-2xl)', maxWidth: '520px' }}>
+              <h2 className="heading-lg" style={{ color: 'var(--color-text-heading)', marginBottom: 'var(--space-lg)' }}>Thử Kính Ảo Với <span className="text-gradient">Trí Tuệ Nhân Tạo</span></h2>
+              <p style={{ color: 'var(--color-text-light)', fontSize: '1.0625rem', lineHeight: '1.8', marginBottom: 'var(--space-2xl)', maxWidth: '520px' }}>
                 Chỉ cần bật camera hoặc upload ảnh, AI sẽ giúp bạn thử hàng trăm mẫu kính mà không cần đến cửa hàng.
               </p>
               <div style={{ display: 'flex', gap: 'var(--space-md)', flexWrap: 'wrap' }}>

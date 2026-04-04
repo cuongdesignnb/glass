@@ -94,6 +94,9 @@ export const publicApi = {
     return fetchApi(`/public/faqs${query}`);
   },
 
+  // Collections
+  getCollections: () => fetchApi('/public/collections'),
+
   // Orders
   createOrder: (data: any) => fetchApi('/public/orders', {
     method: 'POST',
@@ -345,6 +348,18 @@ export const adminApi = {
     fetchApi(`/faqs/${id}`, { method: 'PUT', body: JSON.stringify(data), token }),
   deleteFaq: (token: string, id: number) =>
     fetchApi(`/faqs/${id}`, { method: 'DELETE', token }),
+
+  // Collections
+  getCollections: (token: string) =>
+    fetchApi('/collections?all=1', { token }),
+  createCollection: (token: string, data: any) =>
+    fetchApi('/collections', { method: 'POST', body: JSON.stringify(data), token }),
+  updateCollection: (token: string, id: number, data: any) =>
+    fetchApi(`/collections/${id}`, { method: 'PUT', body: JSON.stringify(data), token }),
+  deleteCollection: (token: string, id: number) =>
+    fetchApi(`/collections/${id}`, { method: 'DELETE', token }),
+  reorderCollections: (token: string, items: { id: number; order: number }[]) =>
+    fetchApi('/collections-reorder', { method: 'PUT', body: JSON.stringify({ items }), token }),
 
   // Orders
   getOrders: (token: string, params?: Record<string, string>) => {

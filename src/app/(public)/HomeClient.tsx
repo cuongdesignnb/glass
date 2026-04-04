@@ -171,3 +171,66 @@ export function DynamicProducts() {
     </div>
   );
 }
+
+// ── Default collections (fallback when API unavailable) ──
+const DEFAULT_COLLECTIONS = [
+  { name: 'Thanh Lịch', slug: 'thanh-lich', description: 'Tinh tế, sang trọng, phù hợp công sở và sự kiện', tag: 'CLASSIC', variant: 'classic', size: 'tall', gradient_from: '#f7f0e8', gradient_to: '#ede4d6', accent_color: '#c9a96e' },
+  { name: 'Năng Động', slug: 'nang-dong', description: 'Trẻ trung, phóng khoáng', tag: 'SPORT', variant: 'sport', size: 'normal', gradient_from: '#e8eef7', gradient_to: '#d6e0f0', accent_color: '#3b82f6' },
+  { name: 'Vintage', slug: 'vintage', description: 'Hoài cổ, cá tính, retro', tag: 'RETRO', variant: 'vintage', size: 'normal', gradient_from: '#f0ebe3', gradient_to: '#e5ddd0', accent_color: '#8b6914' },
+  { name: 'Tối Giản', slug: 'toi-gian', description: 'Nhẹ nhàng, tinh tế, không rườm rà', tag: 'MINIMAL', variant: 'minimal', size: 'wide', gradient_from: '#f5f0ed', gradient_to: '#ebe5e2', accent_color: '#8b7064' },
+  { name: 'Sang Trọng', slug: 'sang-trong', description: 'Thương hiệu cao cấp, đẳng cấp', tag: 'PREMIUM', variant: 'luxury', size: 'normal', gradient_from: '#e8efe8', gradient_to: '#d5e0d5', accent_color: '#166534' },
+];
+
+export function DynamicCollections() {
+  const [collections, setCollections] = useState<any[]>(DEFAULT_COLLECTIONS);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    publicApi.getCollections()
+      .then((data: any[]) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setCollections(data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoaded(true));
+  }, []);
+
+  return (
+    <div className="style-masonry">
+      {collections.map((col: any, index: number) => (
+        <Link
+          key={col.slug || index}
+          href={`/san-pham?style=${col.slug}`}
+          className={`style-card style-card--${col.size || 'normal'}`}
+          style={{
+            '--card-index': index,
+            background: (col.gradient_from && col.gradient_to)
+              ? `linear-gradient(160deg, ${col.gradient_from} 0%, ${col.gradient_to} 100%)`
+              : undefined,
+            borderColor: col.accent_color ? `${col.accent_color}20` : undefined,
+          } as React.CSSProperties}
+        >
+          <div
+            className="style-card__tag"
+            style={{
+              color: col.accent_color || undefined,
+              borderColor: col.accent_color ? `${col.accent_color}40` : undefined,
+              background: col.accent_color ? `${col.accent_color}12` : undefined,
+            }}
+          >
+            {col.tag || col.name?.toUpperCase()}
+          </div>
+          <h3 className="style-card__name">{col.name}</h3>
+          <p className="style-card__desc">{col.description}</p>
+          <span
+            className="style-card__cta"
+            style={{ color: col.accent_color || undefined }}
+          >
+            Khám phá <FiArrowRight />
+          </span>
+        </Link>
+      ))}
+    </div>
+  );
+}

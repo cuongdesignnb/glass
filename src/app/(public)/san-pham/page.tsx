@@ -75,8 +75,8 @@ export default function ProductListingPage() {
       {/* Page Header */}
       <div className="products-header">
         <div className="container">
-          <h1 className="heading-lg" style={{ color: 'var(--color-white)' }}>Bộ Sưu Tập Kính Mắt</h1>
-          <p style={{ color: 'rgba(255,255,255,0.6)', marginTop: '8px' }}>
+          <h1 className="heading-lg" style={{ color: 'var(--color-text-heading)' }}>Bộ Sưu Tập Kính Mắt</h1>
+          <p style={{ color: 'var(--color-text-muted)', marginTop: '8px' }}>
             Tìm kiếm chiếc kính hoàn hảo cho phong cách của bạn
           </p>
         </div>

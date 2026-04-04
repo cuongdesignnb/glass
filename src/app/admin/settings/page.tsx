@@ -83,6 +83,7 @@ export default function AdminSettingsPage() {
     if (key.startsWith('social_')) return 'social';
     if (key.startsWith('contact_')) return 'contact';
     if (key.startsWith('hero_') || key.startsWith('stat_') || key.startsWith('homepage_')) return 'homepage';
+    if (key.startsWith('brand_')) return 'general';
     if (key.startsWith('payment_')) return 'payment';
     if (key.startsWith('font_') || key.startsWith('custom_font_')) return 'font';
     if (key.startsWith('gemini_') || key.startsWith('openai_') || key.startsWith('google_') || key.startsWith('facebook_')) return 'api';
@@ -112,6 +113,7 @@ export default function AdminSettingsPage() {
     isToggle?: boolean;
     isTextarea?: boolean;
     isPassword?: boolean;
+    isColor?: boolean;
     hint?: string;
     section?: string;
   };
@@ -122,6 +124,7 @@ export default function AdminSettingsPage() {
       { key: 'site_description', label: 'Mô tả Website', placeholder: 'Cửa hàng kính mắt...', isTextarea: true },
       { key: 'site_logo',        label: 'Logo',          isImage: true },
       { key: 'site_favicon',     label: 'Favicon',       isImage: true },
+      { key: 'brand_color',      label: 'Màu chủ đạo',   isColor: true, section: 'Giao Diện', hint: 'Chọn màu chủ đạo cho website. Màu này sẽ áp dụng cho tất cả nút bấm, link, accent trên toàn bộ trang.' },
     ],
     homepage: [
       { key: 'hero_image',    label: 'Ảnh Hero (nền)',          isImage: true, section: 'Hero Section' },
@@ -392,6 +395,31 @@ export default function AdminSettingsPage() {
             color: 'rgba(255,255,255,0.4)', fontSize: '1rem',
           }} title={revealed ? 'Ẩn' : 'Hiện'}>
             {revealed ? <FiEyeOff /> : <FiEye />}
+          </button>
+        </div>
+      );
+    }
+    if (field.isColor) {
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <input
+            type="color"
+            value={settings[field.key] || '#c9a96e'}
+            onChange={(e) => updateSetting(field.key, e.target.value)}
+            style={{ width: '48px', height: '40px', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', cursor: 'pointer', padding: '2px', background: 'rgba(255,255,255,0.06)' }}
+          />
+          <input
+            type="text"
+            className="admin-form__input"
+            value={settings[field.key] || '#c9a96e'}
+            onChange={(e) => updateSetting(field.key, e.target.value)}
+            placeholder="#c9a96e"
+            style={{ maxWidth: '180px', fontFamily: 'monospace' }}
+          />
+          <div style={{ width: '100px', height: '36px', borderRadius: '8px', background: settings[field.key] || '#c9a96e', border: '1px solid rgba(255,255,255,0.1)' }} />
+          <button type="button" onClick={() => updateSetting(field.key, '#c9a96e')}
+            style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', background: 'none', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer' }}>
+            Mặc định
           </button>
         </div>
       );
