@@ -101,10 +101,24 @@ class ProductController extends Controller
             ->firstOrFail();
 
         // Try loading addon relations (tables may not be migrated yet)
+        $constraints = [];
         try {
             $product->load(['addonGroups.options', 'addonPrices']);
+
+            // Load constraints for options in this product's addon groups
+            $optionIds = $product->addonGroups->pluck('options')->flatten()->pluck('id')->toArray();
+            if (!empty($optionIds)) {
+                $constraints = \App\Models\AddonOptionConstraint::whereIn('option_id', $optionIds)
+                    ->orWhereIn('blocked_option_id', $optionIds)
+                    ->get()
+                    ->map(fn($c) => [
+                        'option_id' => $c->option_id,
+                        'blocked_option_id' => $c->blocked_option_id,
+                    ])
+                    ->values()
+                    ->toArray();
+            }
         } catch (\Exception $e) {
-            // Addon tables don't exist yet, return empty arrays
             $product->setRelation('addonGroups', collect([]));
             $product->setRelation('addonPrices', collect([]));
         }
@@ -112,7 +126,10 @@ class ProductController extends Controller
         // Increment views
         $product->increment('views');
 
-        return response()->json($product);
+        $data = $product->toArray();
+        $data['addon_constraints'] = $constraints;
+
+        return response()->json($data);
     }
 
     /**

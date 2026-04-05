@@ -52,15 +52,16 @@ export default function ProductFormPage() {
     }
     if (token) {
       adminApi.getAddonGroups(token).then((data: any) => {
-        setAllAddonGroups(Array.isArray(data) ? data : []);
+        // Handle new format { groups, constraints } or old format (array)
+        const groups = Array.isArray(data) ? data : (data?.groups || []);
+        setAllAddonGroups(groups);
       }).catch(() => {});
     }
   }, [isEdit, token]);
 
   const loadProduct = async () => {
     try {
-      const data = await adminApi.getProducts(token!, { show_all: '1', per_page: '1000' });
-      const product = (data.data || []).find((p: any) => p.id === Number(params?.id));
+      const product = await adminApi.getProduct(token!, Number(params?.id));
       if (product) {
         setForm({
           name: product.name || '', sku: product.sku || '',

@@ -216,6 +216,8 @@ export const adminApi = {
     const query = params ? '?' + new URLSearchParams({ ...params, show_all: '1' }).toString() : '?show_all=1';
     return fetchApi(`/products${query}`, { token });
   },
+  getProduct: (token: string, id: number) =>
+    fetchApi(`/products/${id}`, { token }),
   createProduct: (token: string, data: any) =>
     fetchApi('/products', { method: 'POST', body: JSON.stringify(data), token }),
   updateProduct: (token: string, id: number, data: any) =>
@@ -442,4 +444,6 @@ export const adminApi = {
     fetchApi(`/addon-groups/${id}`, { method: 'PUT', body: JSON.stringify(data), token }),
   deleteAddonGroup: (token: string, id: number) =>
     fetchApi(`/addon-groups/${id}`, { method: 'DELETE', token }),
+  saveAddonConstraints: (token: string, constraints: { option_id: number; blocked_option_id: number }[]) =>
+    fetchApi('/addon-constraints', { method: 'PUT', body: JSON.stringify({ constraints }), token }),
 };

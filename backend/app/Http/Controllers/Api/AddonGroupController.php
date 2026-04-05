@@ -4,30 +4,52 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ProductAddonGroup;
+use App\Models\AddonOptionConstraint;
 use Illuminate\Http\Request;
 
 class AddonGroupController extends Controller
 {
     /**
-     * List all addon groups with options
+     * List all addon groups with options and constraints
      */
     public function index()
     {
         try {
-            $groups = ProductAddonGroup::with('options')
+            $groups = ProductAddonGroup::with(['options' => function ($q) {
+                $q->orderBy('sort_order');
+            }])
                 ->withCount('products')
                 ->orderBy('sort_order')
                 ->get();
 
-            return response()->json($groups);
+            // Load all constraints
+            $constraints = [];
+            try {
+                $constraints = AddonOptionConstraint::all()
+                    ->map(fn($c) => [
+                        'option_id' => $c->option_id,
+                        'blocked_option_id' => $c->blocked_option_id,
+                    ])
+                    ->values()
+                    ->toArray();
+            } catch (\Exception $e) {
+                // Table may not exist yet
+            }
+
+            return response()->json([
+                'groups' => $groups,
+                'constraints' => $constraints,
+            ]);
         } catch (\Exception $e) {
-            // Tables may not exist yet if migration hasn't been run
-            return response()->json([]);
+            return response()->json([
+                'groups' => [],
+                'constraints' => [],
+            ]);
         }
     }
 
     /**
-     * Create addon group with options (names only, no prices)
+     * Create addon group with options
      */
     public function store(Request $request)
     {
@@ -99,5 +121,37 @@ class AddonGroupController extends Controller
         $addonGroup->products()->detach();
         $addonGroup->delete();
         return response()->json(['message' => 'Xóa nhóm tuỳ chọn thành công']);
+    }
+
+    /**
+     * Save constraints (bulk update)
+     * Expected: { constraints: [{ option_id: 1, blocked_option_id: 5 }, ...] }
+     */
+    public function saveConstraints(Request $request)
+    {
+        $data = $request->validate([
+            'constraints' => 'required|array',
+            'constraints.*.option_id' => 'required|integer',
+            'constraints.*.blocked_option_id' => 'required|integer',
+        ]);
+
+        try {
+            // Replace all constraints
+            AddonOptionConstraint::truncate();
+
+            foreach ($data['constraints'] as $constraint) {
+                // Don't allow self-referencing
+                if ($constraint['option_id'] == $constraint['blocked_option_id']) continue;
+
+                AddonOptionConstraint::create([
+                    'option_id' => $constraint['option_id'],
+                    'blocked_option_id' => $constraint['blocked_option_id'],
+                ]);
+            }
+
+            return response()->json(['message' => 'Đã lưu ràng buộc']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 }

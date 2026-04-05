@@ -741,6 +741,25 @@
   box-shadow: 0 0 0 1px var(--color-brand);
 }
 
+.addon-option--blocked {
+  opacity: 0.4;
+  cursor: not-allowed;
+  background: var(--color-gray-100);
+  border-color: var(--color-gray-200);
+  border-style: dashed;
+  position: relative;
+}
+
+.addon-option--blocked:hover {
+  border-color: var(--color-gray-300);
+  background: var(--color-gray-100);
+}
+
+.addon-option--blocked .addon-option__name {
+  text-decoration: line-through;
+  color: var(--color-gray-400);
+}
+
 .addon-option__name {
   font-size: 0.8125rem;
   font-weight: 600;

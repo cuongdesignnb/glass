@@ -340,6 +340,27 @@ export default function ProductDetailClient({ product, reviewData, apiMediaUrl }
               priceMap[p.option_id] = { additional_price: p.additional_price || 0, is_available: p.is_available ?? true };
             });
 
+            // Build blocked set from constraints + selected options
+            const addonConstraints: { option_id: number; blocked_option_id: number }[] = product.addon_constraints || [];
+            const blockedOptionIds = new Set<number>();
+            const blockReasons: Record<number, string> = {};
+
+            // For each selected option, find what it blocks
+            Object.values(selectedAddons).forEach(selectedOptId => {
+              if (!selectedOptId) return;
+              addonConstraints.forEach(c => {
+                if (c.option_id === selectedOptId) {
+                  blockedOptionIds.add(c.blocked_option_id);
+                  // Find source option name for tooltip
+                  const sourceOpt = product.addon_groups?.flatMap((g: any) => g.options || [])
+                    .find((o: any) => o.id === selectedOptId);
+                  if (sourceOpt) {
+                    blockReasons[c.blocked_option_id] = sourceOpt.name;
+                  }
+                }
+              });
+            });
+
             return (
               <div className="product-addons">
                 <h4 className="product-addons__title">Tuỳ chọn thêm</h4>
@@ -359,21 +380,49 @@ export default function ProductDetailClient({ product, reviewData, apiMediaUrl }
                       <div className="product-addon-group__options">
                         {availableOptions.map((opt: any) => {
                           const isSelected = selectedAddons[group.id] === opt.id;
+                          const isBlocked = blockedOptionIds.has(opt.id);
                           const price = priceMap[opt.id]?.additional_price || 0;
-                          // Check if any option in this group has a price > 0
                           const groupHasPricing = availableOptions.some((o: any) => (priceMap[o.id]?.additional_price || 0) > 0);
+
                           return (
                             <button
                               key={opt.id}
-                              className={`addon-option ${isSelected ? 'addon-option--active' : ''}`}
-                              onClick={() => setSelectedAddons(prev => ({ ...prev, [group.id]: isSelected ? null : opt.id }))}
+                              className={`addon-option ${isSelected ? 'addon-option--active' : ''} ${isBlocked ? 'addon-option--blocked' : ''}`}
+                              disabled={isBlocked}
+                              title={isBlocked ? `Không khả dụng khi chọn "${blockReasons[opt.id]}"` : ''}
+                              onClick={() => {
+                                if (isBlocked) return;
+                                const newAddons = { ...selectedAddons, [group.id]: isSelected ? null : opt.id };
+
+                                // Auto-deselect options that become blocked by this selection
+                                if (!isSelected) {
+                                  const newlyBlocked = new Set<number>();
+                                  addonConstraints.forEach(c => {
+                                    if (c.option_id === opt.id) newlyBlocked.add(c.blocked_option_id);
+                                  });
+                                  // Check all other groups
+                                  product.addon_groups.forEach((otherGroup: any) => {
+                                    if (otherGroup.id === group.id) return;
+                                    const selectedInOther = newAddons[otherGroup.id];
+                                    if (selectedInOther && newlyBlocked.has(selectedInOther)) {
+                                      newAddons[otherGroup.id] = null;
+                                    }
+                                  });
+                                }
+
+                                setSelectedAddons(newAddons);
+                              }}
                             >
                               <span className="addon-option__name">{opt.name}</span>
-                              {groupHasPricing && (
+                              {isBlocked ? (
+                                <span className="addon-option__price" style={{ color: 'rgba(200,50,50,0.7)', fontSize: '0.65rem' }}>
+                                  Không khả dụng
+                                </span>
+                              ) : groupHasPricing ? (
                                 <span className="addon-option__price">
                                   {price > 0 ? `+${formatPrice(price)}` : 'Miễn phí'}
                                 </span>
-                              )}
+                              ) : null}
                             </button>
                           );
                         })}

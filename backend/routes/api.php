@@ -185,6 +185,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('addon-groups', AddonGroupController::class)->parameters([
         'addon-groups' => 'addonGroup',
     ]);
+    Route::put('/addon-constraints', [AddonGroupController::class, 'saveConstraints']);
 
     // Orders (admin)
     Route::get('/orders', [OrderController::class, 'index']);
