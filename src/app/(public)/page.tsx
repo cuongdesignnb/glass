@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { FiArrowRight, FiTruck, FiShield, FiRefreshCw, FiAward, FiEye, FiCamera, FiPhone, FiCircle, FiSquare, FiHeart, FiMaximize } from 'react-icons/fi';
 import { RiGlassesLine, RiSunLine, RiVipCrownLine, RiPriceTag3Line } from 'react-icons/ri';
 import { publicApi } from '@/lib/api';
-import { DynamicCategories, DynamicProducts, DynamicCollections, DynamicVouchers } from './HomeClient';
+import { DynamicCategories, DynamicProducts, DynamicCollections, DynamicVouchers, DynamicHero, DynamicStats } from './HomeClient';
 import './home.css';
 
 export const metadata = {
@@ -35,45 +35,8 @@ const testimonials = [
 export default function HomePage() {
   return (
     <>
-      {/* Hero Section */}
-      <section className="hero">
-        <div className="hero__bg">
-          <div className="hero__bg-gradient" />
-          <div className="hero__particles">
-            {Array.from({ length: 15 }).map((_, i) => (
-              <div key={i} className="hero__particle" style={{
-                left: `${(i * 7.3) % 100}%`, top: `${(i * 13.7) % 100}%`,
-                animationDelay: `${i * 0.5}s`, animationDuration: `${6 + (i % 4)}s`,
-              }} />
-            ))}
-          </div>
-        </div>
-        <div className="container" style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 'var(--space-3xl)', minHeight: '100vh' }}>
-          <div className="hero__content">
-            <div className="hero__tag">✦ Bộ Sưu Tập Mới 2026</div>
-            <h1 className="hero__title">Phong Cách <em>Đẳng Cấp</em><br />Qua Mỗi Ánh Nhìn</h1>
-            <p className="hero__desc">Khám phá bộ sưu tập kính mắt cao cấp với công nghệ AI thử kính ảo. Tìm kiếm chiếc kính hoàn hảo cho phong cách riêng của bạn.</p>
-            <div className="hero__actions">
-              <Link href="/san-pham" className="btn btn-primary btn-lg">Khám Phá Ngay <FiArrowRight /></Link>
-              <Link href="/thu-kinh-ao" className="btn btn-secondary btn-lg">Thử Kính AI</Link>
-            </div>
-          </div>
-          <div className="hero__visual">
-            <div className="hero__visual-ring hero__visual-ring--lg" />
-            <div className="hero__visual-ring hero__visual-ring--md" />
-            <div className="hero__visual-ring hero__visual-ring--sm" />
-            <div className="hero__visual-badge hero__visual-badge--1"><span className="hero__visual-badge-num">500+</span><span className="hero__visual-badge-txt">Mẫu Kính</span></div>
-            <div className="hero__visual-badge hero__visual-badge--2"><span className="hero__visual-badge-num">4.9★</span><span className="hero__visual-badge-txt">Đánh Giá</span></div>
-            <div className="hero__visual-center">
-              <div className="hero__glasses-shape">
-                <div className="hero__glasses-lens hero__glasses-lens--left" />
-                <div className="hero__glasses-bridge" />
-                <div className="hero__glasses-lens hero__glasses-lens--right" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Hero Section (reads from admin settings) */}
+      <DynamicHero />
 
       {/* Trust Badges */}
       <section className="trust-badges">
@@ -234,17 +197,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="section section--dark stats-section">
-        <div className="container">
-          <div className="stats-grid">
-            <div className="stat"><div className="stat__number">10,000+</div><div className="stat__label">Khách Hàng Hài Lòng</div></div>
-            <div className="stat"><div className="stat__number">500+</div><div className="stat__label">Mẫu Kính Đa Dạng</div></div>
-            <div className="stat"><div className="stat__number">50+</div><div className="stat__label">Thương Hiệu Premium</div></div>
-            <div className="stat"><div className="stat__number">4.9 ★</div><div className="stat__label">Đánh Giá Trung Bình</div></div>
-          </div>
-        </div>
-      </section>
+      {/* Stats (reads from admin settings) */}
+      <DynamicStats />
     </>
   );
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, ReactNode } from 'react';
 import Link from 'next/link';
 import { publicApi } from '@/lib/api';
+import { useSettings } from '@/lib/useSettings';
 import { RiGlassesLine, RiSunLine, RiVipCrownLine, RiPriceTag3Line } from 'react-icons/ri';
 import { FiArrowRight, FiCopy, FiCheck, FiGift, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 
@@ -12,6 +13,84 @@ function getImageUrl(path: string | null) {
   if (!path) return null;
   if (path.startsWith('http')) return path;
   return `${API_BASE}${path}`;
+}
+
+// ── Hero Section (reads from admin settings) ──
+export function DynamicHero() {
+  const { settings } = useSettings();
+
+  const heroTitle = settings['hero_title'] || 'Phong Cách Đẳng Cấp\nQua Mỗi Ánh Nhìn';
+  const heroDesc = settings['hero_subtitle'] || 'Khám phá bộ sưu tập kính mắt cao cấp với công nghệ AI thử kính ảo. Tìm kiếm chiếc kính hoàn hảo cho phong cách riêng của bạn.';
+  const heroCtaText = settings['hero_cta_text'] || 'Khám Phá Ngay';
+  const heroTag = settings['hero_tag'] || 'Bộ Sưu Tập Mới 2026';
+  const heroImage = settings['hero_image'] ? getImageUrl(settings['hero_image']) : null;
+
+  // Split title into parts for styling (first line em, second normal)
+  const titleParts = heroTitle.split('\n');
+
+  return (
+    <section className="hero" style={heroImage ? { backgroundImage: `url(${heroImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}>
+      <div className="hero__bg">
+        <div className="hero__bg-gradient" />
+        {!heroImage && (
+          <div className="hero__particles">
+            {Array.from({ length: 15 }).map((_, i) => (
+              <div key={i} className="hero__particle" style={{
+                left: `${(i * 7.3) % 100}%`, top: `${(i * 13.7) % 100}%`,
+                animationDelay: `${i * 0.5}s`, animationDuration: `${6 + (i % 4)}s`,
+              }} />
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="container" style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 'var(--space-3xl)', minHeight: '100vh' }}>
+        <div className="hero__content">
+          <div className="hero__tag">✦ {heroTag}</div>
+          <h1 className="hero__title">
+            {titleParts.length > 1 ? (
+              <>{titleParts[0]}<br />{titleParts.slice(1).join(' ')}</>
+            ) : heroTitle}
+          </h1>
+          <p className="hero__desc">{heroDesc}</p>
+          <div className="hero__actions">
+            <Link href="/san-pham" className="btn btn-primary btn-lg">{heroCtaText} <FiArrowRight /></Link>
+            <Link href="/thu-kinh-ao" className="btn btn-secondary btn-lg">Thử Kính AI</Link>
+          </div>
+        </div>
+        <div className="hero__visual">
+          <div className="hero__visual-ring hero__visual-ring--lg" />
+          <div className="hero__visual-ring hero__visual-ring--md" />
+          <div className="hero__visual-ring hero__visual-ring--sm" />
+          <div className="hero__visual-badge hero__visual-badge--1"><span className="hero__visual-badge-num">500+</span><span className="hero__visual-badge-txt">Mẫu Kính</span></div>
+          <div className="hero__visual-badge hero__visual-badge--2"><span className="hero__visual-badge-num">4.9★</span><span className="hero__visual-badge-txt">Đánh Giá</span></div>
+          <div className="hero__visual-center">
+            <div className="hero__glasses-shape">
+              <div className="hero__glasses-lens hero__glasses-lens--left" />
+              <div className="hero__glasses-bridge" />
+              <div className="hero__glasses-lens hero__glasses-lens--right" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Stats Section (reads from admin settings) ──
+export function DynamicStats() {
+  const { settings } = useSettings();
+  return (
+    <section className="section section--dark stats-section">
+      <div className="container">
+        <div className="stats-grid">
+          <div className="stat"><div className="stat__number">{settings['stat_customers'] || '10,000+'}</div><div className="stat__label">Khách Hàng Hài Lòng</div></div>
+          <div className="stat"><div className="stat__number">{settings['stat_products'] || '500+'}</div><div className="stat__label">Mẫu Kính Đa Dạng</div></div>
+          <div className="stat"><div className="stat__number">{settings['stat_brands'] || '50+'}</div><div className="stat__label">Thương Hiệu Premium</div></div>
+          <div className="stat"><div className="stat__number">{settings['stat_rating'] || '4.9 ★'}</div><div className="stat__label">Đánh Giá Trung Bình</div></div>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 // ── Reusable Slider with Navigation Arrows ──

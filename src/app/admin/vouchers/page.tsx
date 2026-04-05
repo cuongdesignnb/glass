@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 
 const SCOPE_LABELS: Record<string, string> = {
   all: 'Toàn bộ',
+  all_users: 'Tất cả thành viên',
   product: 'Sản phẩm cụ thể',
   user: 'User cụ thể',
 };
@@ -264,7 +265,8 @@ export default function AdminVouchersPage() {
                   <label className="admin-form__label">Phạm vi áp dụng</label>
                   <select className="admin-form__input" value={form.scope}
                     onChange={e => setForm({ ...form, scope: e.target.value as any })}>
-                    <option value="all">Toàn bộ sản phẩm</option>
+                    <option value="all">Toàn bộ (ai cũng dùng được)</option>
+                    <option value="all_users">Tất cả thành viên (phải đăng nhập)</option>
                     <option value="product">Sản phẩm cụ thể</option>
                     <option value="user">User được chỉ định</option>
                   </select>

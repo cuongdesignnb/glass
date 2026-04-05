@@ -223,6 +223,17 @@ class OrderController extends Controller
             }
         }
 
+        // Check all_users scope (any logged-in user)
+        if ($voucher->scope === 'all_users') {
+            $user = auth('sanctum')->user();
+            if (!$user) {
+                return response()->json(['valid' => false, 'message' => 'Vui lòng đăng nhập để sử dụng mã này'], 422);
+            }
+            if (!$voucher->isWithinUserLimit($user->id)) {
+                return response()->json(['valid' => false, 'message' => 'Bạn đã sử dụng hết lượt cho mã này'], 422);
+            }
+        }
+
         // Check product scope
         if ($voucher->scope === 'product' && $request->has('product_ids')) {
             $cartProductIds = $request->product_ids;
