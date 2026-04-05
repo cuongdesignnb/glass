@@ -161,10 +161,10 @@ export default function CheckoutPage() {
     const bankName    = bankInfo.bank_name    || process.env.NEXT_PUBLIC_SEPAY_BANK_NAME    || '';
     const accountNo   = bankInfo.account_number || process.env.NEXT_PUBLIC_SEPAY_ACCOUNT_NUMBER || '';
     const accountName = bankInfo.account_name   || process.env.NEXT_PUBLIC_SEPAY_ACCOUNT_NAME  || '';
-    const paymentCode = orderSuccess.payment_code || orderSuccess.order_number;
+    const paymentCode = bankInfo.transfer_content || orderSuccess.payment_code || orderSuccess.order_number;
     const amount      = orderSuccess.total;
 
-    // VietQR URL (no external SDK needed)
+    // VietQR URL — nội dung CK phải bắt đầu bằng SEVQR để SePay nhận diện
     const qrUrl = accountNo && bankName
       ? `https://img.vietqr.io/image/${bankName}-${accountNo}-compact.png?amount=${amount}&addInfo=${paymentCode}&accountName=${encodeURIComponent(accountName)}`
       : null;

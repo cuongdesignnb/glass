@@ -50,13 +50,14 @@ class Order extends Model
     }
 
     /**
-     * Tạo mã thanh toán ngắn gọn để điền vào nội dung chuyển khoản.
-     * VD: GLS8A3F2C  (dễ đọc, unique)
+     * Tạo mã thanh toán theo format SePay: SEVQR + mã duy nhất
+     * SePay yêu cầu nội dung CK bắt đầu bằng SEVQR để webhook nhận diện
+     * VD: SEVQR8A3F2C
      */
     public static function generatePaymentCode(): string
     {
         do {
-            $code = 'GLS' . strtoupper(substr(md5(uniqid()), 0, 6));
+            $code = 'SEVQR' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 6));
         } while (self::where('payment_code', $code)->exists());
 
         return $code;
