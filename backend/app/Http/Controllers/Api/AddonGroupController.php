@@ -13,12 +13,17 @@ class AddonGroupController extends Controller
      */
     public function index()
     {
-        $groups = ProductAddonGroup::with('options')
-            ->withCount('products')
-            ->orderBy('sort_order')
-            ->get();
+        try {
+            $groups = ProductAddonGroup::with('options')
+                ->withCount('products')
+                ->orderBy('sort_order')
+                ->get();
 
-        return response()->json($groups);
+            return response()->json($groups);
+        } catch (\Exception $e) {
+            // Tables may not exist yet if migration hasn't been run
+            return response()->json([]);
+        }
     }
 
     /**
