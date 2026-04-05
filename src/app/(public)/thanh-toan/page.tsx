@@ -7,7 +7,7 @@ import { publicApi } from '@/lib/api';
 import { formatPrice, PAYMENT_METHODS } from '@/lib/constants';
 import Breadcrumb from '@/components/layout/Breadcrumb';
 import Link from 'next/link';
-import { FiCheck, FiArrowLeft, FiShoppingBag, FiCopy, FiRefreshCw, FiClock } from 'react-icons/fi';
+import { FiCheck, FiArrowLeft, FiShoppingBag, FiCopy, FiRefreshCw, FiClock, FiTag, FiX } from 'react-icons/fi';
 import { RiGlassesLine } from 'react-icons/ri';
 import './checkout.css';
 
@@ -47,6 +47,13 @@ export default function CheckoutPage() {
   const [provinces, setProvinces] = useState<any[]>([]);
   const [wards, setWards] = useState<any[]>([]);
 
+  // Voucher
+  const [voucherCode, setVoucherCode] = useState('');
+  const [appliedVoucher, setAppliedVoucher] = useState<any>(null);
+  const [voucherDiscount, setVoucherDiscount] = useState(0);
+  const [voucherError, setVoucherError] = useState('');
+  const [voucherLoading, setVoucherLoading] = useState(false);
+
   useEffect(() => {
     fetch('/locations.json')
       .then(r => r.json())
@@ -55,10 +62,36 @@ export default function CheckoutPage() {
   }, []);
 
   const shipping = subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
-  const total = subtotal + shipping;
+  const total = Math.max(0, subtotal + shipping - voucherDiscount);
 
   const updateForm = (key: string, value: string) => {
     setForm(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleApplyVoucher = async () => {
+    if (!voucherCode.trim()) return;
+    setVoucherLoading(true);
+    setVoucherError('');
+    try {
+      const result = await publicApi.validateVoucher(voucherCode.trim(), subtotal);
+      if (result.valid) {
+        setAppliedVoucher(result.voucher);
+        setVoucherDiscount(result.discount || 0);
+      } else {
+        setVoucherError(result.message || 'Mã không hợp lệ');
+      }
+    } catch (err: any) {
+      setVoucherError(err.message || 'Mã không hợp lệ hoặc đã hết hạn');
+    } finally {
+      setVoucherLoading(false);
+    }
+  };
+
+  const handleRemoveVoucher = () => {
+    setAppliedVoucher(null);
+    setVoucherDiscount(0);
+    setVoucherCode('');
+    setVoucherError('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -73,8 +106,9 @@ export default function CheckoutPage() {
         ...form,
         subtotal,
         shipping,
-        discount: 0,
+        discount: voucherDiscount,
         total,
+        voucher_code: appliedVoucher?.code || null,
         items: items.map(item => ({
           product_id: item.productId,
           name: item.name,
@@ -379,6 +413,75 @@ export default function CheckoutPage() {
               })()}
             </div>
 
+            {/* Voucher */}
+            <div className="checkout-section">
+              <h2 className="checkout-section__title">Mã giảm giá</h2>
+              {appliedVoucher ? (
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '12px 14px', borderRadius: '10px',
+                  background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <FiTag style={{ color: '#10b981', fontSize: '1.125rem' }} />
+                    <div>
+                      <div style={{ fontWeight: 700, color: 'var(--color-gray-900)', fontSize: '0.9375rem' }}>{appliedVoucher.code}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#10b981' }}>
+                        {appliedVoucher.type === 'percent'
+                          ? `Giảm ${appliedVoucher.value}%${appliedVoucher.max_discount > 0 ? ` (tối đa ${formatPrice(appliedVoucher.max_discount)})` : ''}`
+                          : `Giảm ${formatPrice(appliedVoucher.value)}`
+                        }
+                        {appliedVoucher.min_order > 0 && ` • Đơn từ ${formatPrice(appliedVoucher.min_order)}`}
+                      </div>
+                    </div>
+                  </div>
+                  <button onClick={handleRemoveVoucher} style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--color-gray-400)', padding: '4px',
+                  }}>
+                    <FiX size={18} />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      placeholder="Nhập mã giảm giá"
+                      value={voucherCode}
+                      onChange={e => setVoucherCode(e.target.value.toUpperCase())}
+                      onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleApplyVoucher())}
+                      style={{
+                        flex: 1, padding: '10px 14px',
+                        background: 'var(--color-white)', border: '1px solid var(--color-gray-300)',
+                        borderRadius: '8px', color: 'var(--color-gray-900)',
+                        fontSize: '0.9375rem', fontFamily: 'monospace', fontWeight: 600,
+                        letterSpacing: '0.05em', textTransform: 'uppercase',
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyVoucher}
+                      disabled={voucherLoading || !voucherCode.trim()}
+                      className="btn btn-secondary"
+                      style={{ whiteSpace: 'nowrap', padding: '10px 20px' }}
+                    >
+                      {voucherLoading ? 'Đang kiểm tra...' : 'Áp dụng'}
+                    </button>
+                  </div>
+                  {voucherError && (
+                    <div style={{
+                      marginTop: '8px', fontSize: '0.8125rem',
+                      color: 'var(--color-error)', padding: '8px 12px',
+                      background: 'rgba(239,68,68,0.06)', borderRadius: '6px',
+                    }}>
+                      {voucherError}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
             {/* Note */}
             <div className="checkout-section">
               <h2 className="checkout-section__title">Ghi chú</h2>
@@ -432,6 +535,12 @@ export default function CheckoutPage() {
               <span>Phí vận chuyển</span>
               <span>{shipping === 0 ? <em style={{ color: '#10b981' }}>Miễn phí</em> : formatPrice(shipping)}</span>
             </div>
+            {voucherDiscount > 0 && (
+              <div className="checkout-summary__row" style={{ color: '#10b981' }}>
+                <span>Giảm giá ({appliedVoucher?.code})</span>
+                <span>-{formatPrice(voucherDiscount)}</span>
+              </div>
+            )}
             <div className="checkout-summary__divider" />
             <div className="checkout-summary__row checkout-summary__total">
               <span>Tổng cộng</span>
