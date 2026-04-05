@@ -92,12 +92,22 @@ class ProductController extends Controller
      */
     public function show(string $slugOrId)
     {
+        // Load product with safe relations (addon tables may not exist yet)
         $product = Product::with(['category', 'faqs' => function($q) {
             $q->where('is_active', true)->orderBy('order', 'asc');
-        }, 'addonGroups.options', 'addonPrices'])
+        }])
             ->where('slug', $slugOrId)
             ->orWhere('id', is_numeric($slugOrId) ? $slugOrId : 0)
             ->firstOrFail();
+
+        // Try loading addon relations (tables may not be migrated yet)
+        try {
+            $product->load(['addonGroups.options', 'addonPrices']);
+        } catch (\Exception $e) {
+            // Addon tables don't exist yet, return empty arrays
+            $product->setRelation('addonGroups', collect([]));
+            $product->setRelation('addonPrices', collect([]));
+        }
 
         // Increment views
         $product->increment('views');
