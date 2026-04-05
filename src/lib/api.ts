@@ -58,7 +58,6 @@ export const publicApi = {
     return fetchApi(`/public/products${query}`);
   },
   getProduct: (slug: string) => fetchApi(`/public/products/${slug}`),
-  getProductFilters: () => fetchApi('/public/product-filters'),
 
   // Search
   search: (q: string) => fetchApi(`/public/search?q=${encodeURIComponent(q)}`),
