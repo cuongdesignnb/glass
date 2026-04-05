@@ -80,7 +80,7 @@ export function DynamicHero() {
 export function DynamicStats() {
   const { settings } = useSettings();
   return (
-    <section className="section section--dark stats-section">
+    <section className="section stats-section">
       <div className="container">
         <div className="stats-grid">
           <div className="stat"><div className="stat__number">{settings['stat_customers'] || '10,000+'}</div><div className="stat__label">Khách Hàng Hài Lòng</div></div>

@@ -952,7 +952,10 @@
 }
 
 /* ---- Stats ---- */
-.stats-section { background: var(--color-gray-900); }
+.stats-section {
+  background: linear-gradient(135deg, #f5f3ef 0%, #ede8e0 100%);
+  border-top: 1px solid rgba(201, 169, 110, 0.15);
+}
 
 .stats-grid {
   display: grid;
@@ -967,13 +970,13 @@
   font-family: var(--font-display);
   font-size: clamp(1.75rem, 4vw, 2.5rem);
   font-weight: 700;
-  color: var(--color-brand-light);
+  color: var(--color-brand-dark);
   margin-bottom: var(--space-xs);
 }
 
 .stat__label {
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--color-text-muted);
   font-weight: 500;
 }
 

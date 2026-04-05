@@ -4,6 +4,7 @@ import { FiArrowRight, FiTruck, FiShield, FiRefreshCw, FiAward, FiEye, FiCamera,
 import { RiGlassesLine, RiSunLine, RiVipCrownLine, RiPriceTag3Line } from 'react-icons/ri';
 import { publicApi } from '@/lib/api';
 import { DynamicCategories, DynamicProducts, DynamicCollections, DynamicVouchers, DynamicHero, DynamicStats } from './HomeClient';
+import Newsletter from '@/components/layout/Newsletter';
 import './home.css';
 
 export const metadata = {
@@ -148,6 +149,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Newsletter — ngay dưới chọn kính theo khuôn mặt */}
+      <Newsletter />
 
       {/* Services */}
       <section className="section services-section">
