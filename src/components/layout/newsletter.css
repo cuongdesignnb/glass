@@ -1,0 +1,135 @@
+/* Newsletter Section */
+.newsletter {
+  background: linear-gradient(135deg, #f8f6f3 0%, #f0ece5 100%);
+  padding: 48px 0;
+  border-top: 1px solid rgba(201,169,110,0.15);
+}
+
+.newsletter__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 40px;
+}
+
+.newsletter__text {
+  flex-shrink: 0;
+}
+
+.newsletter__title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-gray-900);
+  margin-bottom: 6px;
+  font-style: italic;
+}
+
+.newsletter__desc {
+  font-size: 0.875rem;
+  color: var(--color-gray-500);
+  margin: 0;
+}
+
+.newsletter__form-wrap {
+  flex: 1;
+  max-width: 480px;
+}
+
+.newsletter__form {
+  display: flex;
+  gap: 0;
+  border-radius: 50px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  border: 1.5px solid var(--color-gray-200);
+  background: var(--color-white);
+}
+
+.newsletter__input-wrap {
+  flex: 1;
+  position: relative;
+}
+
+.newsletter__input {
+  width: 100%;
+  padding: 14px 20px;
+  border: none;
+  outline: none;
+  font-size: 0.9375rem;
+  color: var(--color-gray-900);
+  background: transparent;
+  font-family: inherit;
+}
+
+.newsletter__input::placeholder {
+  color: var(--color-gray-400);
+  font-weight: 400;
+}
+
+.newsletter__btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  background: var(--color-gold);
+  color: var(--color-white);
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+  letter-spacing: 0.03em;
+  border-radius: 0 50px 50px 0;
+}
+
+.newsletter__btn:hover {
+  background: var(--color-gold-dark);
+}
+
+.newsletter__success {
+  padding: 16px 20px;
+  background: rgba(16,185,129,0.08);
+  border: 1px solid rgba(16,185,129,0.2);
+  border-radius: 12px;
+  color: #059669;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.newsletter__error {
+  margin-top: 8px;
+  font-size: 0.8125rem;
+  color: var(--color-error);
+}
+
+.newsletter__note {
+  margin-top: 10px;
+  font-size: 0.8125rem;
+  color: var(--color-gray-500);
+  text-align: center;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .newsletter {
+    padding: 32px 0;
+  }
+  .newsletter__inner {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+  }
+  .newsletter__form-wrap {
+    max-width: 100%;
+    width: 100%;
+  }
+  .newsletter__title {
+    font-size: 1.25rem;
+  }
+  .newsletter__btn {
+    padding: 14px 20px;
+  }
+}

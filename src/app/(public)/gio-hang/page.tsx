@@ -69,9 +69,9 @@ export default function CartPage() {
                     </div>
                   )}
                   {item.addons && item.addons.length > 0 && (
-                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)', marginTop: '4px' }}>
                       {item.addons.map((a, i) => (
-                        <div key={i}>{a.groupName}: <span style={{ color: 'var(--color-gold)' }}>{a.optionName}</span>{a.price > 0 && ` (+${formatPrice(a.price)})`}</div>
+                        <div key={i}>{a.groupName}: <span style={{ color: 'var(--color-gray-800)', fontWeight: 500 }}>{a.optionName}</span>{a.price > 0 && ` (+${formatPrice(a.price)})`}</div>
                       ))}
                     </div>
                   )}

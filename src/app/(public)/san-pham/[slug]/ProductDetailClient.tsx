@@ -93,6 +93,17 @@ export default function ProductDetailClient({ product, reviewData, apiMediaUrl }
   };
 
   const handleAddToCart = () => {
+    // Validate required addon groups
+    if (product.addon_groups && product.addon_groups.length > 0) {
+      const missing = product.addon_groups.filter(
+        (g: any) => g.is_required && !selectedAddons[g.id]
+      );
+      if (missing.length > 0) {
+        alert(`Vui lòng chọn: ${missing.map((g: any) => g.name).join(', ')}`);
+        return;
+      }
+    }
+
     // Build addon details from selected addons
     const addonDetails: { groupName: string; optionName: string; price: number }[] = [];
     let addonTotal = 0;

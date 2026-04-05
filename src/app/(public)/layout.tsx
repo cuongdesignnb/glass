@@ -1,5 +1,6 @@
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import Newsletter from '@/components/layout/Newsletter';
 import { CartProvider } from '@/lib/useCart';
 import { AuthProvider } from '@/lib/useAuth';
 
@@ -13,6 +14,7 @@ export default function PublicLayout({
       <CartProvider>
         <Header />
         <main>{children}</main>
+        <Newsletter />
         <Footer />
       </CartProvider>
     </AuthProvider>

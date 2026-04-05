@@ -94,6 +94,16 @@ Route::prefix('public')->group(function () {
         ]);
     });
 
+    // Newsletter
+    Route::post('/newsletter', function (\Illuminate\Http\Request $request) {
+        $request->validate(['email' => 'required|email']);
+        \App\Models\NewsletterSubscriber::updateOrCreate(
+            ['email' => $request->email],
+            ['is_active' => true]
+        );
+        return response()->json(['success' => true, 'message' => 'Đăng ký thành công!']);
+    });
+
     // Tra cứu đơn hàng (không cần login)
     Route::post('/orders/lookup', [UserController::class, 'lookupOrder']);
 
