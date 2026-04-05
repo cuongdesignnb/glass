@@ -121,7 +121,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   }
 
   return (
-    <div style={{ paddingTop: 'var(--header-height)' }}>
+    <div style={{ paddingTop: 'var(--header-height)', overflowX: 'hidden', maxWidth: '100vw' }}>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
