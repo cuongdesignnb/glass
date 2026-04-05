@@ -49,6 +49,7 @@ export default function VirtualTryOnPage() {
   const [processing, setProcessing] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [remainingTries, setRemainingTries] = useState<number | null>(null);
   const resultCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Fetch products for step 2
@@ -158,6 +159,10 @@ export default function VirtualTryOnPage() {
         product_name: selectedProduct.name,
       });
 
+      if (result.remaining !== undefined) {
+        setRemainingTries(result.remaining);
+      }
+
       if (result.success && result.image) {
         setResultImage(result.image);
       } else {
@@ -167,8 +172,14 @@ export default function VirtualTryOnPage() {
       console.error('AI Try-On error:', err);
       const msg = err?.message || '';
 
-      if (msg.includes('429') || msg.includes('Too Many')) {
-        setErrorMsg('⏳ Hệ thống AI đang quá tải. Vui lòng đợi 30 giây rồi thử lại.');
+      // Parse remaining from error response body if available
+      if (err?.remaining !== undefined) {
+        setRemainingTries(err.remaining);
+      }
+
+      if (msg.includes('429') || msg.includes('Too Many') || msg.includes('hết') && msg.includes('lượt')) {
+        setRemainingTries(0);
+        setErrorMsg(msg || '⏳ Bạn đã sử dụng hết lượt thử kính hôm nay. Vui lòng quay lại vào ngày mai!');
       } else if (msg.includes('500')) {
         setErrorMsg('AI đang gặp lỗi. Vui lòng kiểm tra Gemini API key trong Cài đặt Admin.');
       } else if (msg.includes('422') || msg.includes('không thể')) {
@@ -285,6 +296,20 @@ export default function VirtualTryOnPage() {
             <p className="tryon-hero__desc">
               Trải nghiệm đeo thử kính ngay tại nhà với công nghệ AI tiên tiến
             </p>
+            {remainingTries !== null && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                padding: '8px 16px', borderRadius: '20px', marginTop: '12px',
+                background: remainingTries > 0 ? 'rgba(201,169,110,0.15)' : 'rgba(239,68,68,0.15)',
+                border: `1px solid ${remainingTries > 0 ? 'rgba(201,169,110,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                color: remainingTries > 0 ? 'var(--color-gold)' : '#ef4444',
+                fontSize: '0.85rem', fontWeight: 600,
+              }}>
+                {remainingTries > 0
+                  ? `✨ Còn ${remainingTries} lượt thử hôm nay`
+                  : '⏳ Đã hết lượt thử hôm nay — quay lại ngày mai nhé!'}
+              </div>
+            )}
           </div>
         </div>
       </div>

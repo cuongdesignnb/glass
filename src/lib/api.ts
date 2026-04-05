@@ -151,15 +151,25 @@ export const publicApi = {
     });
   },
 
-  // AI Virtual Try-On
-  aiTryOn: (data: {
+  // AI Virtual Try-On (custom fetch to handle rate limit response)
+  aiTryOn: async (data: {
     face_image: string;
     glasses_image: string;
     product_name?: string;
-  }) => fetchApi('/public/ai/try-on', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
+  }) => {
+    const res = await fetch(`${API_BASE}/public/ai/try-on`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json().catch(() => ({ error: 'Lỗi kết nối' }));
+    if (!res.ok) {
+      const err: any = new Error(json.error || json.message || `HTTP ${res.status}`);
+      err.remaining = json.remaining;
+      throw err;
+    }
+    return json;
+  },
 };
 
 // ==========================================

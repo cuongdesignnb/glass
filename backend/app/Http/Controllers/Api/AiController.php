@@ -6,14 +6,39 @@ use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Cache;
 
 class AiController extends Controller
 {
     /**
      * Virtual try-on using Gemini AI (Image Generation)
+     * Rate limited: 5 tries per IP per day
      */
     public function tryOn(Request $request)
     {
+        // ── Rate Limit: 5 tries / IP / day ──
+        $ip = $request->ip();
+        $cacheKey = 'tryon_limit_' . md5($ip);
+        $today = now()->format('Y-m-d');
+        $limitData = Cache::get($cacheKey, ['date' => $today, 'count' => 0]);
+
+        // Reset counter if new day
+        if (($limitData['date'] ?? '') !== $today) {
+            $limitData = ['date' => $today, 'count' => 0];
+        }
+
+        $maxTries = 5;
+        if ($limitData['count'] >= $maxTries) {
+            return response()->json([
+                'error' => 'Bạn đã sử dụng hết ' . $maxTries . ' lượt thử kính hôm nay. Vui lòng quay lại vào ngày mai!',
+                'remaining' => 0,
+            ], 429);
+        }
+
+        // Increment counter
+        $limitData['count']++;
+        Cache::put($cacheKey, $limitData, now()->endOfDay());
+
         $request->validate([
             'face_image' => 'required|string',
             'glasses_image' => 'required|string',
@@ -214,6 +239,7 @@ Generate ONE realistic photo of this person wearing these exact glasses.
                 return response()->json([
                     'success' => true,
                     'image' => "data:{$imageMime};base64,{$imageData}",
+                    'remaining' => $maxTries - $limitData['count'],
                 ]);
             }
 
