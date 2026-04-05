@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 async function getFaqs() {
   try {
     const res = await fetch(`${API_BASE}/public/faqs`, {
-      next: { revalidate: 60 },
+      cache: 'no-store',
     });
     if (!res.ok) return [];
     const data = await res.json();

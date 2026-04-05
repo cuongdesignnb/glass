@@ -13,7 +13,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 async function getProduct(slug: string) {
   try {
     const res = await fetch(`${API_BASE}/public/products/${slug}`, {
-      next: { revalidate: 60 },
+      cache: 'no-store',
     });
     if (!res.ok) return null;
     return res.json();
@@ -25,7 +25,7 @@ async function getProduct(slug: string) {
 async function getProductReviews(productId: number) {
   try {
     const res = await fetch(`${API_BASE}/public/products/${productId}/reviews?per_page=5`, {
-      next: { revalidate: 120 },
+      cache: 'no-store',
     });
     if (!res.ok) return null;
     return res.json();
@@ -34,8 +34,9 @@ async function getProductReviews(productId: number) {
   }
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const product = await getProduct(params.slug);
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const product = await getProduct(slug);
   if (!product) {
     return { title: 'Sản phẩm không tìm thấy' };
   }
@@ -54,8 +55,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   });
 }
 
-export default async function ProductDetailPage({ params }: { params: { slug: string } }) {
-  const product = await getProduct(params.slug);
+export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const product = await getProduct(slug);
   if (!product) notFound();
 
   const reviewData = await getProductReviews(product.id);

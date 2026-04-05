@@ -10,7 +10,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 async function getPage(slug: string) {
   try {
     const res = await fetch(`${API_BASE}/public/pages/${slug}`, {
-      next: { revalidate: 120 },
+      cache: 'no-store',
     });
     if (!res.ok) return null;
     return res.json();
@@ -19,8 +19,9 @@ async function getPage(slug: string) {
   }
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const page = await getPage(params.slug);
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const page = await getPage(slug);
   if (!page) return {};
   return generateMeta({
     title: page.meta_title || page.title,
@@ -29,8 +30,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   });
 }
 
-export default async function StaticPage({ params }: { params: { slug: string } }) {
-  const page = await getPage(params.slug);
+export default async function StaticPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const page = await getPage(slug);
   if (!page) return notFound();
 
   const breadcrumbItems = [
