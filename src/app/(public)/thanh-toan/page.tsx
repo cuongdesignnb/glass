@@ -313,26 +313,26 @@ export default function CheckoutPage() {
             <div className="checkout-section">
               <h2 className="checkout-section__title">Phương thức thanh toán</h2>
               {(() => {
-                // If any item has addons, only allow bank transfer
-                const hasAddons = items.some(item => item.addons && item.addons.length > 0);
-                const availableMethods = hasAddons
+                const COD_LIMIT = 250000;
+                const isBankOnly = total >= COD_LIMIT;
+                const availableMethods = isBankOnly
                   ? PAYMENT_METHODS.filter(m => m.value !== 'cod')
                   : PAYMENT_METHODS;
 
-                // Auto-select bank_transfer if COD was selected but not available
-                if (hasAddons && form.payment_method === 'cod') {
+                // Auto-switch to bank_transfer if COD no longer available
+                if (isBankOnly && form.payment_method === 'cod') {
                   updateForm('payment_method', 'bank_transfer');
                 }
 
                 return (
                   <>
-                    {hasAddons && (
+                    {isBankOnly && (
                       <div style={{
                         padding: '10px 14px', borderRadius: '8px', marginBottom: '12px',
                         background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.2)',
                         fontSize: '0.8125rem', color: 'var(--color-gray-600)',
                       }}>
-                        ⚠️ Đơn hàng có tuỳ chọn biến thể — chỉ hỗ trợ thanh toán chuyển khoản.
+                        💳 Đơn hàng từ {formatPrice(COD_LIMIT)} chỉ hỗ trợ thanh toán chuyển khoản.
                       </div>
                     )}
                     <div className="checkout-payment-methods">
