@@ -6,7 +6,7 @@ import { adminApi } from '@/lib/api';
 import { useAdminCategories, invalidateAdmin } from '@/lib/useAdmin';
 import { useToken } from '@/lib/useToken';
 import { GENDERS, FACE_SHAPES, FRAME_STYLES, MATERIALS, COLORS } from '@/lib/constants';
-import { FiSave, FiArrowLeft, FiImage, FiX, FiPlus, FiTrash2 } from 'react-icons/fi';
+import { FiSave, FiArrowLeft, FiImage, FiX, FiPlus, FiTrash2, FiLink } from 'react-icons/fi';
 import dynamic from 'next/dynamic';
 import MediaPicker from '@/components/admin/MediaPicker';
 import toast from 'react-hot-toast';
@@ -45,6 +45,10 @@ export default function ProductFormPage() {
   });
 
   const [allAddonGroups, setAllAddonGroups] = useState<any[]>([]);
+  const [productConstraints, setProductConstraints] = useState<{ option_id: number; blocked_option_id: number }[]>([]);
+  const [globalConstraints, setGlobalConstraints] = useState<{ option_id: number; blocked_option_id: number }[]>([]);
+  const [showConstraintEditor, setShowConstraintEditor] = useState(false);
+  const [constraintSource, setConstraintSource] = useState<number | null>(null);
 
   useEffect(() => {
     if (isEdit && token) {
@@ -52,9 +56,10 @@ export default function ProductFormPage() {
     }
     if (token) {
       adminApi.getAddonGroups(token).then((data: any) => {
-        // Handle new format { groups, constraints } or old format (array)
         const groups = Array.isArray(data) ? data : (data?.groups || []);
         setAllAddonGroups(groups);
+        const gc = Array.isArray(data) ? [] : (data?.constraints || []);
+        setGlobalConstraints(gc);
       }).catch(() => {});
     }
   }, [isEdit, token]);
@@ -87,6 +92,8 @@ export default function ProductFormPage() {
             return acc;
           }, {}),
         });
+        // Load per-product constraints
+        setProductConstraints(product.addon_constraints || []);
       }
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
@@ -541,7 +548,107 @@ export default function ProductFormPage() {
           {/* ============ TAB: Addons ============ */}
           {activeTab === 'addons' && (
             <div className="admin-card">
-              <h3 style={{ color: '#fff', fontSize: '1rem', margin: '0 0 8px' }}>Chọn nhóm tuỳ chọn áp dụng</h3>
+              {/* Per-product Constraint Editor */}
+              {isEdit && showConstraintEditor && form.addon_group_ids.length > 0 && (() => {
+                const selectedGroups = allAddonGroups.filter(g => form.addon_group_ids.includes(g.id));
+                const allOpts = selectedGroups.flatMap((g: any) => (g.options || []).map((o: any) => ({ ...o, groupName: g.name, groupId: g.id })));
+                const isBlocked = (src: number, tgt: number) => productConstraints.some(c => c.option_id === src && c.blocked_option_id === tgt);
+                const toggleC = (src: number, tgt: number) => {
+                  if (src === tgt) return;
+                  setProductConstraints(prev => {
+                    const exists = prev.some(c => c.option_id === src && c.blocked_option_id === tgt);
+                    return exists ? prev.filter(c => !(c.option_id === src && c.blocked_option_id === tgt)) : [...prev, { option_id: src, blocked_option_id: tgt }];
+                  });
+                };
+                const handleSaveC = async () => {
+                  try {
+                    const t = toast.loading('Đang lưu ràng buộc...');
+                    await adminApi.saveProductConstraints(token!, Number(params?.id), productConstraints);
+                    toast.success('Đã lưu ràng buộc!', { id: t });
+                  } catch (e: any) { toast.error('Lỗi: ' + (e.message || '')); }
+                };
+                return (
+                  <div style={{ marginBottom: '20px', padding: '16px', border: '1px solid rgba(201,169,110,0.3)', borderRadius: '12px', background: 'rgba(201,169,110,0.03)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <h4 style={{ color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <FiLink style={{ color: 'var(--color-gold)' }} /> Ràng buộc riêng cho sản phẩm này
+                      </h4>
+                      <button onClick={() => setShowConstraintEditor(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer' }}><FiX /></button>
+                    </div>
+                    <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '12px' }}>
+                      Chọn option bên trái → tick option bị <strong style={{ color: '#f87171' }}>khoá</strong> bên phải. Nếu để trống sẽ dùng ràng buộc mặc định ({globalConstraints.length} rules).
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                      <div>
+                        <div style={{ fontSize: '0.6875rem', color: 'var(--color-gold)', fontWeight: 700, marginBottom: '8px', textTransform: 'uppercase' }}>Khi chọn:</div>
+                        {selectedGroups.map((g: any) => (
+                          <div key={g.id}>
+                            <div style={{ fontSize: '0.625rem', color: 'rgba(255,255,255,0.3)', padding: '4px 6px', fontWeight: 600 }}>{g.name}</div>
+                            {(g.options || []).map((o: any) => {
+                              const cnt = productConstraints.filter(c => c.option_id === o.id).length;
+                              return (
+                                <button key={o.id} onClick={() => setConstraintSource(o.id)} style={{
+                                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', textAlign: 'left',
+                                  padding: '6px 10px', borderRadius: '6px', fontSize: '0.8125rem', cursor: 'pointer', marginBottom: '2px',
+                                  border: constraintSource === o.id ? '1px solid var(--color-gold)' : '1px solid rgba(255,255,255,0.06)',
+                                  background: constraintSource === o.id ? 'rgba(201,169,110,0.1)' : 'rgba(255,255,255,0.02)',
+                                  color: constraintSource === o.id ? '#fff' : 'rgba(255,255,255,0.7)',
+                                }}>
+                                  <span>{o.name}</span>
+                                  {cnt > 0 && <span style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171', padding: '1px 6px', borderRadius: '99px', fontSize: '0.625rem', fontWeight: 600 }}>khoá {cnt}</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.6875rem', color: '#f87171', fontWeight: 700, marginBottom: '8px', textTransform: 'uppercase' }}>Sẽ bị khoá:</div>
+                        {!constraintSource ? (
+                          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem', padding: '16px', textAlign: 'center' }}>← Chọn option</p>
+                        ) : selectedGroups.map((g: any) => {
+                          const srcOpt = allOpts.find(o => o.id === constraintSource);
+                          if (srcOpt && g.id === srcOpt.groupId) return null;
+                          const opts = (g.options || []).filter((o: any) => o.id !== constraintSource);
+                          if (!opts.length) return null;
+                          return (
+                            <div key={g.id}>
+                              <div style={{ fontSize: '0.625rem', color: 'rgba(255,255,255,0.3)', padding: '4px 6px', fontWeight: 600 }}>{g.name}</div>
+                              {opts.map((o: any) => {
+                                const blocked = isBlocked(constraintSource, o.id);
+                                return (
+                                  <label key={o.id} style={{
+                                    display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', marginBottom: '2px',
+                                    border: blocked ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(255,255,255,0.06)',
+                                    background: blocked ? 'rgba(239,68,68,0.06)' : 'rgba(255,255,255,0.02)',
+                                  }}>
+                                    <input type="checkbox" checked={blocked} onChange={() => toggleC(constraintSource, o.id)} style={{ accentColor: '#ef4444' }} />
+                                    <span style={{ fontSize: '0.8125rem', color: blocked ? '#f87171' : 'rgba(255,255,255,0.7)', textDecoration: blocked ? 'line-through' : 'none' }}>{o.name}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                      <button className="admin-btn admin-btn--primary admin-btn--sm" onClick={handleSaveC}>
+                        <FiSave /> Lưu ràng buộc ({productConstraints.length} rules)
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <h3 style={{ color: '#fff', fontSize: '1rem', margin: 0 }}>Chọn nhóm tuỳ chọn áp dụng</h3>
+                {isEdit && form.addon_group_ids.length > 1 && (
+                  <button className="admin-btn admin-btn--ghost admin-btn--sm" onClick={() => setShowConstraintEditor(!showConstraintEditor)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <FiLink /> Ràng buộc {productConstraints.length > 0 && <span style={{ background: 'rgba(239,68,68,0.15)', color: '#f87171', padding: '1px 6px', borderRadius: '99px', fontSize: '0.625rem' }}>{productConstraints.length}</span>}
+                  </button>
+                )}
+              </div>
               <p style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.5)', marginBottom: '20px' }}>
                 Tick chọn nhóm → nhập giá riêng cho từng tuỳ chọn. Quản lý nhóm tại <a href="/admin/addons" style={{ color: 'var(--color-gold)', textDecoration: 'underline' }}>Biến thể</a>
               </p>

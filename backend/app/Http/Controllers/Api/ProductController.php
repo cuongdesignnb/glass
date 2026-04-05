@@ -105,18 +105,38 @@ class ProductController extends Controller
         try {
             $product->load(['addonGroups.options', 'addonPrices']);
 
-            // Load constraints for options in this product's addon groups
+            // Load constraints: per-product first, fallback to global
             $optionIds = $product->addonGroups->pluck('options')->flatten()->pluck('id')->toArray();
             if (!empty($optionIds)) {
-                $constraints = \App\Models\AddonOptionConstraint::whereIn('option_id', $optionIds)
-                    ->orWhereIn('blocked_option_id', $optionIds)
-                    ->get()
-                    ->map(fn($c) => [
+                // Check if product has its own constraints
+                $perProduct = \App\Models\AddonOptionConstraint::where('product_id', $product->id)
+                    ->where(function ($q) use ($optionIds) {
+                        $q->whereIn('option_id', $optionIds)
+                          ->orWhereIn('blocked_option_id', $optionIds);
+                    })
+                    ->get();
+
+                if ($perProduct->isNotEmpty()) {
+                    // Use per-product constraints
+                    $constraints = $perProduct->map(fn($c) => [
                         'option_id' => $c->option_id,
                         'blocked_option_id' => $c->blocked_option_id,
-                    ])
-                    ->values()
-                    ->toArray();
+                    ])->values()->toArray();
+                } else {
+                    // Fallback to global constraints
+                    $constraints = \App\Models\AddonOptionConstraint::whereNull('product_id')
+                        ->where(function ($q) use ($optionIds) {
+                            $q->whereIn('option_id', $optionIds)
+                              ->orWhereIn('blocked_option_id', $optionIds);
+                        })
+                        ->get()
+                        ->map(fn($c) => [
+                            'option_id' => $c->option_id,
+                            'blocked_option_id' => $c->blocked_option_id,
+                        ])
+                        ->values()
+                        ->toArray();
+                }
             }
         } catch (\Exception $e) {
             $product->setRelation('addonGroups', collect([]));
@@ -288,6 +308,39 @@ class ProductController extends Controller
     {
         $product->delete();
         return response()->json(['message' => 'Xóa sản phẩm thành công']);
+    }
+
+    /**
+     * Save per-product addon constraints
+     * Expected: { constraints: [{ option_id: 1, blocked_option_id: 5 }, ...] }
+     */
+    public function saveConstraints(Request $request, Product $product)
+    {
+        $data = $request->validate([
+            'constraints' => 'present|array',
+            'constraints.*.option_id' => 'required|integer',
+            'constraints.*.blocked_option_id' => 'required|integer',
+        ]);
+
+        try {
+            // Remove existing per-product constraints
+            \App\Models\AddonOptionConstraint::where('product_id', $product->id)->delete();
+
+            // Insert new ones
+            foreach ($data['constraints'] as $c) {
+                if ($c['option_id'] == $c['blocked_option_id']) continue;
+
+                \App\Models\AddonOptionConstraint::create([
+                    'product_id' => $product->id,
+                    'option_id' => $c['option_id'],
+                    'blocked_option_id' => $c['blocked_option_id'],
+                ]);
+            }
+
+            return response()->json(['message' => 'Đã lưu ràng buộc cho sản phẩm']);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     /**

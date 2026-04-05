@@ -224,6 +224,8 @@ export const adminApi = {
     fetchApi(`/products/${id}`, { method: 'PUT', body: JSON.stringify(data), token }),
   deleteProduct: (token: string, id: number) =>
     fetchApi(`/products/${id}`, { method: 'DELETE', token }),
+  saveProductConstraints: (token: string, productId: number, constraints: { option_id: number; blocked_option_id: number }[]) =>
+    fetchApi(`/products/${productId}/constraints`, { method: 'PUT', body: JSON.stringify({ constraints }), token }),
 
   // Products Import/Export
   exportProducts: async (token: string) => {

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class AddonOptionConstraint extends Model
 {
     protected $fillable = [
+        'product_id',
         'option_id',
         'blocked_option_id',
     ];
