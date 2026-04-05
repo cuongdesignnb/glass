@@ -67,7 +67,7 @@ export default function ProductDetailClient({ product, reviewData, apiMediaUrl }
     rating: 5,
     comment: '',
   });
-  const [reviewImages, setReviewImages] = useState<string[]>([]);
+  const [reviewImages, setReviewImages] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [showTryOn, setShowTryOn] = useState(false);
@@ -609,30 +609,46 @@ export default function ProductDetailClient({ product, reviewData, apiMediaUrl }
                   </div>
 
                   <div className="review-form__group">
-                    <label>Ảnh đánh giá (URL)</label>
+                    <label>Ảnh đánh giá</label>
                     <div className="review-form__images">
-                      {reviewImages.map((url, i) => (
+                      {reviewImages.map((file, i) => (
                         <div key={i} className="review-form__image-preview">
-                          <img src={url} alt="" />
+                          <img src={URL.createObjectURL(file)} alt="" />
                           <button type="button" onClick={() => setReviewImages(imgs => imgs.filter((_, idx) => idx !== i))}>
                             <FiX />
                           </button>
                         </div>
                       ))}
                       {reviewImages.length < 5 && (
-                        <button
-                          type="button"
-                          className="review-form__add-image"
-                          onClick={() => {
-                            const url = prompt('Nhập URL ảnh:');
-                            if (url) setReviewImages(imgs => [...imgs, url]);
-                          }}
-                        >
-                          <FiCamera />
-                          <span>Thêm ảnh</span>
-                        </button>
+                        <>
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            multiple
+                            id="review-image-upload"
+                            style={{ display: 'none' }}
+                            onChange={(e) => {
+                              const files = Array.from(e.target.files || []);
+                              const remaining = 5 - reviewImages.length;
+                              const toAdd = files.slice(0, remaining);
+                              if (toAdd.length > 0) {
+                                setReviewImages(prev => [...prev, ...toAdd]);
+                              }
+                              e.target.value = '';
+                            }}
+                          />
+                          <button
+                            type="button"
+                            className="review-form__add-image"
+                            onClick={() => document.getElementById('review-image-upload')?.click()}
+                          >
+                            <FiCamera />
+                            <span>Thêm ảnh</span>
+                          </button>
+                        </>
                       )}
                     </div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-gray-400)', marginTop: '4px' }}>Tối đa 5 ảnh, mỗi ảnh không quá 5MB</span>
                   </div>
 
                   <div className="review-form__actions">

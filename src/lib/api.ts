@@ -130,11 +130,26 @@ export const publicApi = {
     customer_phone: string;
     rating: number;
     comment?: string;
-    images?: string[];
-  }) => fetchApi('/public/reviews', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
+    images?: File[];
+  }) => {
+    const formData = new FormData();
+    formData.append('product_id', String(data.product_id));
+    formData.append('customer_name', data.customer_name);
+    formData.append('customer_phone', data.customer_phone);
+    formData.append('rating', String(data.rating));
+    if (data.comment) formData.append('comment', data.comment);
+    if (data.images) {
+      data.images.forEach((file) => formData.append('images[]', file));
+    }
+    return fetch(`${API_BASE}/public/reviews`, {
+      method: 'POST',
+      headers: { 'Accept': 'application/json' },
+      body: formData,
+    }).then(res => {
+      if (!res.ok) throw new Error('Lỗi gửi đánh giá');
+      return res.json();
+    });
+  },
 
   // AI Virtual Try-On
   aiTryOn: (data: {

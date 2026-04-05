@@ -46,7 +46,7 @@ class ReviewController extends Controller
     }
 
     /**
-     * Public: Submit a review
+     * Public: Submit a review (with optional image uploads)
      */
     public function store(Request $request)
     {
@@ -57,10 +57,26 @@ class ReviewController extends Controller
             'rating' => 'required|integer|min:1|max:5',
             'comment' => 'nullable|string|max:1000',
             'images' => 'nullable|array|max:5',
-            'images.*' => 'string|max:500',
+            'images.*' => 'image|mimes:jpeg,jpg,png,webp,gif|max:5120',
         ]);
 
-        $review = Review::create($validated);
+        // Handle file uploads
+        $imagePaths = [];
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $file) {
+                $path = $file->store('reviews', 'public');
+                $imagePaths[] = '/storage/' . $path;
+            }
+        }
+
+        $review = Review::create([
+            'product_id' => $validated['product_id'],
+            'customer_name' => $validated['customer_name'],
+            'customer_phone' => $validated['customer_phone'],
+            'rating' => $validated['rating'],
+            'comment' => $validated['comment'] ?? null,
+            'images' => !empty($imagePaths) ? $imagePaths : null,
+        ]);
 
         return response()->json([
             'message' => 'Đánh giá đã được gửi và đang chờ duyệt.',
