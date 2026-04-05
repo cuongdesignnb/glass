@@ -50,6 +50,22 @@ export default function ProductListingPage() {
     }
   }, [filters]);
 
+  // Dynamic filter options from API
+  const [filterOptions, setFilterOptions] = useState<{
+    genders: string[]; face_shapes: string[]; frame_styles: string[];
+    materials: string[]; colors: { value: string; name: string }[]; brands: string[];
+  } | null>(null);
+
+  // Label helpers - use constants as label map, fallback to raw value
+  const genderLabel = (v: string) => GENDERS.find(g => g.value === v)?.label || v;
+  const faceLabel = (v: string) => FACE_SHAPES.find(f => f.value === v)?.label || v;
+  const frameLabel = (v: string) => FRAME_STYLES.find(f => f.value === v)?.label || v;
+  const materialLabel = (v: string) => MATERIALS.find(m => m.value === v)?.label || v;
+
+  useEffect(() => {
+    publicApi.getProductFilters().then(setFilterOptions).catch(console.error);
+  }, []);
+
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
@@ -145,15 +161,15 @@ export default function ProductListingPage() {
             <div className="filter-group">
               <div className="filter-group__title">Giới Tính</div>
               <div className="filter-group__items">
-                {GENDERS.map(g => (
-                  <label key={g.value} className="filter-checkbox">
+                {(filterOptions?.genders || GENDERS.map(g => g.value)).map(v => (
+                  <label key={v} className="filter-checkbox">
                     <input
                       type="radio"
                       name="gender"
-                      checked={filters.gender === g.value}
-                      onChange={() => updateFilter('gender', filters.gender === g.value ? '' : g.value)}
+                      checked={filters.gender === v}
+                      onChange={() => updateFilter('gender', filters.gender === v ? '' : v)}
                     />
-                    <span className="filter-checkbox__label">{g.label}</span>
+                    <span className="filter-checkbox__label">{genderLabel(v)}</span>
                   </label>
                 ))}
               </div>
@@ -163,7 +179,7 @@ export default function ProductListingPage() {
             <div className="filter-group">
               <div className="filter-group__title">Màu Sắc</div>
               <div className="filter-colors">
-                {COLORS.map(c => (
+                {(filterOptions?.colors || COLORS.map(c => ({ value: c.value, name: c.name }))).map(c => (
                   <button
                     key={c.value}
                     className={`filter-color ${filters.color === c.value ? 'filter-color--active' : ''}`}
@@ -178,17 +194,17 @@ export default function ProductListingPage() {
 
             {/* Face Shape */}
             <div className="filter-group">
-              <div className="filter-group__title">Khuôn Mặt</div>
+              <div className="filter-group__title">Khuôn Mặt Phù Hợp</div>
               <div className="filter-group__items">
-                {FACE_SHAPES.map(f => (
-                  <label key={f.value} className="filter-checkbox">
+                {(filterOptions?.face_shapes || FACE_SHAPES.map(f => f.value)).map(v => (
+                  <label key={v} className="filter-checkbox">
                     <input
                       type="radio"
                       name="face_shape"
-                      checked={filters.face_shape === f.value}
-                      onChange={() => updateFilter('face_shape', filters.face_shape === f.value ? '' : f.value)}
+                      checked={filters.face_shape === v}
+                      onChange={() => updateFilter('face_shape', filters.face_shape === v ? '' : v)}
                     />
-                    <span className="filter-checkbox__label">{f.label}</span>
+                    <span className="filter-checkbox__label">{faceLabel(v)}</span>
                   </label>
                 ))}
               </div>
@@ -198,15 +214,15 @@ export default function ProductListingPage() {
             <div className="filter-group">
               <div className="filter-group__title">Kiểu Gọng</div>
               <div className="filter-group__items">
-                {FRAME_STYLES.map(f => (
-                  <label key={f.value} className="filter-checkbox">
+                {(filterOptions?.frame_styles || FRAME_STYLES.map(f => f.value)).map(v => (
+                  <label key={v} className="filter-checkbox">
                     <input
                       type="radio"
                       name="frame_style"
-                      checked={filters.frame_style === f.value}
-                      onChange={() => updateFilter('frame_style', filters.frame_style === f.value ? '' : f.value)}
+                      checked={filters.frame_style === v}
+                      onChange={() => updateFilter('frame_style', filters.frame_style === v ? '' : v)}
                     />
-                    <span className="filter-checkbox__label">{f.label}</span>
+                    <span className="filter-checkbox__label">{frameLabel(v)}</span>
                   </label>
                 ))}
               </div>
@@ -216,15 +232,15 @@ export default function ProductListingPage() {
             <div className="filter-group">
               <div className="filter-group__title">Chất Liệu</div>
               <div className="filter-group__items">
-                {MATERIALS.map(m => (
-                  <label key={m.value} className="filter-checkbox">
+                {(filterOptions?.materials || MATERIALS.map(m => m.value)).map(v => (
+                  <label key={v} className="filter-checkbox">
                     <input
                       type="radio"
                       name="material"
-                      checked={filters.material === m.value}
-                      onChange={() => updateFilter('material', filters.material === m.value ? '' : m.value)}
+                      checked={filters.material === v}
+                      onChange={() => updateFilter('material', filters.material === v ? '' : v)}
                     />
-                    <span className="filter-checkbox__label">{m.label}</span>
+                    <span className="filter-checkbox__label">{materialLabel(v)}</span>
                   </label>
                 ))}
               </div>

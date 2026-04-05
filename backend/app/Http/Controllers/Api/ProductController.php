@@ -696,4 +696,47 @@ class ProductController extends Controller
             );
         }
     }
+
+    /**
+     * Public: Get available filter values from active products
+     */
+    public function filters()
+    {
+        $products = Product::where('is_active', true)->get([
+            'gender', 'face_shapes', 'frame_styles', 'materials', 'colors', 'color_names', 'brand',
+        ]);
+
+        // Collect unique values
+        $genders = [];
+        $faceShapes = [];
+        $frameStyles = [];
+        $materials = [];
+        $colors = [];
+        $brands = [];
+
+        foreach ($products as $p) {
+            if ($p->gender) $genders[$p->gender] = true;
+            if ($p->brand) $brands[$p->brand] = true;
+
+            foreach ($p->face_shapes ?? [] as $v) $faceShapes[$v] = true;
+            foreach ($p->frame_styles ?? [] as $v) $frameStyles[$v] = true;
+            foreach ($p->materials ?? [] as $v) $materials[$v] = true;
+
+            if ($p->colors && $p->color_names) {
+                foreach ($p->colors as $i => $hex) {
+                    $name = $p->color_names[$i] ?? $hex;
+                    $colors[$hex] = $name;
+                }
+            }
+        }
+
+        return response()->json([
+            'genders' => array_keys($genders),
+            'face_shapes' => array_keys($faceShapes),
+            'frame_styles' => array_keys($frameStyles),
+            'materials' => array_keys($materials),
+            'colors' => collect($colors)->map(fn($name, $hex) => ['value' => $hex, 'name' => $name])->values(),
+            'brands' => array_keys($brands),
+        ]);
+    }
 }

@@ -38,6 +38,7 @@ Route::post('/webhook/sepay', [SepayWebhookController::class, 'handle']);
 Route::prefix('public')->group(function () {
     Route::get('/products', [ProductController::class, 'index']);
     Route::get('/products/{slugOrId}', [ProductController::class, 'show']);
+    Route::get('/product-filters', [ProductController::class, 'filters']);
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/categories/{slugOrId}', [CategoryController::class, 'show']);
     Route::get('/articles', [ArticleController::class, 'index']);
