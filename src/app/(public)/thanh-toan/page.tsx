@@ -43,6 +43,17 @@ export default function CheckoutPage() {
     note: '',
   });
 
+  // Location data
+  const [provinces, setProvinces] = useState<any[]>([]);
+  const [wards, setWards] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/locations.json')
+      .then(r => r.json())
+      .then(data => setProvinces(data?.provinces || []))
+      .catch(() => {});
+  }, []);
+
   const shipping = subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
   const total = subtotal + shipping;
 
@@ -288,23 +299,35 @@ export default function CheckoutPage() {
               <div className="checkout-grid">
                 <div className="checkout-field checkout-field--full">
                   <label>Địa chỉ *</label>
-                  <input type="text" required placeholder="Số nhà, đường, phường/xã"
+                  <input type="text" required placeholder="Số nhà, đường"
                     value={form.address} onChange={e => updateForm('address', e.target.value)} />
                 </div>
                 <div className="checkout-field">
                   <label>Tỉnh / Thành phố *</label>
-                  <input type="text" required placeholder="TP. Hồ Chí Minh"
-                    value={form.city} onChange={e => updateForm('city', e.target.value)} />
+                  <select required value={form.city}
+                    onChange={e => {
+                      const prov = provinces.find(p => p.fullname === e.target.value);
+                      setForm(prev => ({ ...prev, city: e.target.value, ward: '' }));
+                      setWards(prov?.wards || []);
+                    }}
+                    className="checkout-select">
+                    <option value="">-- Chọn tỉnh/TP --</option>
+                    {provinces.map(p => (
+                      <option key={p.code} value={p.fullname}>{p.fullname}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="checkout-field">
-                  <label>Quận / Huyện</label>
-                  <input type="text" placeholder="Quận 1"
-                    value={form.district} onChange={e => updateForm('district', e.target.value)} />
-                </div>
-                <div className="checkout-field">
-                  <label>Phường / Xã</label>
-                  <input type="text" placeholder="Phường Bến Nghé"
-                    value={form.ward} onChange={e => updateForm('ward', e.target.value)} />
+                  <label>Phường / Xã *</label>
+                  <select required value={form.ward}
+                    onChange={e => updateForm('ward', e.target.value)}
+                    className="checkout-select"
+                    disabled={!form.city}>
+                    <option value="">-- Chọn phường/xã --</option>
+                    {wards.map(w => (
+                      <option key={w.code} value={w.fullname}>{w.fullname}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
