@@ -779,6 +779,12 @@ export default function ProductFormPage() {
       <MediaPicker
         isOpen={showMediaPicker}
         onClose={() => setShowMediaPicker(false)}
+        multiple={mediaPickerTarget === 'gallery'}
+        onSelectMultiple={(urls) => {
+          if (mediaPickerTarget === 'gallery') {
+            setForm(f => ({ ...f, images: [...f.images, ...urls] }));
+          }
+        }}
         onSelect={(url) => {
           if (mediaPickerTarget === 'thumbnail') {
             setForm(f => ({ ...f, thumbnail: url }));

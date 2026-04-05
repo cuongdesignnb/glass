@@ -9,15 +9,17 @@ interface MediaPickerProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (url: string) => void;
+  onSelectMultiple?: (urls: string[]) => void;
   multiple?: boolean;
 }
 
-export default function MediaPicker({ isOpen, onClose, onSelect }: MediaPickerProps) {
+export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultiple, multiple = false }: MediaPickerProps) {
   const { token } = useToken();
   const [media, setMedia] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string>('');
+  const [selectedMultiple, setSelectedMultiple] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
   const [deleting, setDeleting] = useState<number | null>(null);
@@ -28,6 +30,7 @@ export default function MediaPicker({ isOpen, onClose, onSelect }: MediaPickerPr
     if (isOpen && token) {
       loadMedia();
       setSelected('');
+      setSelectedMultiple(new Set());
     }
   }, [isOpen, token]);
 
@@ -83,6 +86,7 @@ export default function MediaPicker({ isOpen, onClose, onSelect }: MediaPickerPr
       await adminApi.deleteMedia(token, item.id);
       setMedia(prev => prev.filter(m => m.id !== item.id));
       if (selected === item.url) setSelected('');
+      setSelectedMultiple(prev => { const next = new Set(prev); next.delete(item.url); return next; });
     } catch (err) { console.error(err); }
     finally { setDeleting(null); }
   };
@@ -110,15 +114,40 @@ export default function MediaPicker({ isOpen, onClose, onSelect }: MediaPickerPr
     }
   };
 
+  const handleItemClick = (url: string) => {
+    if (multiple) {
+      setSelectedMultiple(prev => {
+        const next = new Set(prev);
+        if (next.has(url)) {
+          next.delete(url);
+        } else {
+          next.add(url);
+        }
+        return next;
+      });
+    } else {
+      setSelected(url);
+    }
+  };
+
   const handleConfirm = () => {
-    if (selected) {
-      onSelect(selected);
-      setSelected('');
-      onClose();
+    if (multiple) {
+      if (selectedMultiple.size > 0 && onSelectMultiple) {
+        onSelectMultiple(Array.from(selectedMultiple));
+        setSelectedMultiple(new Set());
+        onClose();
+      }
+    } else {
+      if (selected) {
+        onSelect(selected);
+        setSelected('');
+        onClose();
+      }
     }
   };
 
   const baseUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || '';
+  const selectionCount = multiple ? selectedMultiple.size : (selected ? 1 : 0);
 
   if (!isOpen) return null;
 
@@ -127,7 +156,11 @@ export default function MediaPicker({ isOpen, onClose, onSelect }: MediaPickerPr
       <div className="media-picker-modal" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="media-picker-header">
-          <h3><FiImage style={{ marginRight: '8px', verticalAlign: 'middle' }} /> Media Library</h3>
+          <h3>
+            <FiImage style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+            Media Library
+            {multiple && <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginLeft: '8px', fontWeight: 400 }}>(chọn nhiều ảnh)</span>}
+          </h3>
           <button onClick={onClose} style={{ color: 'rgba(255,255,255,0.4)', fontSize: '1.25rem', background: 'none', border: 'none', cursor: 'pointer' }}><FiX /></button>
         </div>
 
@@ -200,12 +233,12 @@ export default function MediaPicker({ isOpen, onClose, onSelect }: MediaPickerPr
             <div className="media-picker-grid">
               {media.map((item: any) => {
                 const fullUrl = `${baseUrl}${item.url}`;
-                const isSelected = selected === item.url;
+                const isSelected = multiple ? selectedMultiple.has(item.url) : selected === item.url;
                 const isDeleting = deleting === item.id;
                 return (
                   <div key={item.id}
                     className={`media-picker-item ${isSelected ? 'media-picker-item--selected' : ''}`}
-                    onClick={() => setSelected(item.url)}
+                    onClick={() => handleItemClick(item.url)}
                     style={{ opacity: isDeleting ? 0.4 : 1 }}>
                     <img src={fullUrl} alt={item.filename} loading="lazy" />
 
@@ -218,6 +251,20 @@ export default function MediaPicker({ isOpen, onClose, onSelect }: MediaPickerPr
                         alignItems: 'center', justifyContent: 'center',
                       }}>
                         <FiCheck style={{ color: '#000', fontSize: '0.75rem', fontWeight: 700 }} />
+                      </div>
+                    )}
+
+                    {/* Multi-select index badge */}
+                    {multiple && isSelected && (
+                      <div style={{
+                        position: 'absolute', top: '6px', left: '6px',
+                        minWidth: '22px', height: '22px', borderRadius: '11px',
+                        background: 'var(--color-gold)', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center',
+                        fontSize: '0.6875rem', fontWeight: 700, color: '#000',
+                        padding: '0 4px',
+                      }}>
+                        {Array.from(selectedMultiple).indexOf(item.url) + 1}
                       </div>
                     )}
 
@@ -260,11 +307,11 @@ export default function MediaPicker({ isOpen, onClose, onSelect }: MediaPickerPr
         {/* Footer */}
         <div className="media-picker-footer">
           <span style={{ flex: 1, fontSize: '0.8125rem', color: 'rgba(255,255,255,0.4)' }}>
-            {media.length} ảnh {selected && '• 1 đã chọn'}
+            {media.length} ảnh {selectionCount > 0 && `• ${selectionCount} đã chọn`}
           </span>
           <button className="admin-btn admin-btn--secondary" onClick={onClose}>Hủy</button>
-          <button className="admin-btn admin-btn--primary" onClick={handleConfirm} disabled={!selected}>
-            <FiCheck /> Chọn ảnh
+          <button className="admin-btn admin-btn--primary" onClick={handleConfirm} disabled={selectionCount === 0}>
+            <FiCheck /> {multiple ? `Chọn ${selectionCount} ảnh` : 'Chọn ảnh'}
           </button>
         </div>
       </div>
@@ -274,7 +321,8 @@ export default function MediaPicker({ isOpen, onClose, onSelect }: MediaPickerPr
         .media-picker-item:hover .media-picker-delete-btn,
         .media-picker-item:hover .media-picker-info { opacity: 1 !important; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
+      `}
+      </style>
     </div>
   );
 }

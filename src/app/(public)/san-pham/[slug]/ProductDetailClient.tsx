@@ -95,9 +95,34 @@ export default function ProductDetailClient({ product, reviewData, apiMediaUrl }
   const handleAddToCart = () => {
     // Validate required addon groups
     if (product.addon_groups && product.addon_groups.length > 0) {
-      const missing = product.addon_groups.filter(
-        (g: any) => g.is_required && !selectedAddons[g.id]
-      );
+      // Build price map & blocked set (same logic as render)
+      const priceMap: Record<number, { additional_price: number; is_available: boolean }> = {};
+      (product.addon_prices || []).forEach((p: any) => {
+        priceMap[p.option_id] = { additional_price: p.additional_price || 0, is_available: p.is_available ?? true };
+      });
+
+      const addonConstraints: { option_id: number; blocked_option_id: number }[] = product.addon_constraints || [];
+      const blockedOptionIds = new Set<number>();
+      Object.values(selectedAddons).forEach(selectedOptId => {
+        if (!selectedOptId) return;
+        addonConstraints.forEach(c => {
+          if (c.option_id === selectedOptId) blockedOptionIds.add(c.blocked_option_id);
+        });
+      });
+
+      const missing = product.addon_groups.filter((g: any) => {
+        if (!g.is_required || selectedAddons[g.id]) return false;
+        // Check if group has any selectable option
+        const availableOptions = (g.options || []).filter(
+          (opt: any) => priceMap[opt.id]?.is_available !== false
+        );
+        const selectableOptions = availableOptions.filter(
+          (opt: any) => !blockedOptionIds.has(opt.id)
+        );
+        // Skip validation if NO selectable options exist (all blocked/unavailable)
+        return selectableOptions.length > 0;
+      });
+
       if (missing.length > 0) {
         alert(`Vui lòng chọn: ${missing.map((g: any) => g.name).join(', ')}`);
         return;
