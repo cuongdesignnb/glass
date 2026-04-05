@@ -137,7 +137,18 @@ class OrderController extends Controller
             ]);
         }
 
-        return response()->json($order->load('items'), 201);
+        // Trả về order + thông tin bank từ DB Settings
+        $orderData = $order->load('items')->toArray();
+
+        if (($data['payment_method'] ?? 'cod') === 'bank_transfer') {
+            $orderData['bank_info'] = [
+                'bank_name'      => Setting::getValue('payment_sepay_bank_name') ?: env('SEPAY_BANK_NAME', ''),
+                'account_number' => Setting::getValue('payment_sepay_account_number') ?: env('SEPAY_ACCOUNT_NUMBER', ''),
+                'account_name'   => Setting::getValue('payment_sepay_account_name') ?: env('SEPAY_ACCOUNT_NAME', ''),
+            ];
+        }
+
+        return response()->json($orderData, 201);
     }
 
     public function updateStatus(Request $request, Order $order)

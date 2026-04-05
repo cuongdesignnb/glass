@@ -123,9 +123,10 @@ export default function CheckoutPage() {
   // Order success state
   if (orderSuccess) {
     const isBankTransfer = orderSuccess.payment_method === 'bank_transfer';
-    const bankName    = process.env.NEXT_PUBLIC_SEPAY_BANK_NAME    || '';
-    const accountNo   = process.env.NEXT_PUBLIC_SEPAY_ACCOUNT_NUMBER || '';
-    const accountName = process.env.NEXT_PUBLIC_SEPAY_ACCOUNT_NAME  || '';
+    const bankInfo = orderSuccess.bank_info || {};
+    const bankName    = bankInfo.bank_name    || process.env.NEXT_PUBLIC_SEPAY_BANK_NAME    || '';
+    const accountNo   = bankInfo.account_number || process.env.NEXT_PUBLIC_SEPAY_ACCOUNT_NUMBER || '';
+    const accountName = bankInfo.account_name   || process.env.NEXT_PUBLIC_SEPAY_ACCOUNT_NAME  || '';
     const paymentCode = orderSuccess.payment_code || orderSuccess.order_number;
     const amount      = orderSuccess.total;
 
