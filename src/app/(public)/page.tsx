@@ -55,8 +55,6 @@ export default function HomePage() {
         <div className="container">
           <div className="section__header">
             <span className="section__tag">Ưu Đãi</span>
-            <h2 className="section__title">Mã Giảm Giá Dành Cho Bạn</h2>
-            <p className="section__subtitle">Sao chép mã và sử dụng khi thanh toán</p>
           </div>
           <DynamicVouchers />
         </div>
