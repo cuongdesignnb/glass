@@ -312,21 +312,47 @@ export default function CheckoutPage() {
             {/* Payment Method */}
             <div className="checkout-section">
               <h2 className="checkout-section__title">Phương thức thanh toán</h2>
-              <div className="checkout-payment-methods">
-                {PAYMENT_METHODS.map(method => (
-                  <label key={method.value} className={`payment-method ${form.payment_method === method.value ? 'payment-method--active' : ''}`}>
-                    <input
-                      type="radio"
-                      name="payment_method"
-                      value={method.value}
-                      checked={form.payment_method === method.value}
-                      onChange={e => updateForm('payment_method', e.target.value)}
-                    />
-                    <div className="payment-method__radio" />
-                    <span>{method.label}</span>
-                  </label>
-                ))}
-              </div>
+              {(() => {
+                // If any item has addons, only allow bank transfer
+                const hasAddons = items.some(item => item.addons && item.addons.length > 0);
+                const availableMethods = hasAddons
+                  ? PAYMENT_METHODS.filter(m => m.value !== 'cod')
+                  : PAYMENT_METHODS;
+
+                // Auto-select bank_transfer if COD was selected but not available
+                if (hasAddons && form.payment_method === 'cod') {
+                  updateForm('payment_method', 'bank_transfer');
+                }
+
+                return (
+                  <>
+                    {hasAddons && (
+                      <div style={{
+                        padding: '10px 14px', borderRadius: '8px', marginBottom: '12px',
+                        background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.2)',
+                        fontSize: '0.8125rem', color: 'var(--color-gray-600)',
+                      }}>
+                        ⚠️ Đơn hàng có tuỳ chọn biến thể — chỉ hỗ trợ thanh toán chuyển khoản.
+                      </div>
+                    )}
+                    <div className="checkout-payment-methods">
+                      {availableMethods.map(method => (
+                        <label key={method.value} className={`payment-method ${form.payment_method === method.value ? 'payment-method--active' : ''}`}>
+                          <input
+                            type="radio"
+                            name="payment_method"
+                            value={method.value}
+                            checked={form.payment_method === method.value}
+                            onChange={e => updateForm('payment_method', e.target.value)}
+                          />
+                          <div className="payment-method__radio" />
+                          <span>{method.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
 
             {/* Note */}
