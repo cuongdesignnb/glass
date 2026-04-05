@@ -7,7 +7,7 @@ import { RiGlassesLine } from 'react-icons/ri';
 import {
   FiGrid, FiPackage, FiTag, FiImage, FiMenu, FiLayout,
   FiSettings, FiFileText, FiShoppingCart, FiUsers, FiLogOut,
-  FiCpu, FiFile, FiChevronLeft, FiStar, FiHelpCircle, FiBell, FiLayers, FiGift, FiSliders
+  FiCpu, FiFile, FiChevronLeft, FiStar, FiHelpCircle, FiBell, FiLayers, FiGift, FiSliders, FiDatabase
 } from 'react-icons/fi';
 import { Toaster } from 'react-hot-toast';
 import './admin.css';
@@ -27,6 +27,7 @@ const adminMenuItems = [
   { name: 'Banner', icon: <FiLayout />, href: '/admin/banners' },
   { name: 'Bộ Sưu Tập', icon: <FiLayers />, href: '/admin/collections' },
   { name: 'Biến Thể', icon: <FiSliders />, href: '/admin/addons' },
+  { name: 'Thuộc Tính SP', icon: <FiDatabase />, href: '/admin/product-attributes' },
   { section: 'Kinh Doanh' },
   { name: 'Đơn Hàng', icon: <FiShoppingCart />, href: '/admin/orders' },
   { name: 'Đánh Giá', icon: <FiStar />, href: '/admin/reviews' },

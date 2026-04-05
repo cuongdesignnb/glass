@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { adminApi } from '@/lib/api';
+import { adminApi, publicApi } from '@/lib/api';
 import { useAdminCategories, invalidateAdmin } from '@/lib/useAdmin';
 import { useToken } from '@/lib/useToken';
 import { GENDERS, FACE_SHAPES, FRAME_STYLES, MATERIALS, COLORS } from '@/lib/constants';
@@ -63,6 +63,17 @@ export default function ProductFormPage() {
       }).catch(() => {});
     }
   }, [isEdit, token]);
+
+  // Dynamic attributes from DB
+  const [dynAttrs, setDynAttrs] = useState<Record<string, { value: string; label: string; extra?: string }[]>>({});
+  useEffect(() => {
+    publicApi.getProductAttributes().then(setDynAttrs).catch(() => {});
+  }, []);
+  const dGenders = dynAttrs.gender || GENDERS.map(g => ({ value: g.value, label: g.label }));
+  const dFaceShapes = dynAttrs.face_shape || FACE_SHAPES.map(f => ({ value: f.value, label: f.label }));
+  const dFrameStyles = dynAttrs.frame_style || FRAME_STYLES.map(f => ({ value: f.value, label: f.label }));
+  const dMaterials = dynAttrs.material || MATERIALS.map(m => ({ value: m.value, label: m.label }));
+  const dColors = dynAttrs.color || COLORS.map(c => ({ value: c.value, label: c.name, extra: c.value }));
 
   const loadProduct = async () => {
     try {
@@ -297,7 +308,7 @@ export default function ProductFormPage() {
               <div className="admin-form__group">
                 <label className="admin-form__label">Giới tính</label>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  {GENDERS.map(g => (
+                  {dGenders.map((g: any) => (
                     <button key={g.value} onClick={() => setForm({ ...form, gender: g.value })}
                       className={`admin-btn admin-btn--sm ${form.gender === g.value ? 'admin-btn--primary' : 'admin-btn--secondary'}`}>{g.label}</button>
                   ))}
@@ -307,20 +318,23 @@ export default function ProductFormPage() {
               <div className="admin-form__group">
                 <label className="admin-form__label">Màu sắc</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {COLORS.map(c => (
-                    <button key={c.value} onClick={() => toggleColorWithName(c.value, c.name)}
-                      style={{
-                        width: '40px', height: '40px', borderRadius: '8px', border: '2px solid',
-                        borderColor: form.colors.includes(c.value) ? 'var(--color-gold)' : 'rgba(255,255,255,0.12)',
-                        backgroundColor: c.value === 'transparent' ? undefined : c.value,
-                        position: 'relative', cursor: 'pointer', transition: 'all 0.2s',
-                        boxShadow: form.colors.includes(c.value) ? '0 0 0 2px rgba(201,169,110,0.3)' : 'none',
-                      }} title={c.name}>
-                      {form.colors.includes(c.value) && (
-                        <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', textShadow: '0 0 3px rgba(0,0,0,0.8)', fontWeight: 700, fontSize: '0.75rem' }}>✓</span>
-                      )}
-                    </button>
-                  ))}
+                  {dColors.map((c: any) => {
+                    const hex = c.extra || c.value;
+                    return (
+                      <button key={c.value} onClick={() => toggleColorWithName(hex, c.label)}
+                        style={{
+                          width: '40px', height: '40px', borderRadius: '8px', border: '2px solid',
+                          borderColor: form.colors.includes(hex) ? 'var(--color-gold)' : 'rgba(255,255,255,0.12)',
+                          backgroundColor: hex === 'transparent' ? undefined : hex,
+                          position: 'relative', cursor: 'pointer', transition: 'all 0.2s',
+                          boxShadow: form.colors.includes(hex) ? '0 0 0 2px rgba(201,169,110,0.3)' : 'none',
+                        }} title={c.label}>
+                        {form.colors.includes(hex) && (
+                          <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', textShadow: '0 0 3px rgba(0,0,0,0.8)', fontWeight: 700, fontSize: '0.75rem' }}>✓</span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
                 {form.color_names.length > 0 && (
                   <div style={{ marginTop: '8px', fontSize: '0.8125rem', color: 'rgba(255,255,255,0.5)' }}>
@@ -332,7 +346,7 @@ export default function ProductFormPage() {
               <div className="admin-form__group">
                 <label className="admin-form__label">Khuôn mặt phù hợp</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {FACE_SHAPES.map(f => (
+                  {dFaceShapes.map((f: any) => (
                     <button key={f.value}
                       onClick={() => setForm({ ...form, face_shapes: toggleArray(form.face_shapes, f.value) })}
                       className={`admin-btn admin-btn--sm ${form.face_shapes.includes(f.value) ? 'admin-btn--primary' : 'admin-btn--secondary'}`}>
@@ -345,7 +359,7 @@ export default function ProductFormPage() {
               <div className="admin-form__group">
                 <label className="admin-form__label">Kiểu gọng</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {FRAME_STYLES.map(f => (
+                  {dFrameStyles.map((f: any) => (
                     <button key={f.value}
                       onClick={() => setForm({ ...form, frame_styles: toggleArray(form.frame_styles, f.value) })}
                       className={`admin-btn admin-btn--sm ${form.frame_styles.includes(f.value) ? 'admin-btn--primary' : 'admin-btn--secondary'}`}>
@@ -358,7 +372,7 @@ export default function ProductFormPage() {
               <div className="admin-form__group">
                 <label className="admin-form__label">Chất liệu</label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {MATERIALS.map(m => (
+                  {dMaterials.map((m: any) => (
                     <button key={m.value}
                       onClick={() => setForm({ ...form, materials: toggleArray(form.materials, m.value) })}
                       className={`admin-btn admin-btn--sm ${form.materials.includes(m.value) ? 'admin-btn--primary' : 'admin-btn--secondary'}`}>

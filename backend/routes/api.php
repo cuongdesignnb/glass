@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\CollectionController;
 use App\Http\Controllers\Api\VoucherController;
 use App\Http\Controllers\Api\AddonGroupController;
+use App\Http\Controllers\Api\ProductAttributeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -51,6 +52,7 @@ Route::prefix('public')->group(function () {
     Route::get('/collections/{slugOrId}', [CollectionController::class, 'show']);
     Route::get('/vouchers', [VoucherController::class, 'publicIndex']);
     Route::get('/addon-groups', [AddonGroupController::class, 'index']);
+    Route::get('/product-attributes', [ProductAttributeController::class, 'publicIndex']);
 
     // Global search (products + articles)
     Route::get('/search', function (\Illuminate\Http\Request $request) {
@@ -225,6 +227,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/notifications', [AdminUserController::class, 'getNotifications']);
     Route::post('/admin/notifications', [AdminUserController::class, 'storeNotification']);
     Route::delete('/admin/notifications/{id}', [AdminUserController::class, 'destroyNotification']);
+
+    // === ADMIN: Product Attributes ===
+    Route::get('/admin/product-attributes', [ProductAttributeController::class, 'index']);
+    Route::post('/admin/product-attributes', [ProductAttributeController::class, 'store']);
+    Route::put('/admin/product-attributes/{attribute}', [ProductAttributeController::class, 'update']);
+    Route::delete('/admin/product-attributes/{attribute}', [ProductAttributeController::class, 'destroy']);
+    Route::post('/admin/product-attributes/reorder', [ProductAttributeController::class, 'reorder']);
 
     // SePay Transactions
     Route::get('/sepay/transactions', function () {

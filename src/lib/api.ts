@@ -58,6 +58,7 @@ export const publicApi = {
     return fetchApi(`/public/products${query}`);
   },
   getProduct: (slug: string) => fetchApi(`/public/products/${slug}`),
+  getProductAttributes: () => fetchApi('/public/product-attributes'),
 
   // Search
   search: (q: string) => fetchApi(`/public/search?q=${encodeURIComponent(q)}`),
@@ -473,4 +474,16 @@ export const adminApi = {
     fetchApi(`/addon-groups/${id}`, { method: 'DELETE', token }),
   saveAddonConstraints: (token: string, constraints: { option_id: number; blocked_option_id: number }[]) =>
     fetchApi('/addon-constraints', { method: 'PUT', body: JSON.stringify({ constraints }), token }),
+
+  // === Admin: Product Attributes (Filters) ===
+  getProductAttributes: (token: string, type?: string) =>
+    fetchApi(`/admin/product-attributes${type ? `?type=${type}` : ''}`, { token }),
+  createProductAttribute: (token: string, data: any) =>
+    fetchApi('/admin/product-attributes', { method: 'POST', body: JSON.stringify(data), token }),
+  updateProductAttribute: (token: string, id: number, data: any) =>
+    fetchApi(`/admin/product-attributes/${id}`, { method: 'PUT', body: JSON.stringify(data), token }),
+  deleteProductAttribute: (token: string, id: number) =>
+    fetchApi(`/admin/product-attributes/${id}`, { method: 'DELETE', token }),
+  reorderProductAttributes: (token: string, items: { id: number; sort_order: number }[]) =>
+    fetchApi('/admin/product-attributes/reorder', { method: 'POST', body: JSON.stringify({ items }), token }),
 };

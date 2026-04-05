@@ -50,6 +50,22 @@ export default function ProductListingPage() {
     }
   }, [filters]);
 
+  // Dynamic attributes from API
+  const [attrs, setAttrs] = useState<Record<string, { value: string; label: string; extra?: string }[]>>({});
+
+  useEffect(() => {
+    publicApi.getProductAttributes()
+      .then((data: any) => setAttrs(data))
+      .catch(() => {});
+  }, []);
+
+  // Use dynamic attrs with fallback to constants
+  const genders = attrs.gender || GENDERS.map(g => ({ value: g.value, label: g.label }));
+  const faceShapes = attrs.face_shape || FACE_SHAPES.map(f => ({ value: f.value, label: f.label }));
+  const frameStyles = attrs.frame_style || FRAME_STYLES.map(f => ({ value: f.value, label: f.label }));
+  const materials = attrs.material || MATERIALS.map(m => ({ value: m.value, label: m.label }));
+  const colors = attrs.color || COLORS.map(c => ({ value: c.value, label: c.name, extra: c.value }));
+
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
@@ -145,7 +161,7 @@ export default function ProductListingPage() {
             <div className="filter-group">
               <div className="filter-group__title">Giới Tính</div>
               <div className="filter-group__items">
-                {GENDERS.map(g => (
+                {genders.map((g: any) => (
                   <label key={g.value} className="filter-checkbox">
                     <input
                       type="radio"
@@ -163,24 +179,27 @@ export default function ProductListingPage() {
             <div className="filter-group">
               <div className="filter-group__title">Màu Sắc</div>
               <div className="filter-colors">
-                {COLORS.map(c => (
-                  <button
-                    key={c.value}
-                    className={`filter-color ${filters.color === c.value ? 'filter-color--active' : ''}`}
-                    style={{ backgroundColor: c.value === 'transparent' ? undefined : c.value }}
-                    data-color={c.value}
-                    onClick={() => updateFilter('color', filters.color === c.value ? '' : c.value)}
-                    title={c.name}
-                  />
-                ))}
+                {colors.map((c: any) => {
+                  const hex = c.extra || c.value;
+                  return (
+                    <button
+                      key={c.value}
+                      className={`filter-color ${filters.color === hex ? 'filter-color--active' : ''}`}
+                      style={{ backgroundColor: hex === 'transparent' ? undefined : hex }}
+                      data-color={hex}
+                      onClick={() => updateFilter('color', filters.color === hex ? '' : hex)}
+                      title={c.label}
+                    />
+                  );
+                })}
               </div>
             </div>
 
             {/* Face Shape */}
             <div className="filter-group">
-              <div className="filter-group__title">Khuôn Mặt</div>
+              <div className="filter-group__title">Khuôn Mặt Phù Hợp</div>
               <div className="filter-group__items">
-                {FACE_SHAPES.map(f => (
+                {faceShapes.map((f: any) => (
                   <label key={f.value} className="filter-checkbox">
                     <input
                       type="radio"
@@ -198,7 +217,7 @@ export default function ProductListingPage() {
             <div className="filter-group">
               <div className="filter-group__title">Kiểu Gọng</div>
               <div className="filter-group__items">
-                {FRAME_STYLES.map(f => (
+                {frameStyles.map((f: any) => (
                   <label key={f.value} className="filter-checkbox">
                     <input
                       type="radio"
@@ -216,7 +235,7 @@ export default function ProductListingPage() {
             <div className="filter-group">
               <div className="filter-group__title">Chất Liệu</div>
               <div className="filter-group__items">
-                {MATERIALS.map(m => (
+                {materials.map((m: any) => (
                   <label key={m.value} className="filter-checkbox">
                     <input
                       type="radio"
