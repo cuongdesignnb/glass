@@ -50,15 +50,15 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Categories - Client Side */}
-      <section className="section">
+      {/* Voucher Slider */}
+      <section className="section voucher-home-section" style={{ paddingTop: 'var(--space-2xl)' }}>
         <div className="container">
           <div className="section__header">
-            <span className="section__tag">Danh Mục</span>
-            <h2 className="section__title">Sản Phẩm Theo Danh Mục</h2>
-            <p className="section__subtitle">Tìm kiếm kiểu kính phù hợp với phong cách và nhu cầu của bạn</p>
+            <span className="section__tag">Ưu Đãi</span>
+            <h2 className="section__title">Mã Giảm Giá Dành Cho Bạn</h2>
+            <p className="section__subtitle">Sao chép mã và sử dụng khi thanh toán</p>
           </div>
-          <DynamicCategories />
+          <DynamicVouchers />
         </div>
       </section>
 
@@ -77,6 +77,18 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Categories - Client Side */}
+      <section className="section">
+        <div className="container">
+          <div className="section__header">
+            <span className="section__tag">Danh Mục</span>
+            <h2 className="section__title">Sản Phẩm Theo Danh Mục</h2>
+            <p className="section__subtitle">Tìm kiếm kiểu kính phù hợp với phong cách và nhu cầu của bạn</p>
+          </div>
+          <DynamicCategories />
+        </div>
+      </section>
+
       {/* Style Collections — Masonry Grid (Dynamic from API) */}
       <section className="section style-collection">
         <div className="container">
@@ -86,18 +98,6 @@ export default function HomePage() {
             <p className="section__subtitle">Chọn bộ sưu tập phù hợp với cá tính và lối sống của bạn</p>
           </div>
           <DynamicCollections />
-        </div>
-      </section>
-
-      {/* Voucher Slider */}
-      <section className="section voucher-home-section" style={{ paddingTop: 'var(--space-2xl)' }}>
-        <div className="container">
-          <div className="section__header">
-            <span className="section__tag">Ưu Đãi</span>
-            <h2 className="section__title">Mã Giảm Giá Dành Cho Bạn</h2>
-            <p className="section__subtitle">Sao chép mã và sử dụng khi thanh toán</p>
-          </div>
-          <DynamicVouchers />
         </div>
       </section>
 
