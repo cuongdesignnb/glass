@@ -83,6 +83,16 @@ export default function CheckoutPage() {
       .catch(() => {});
   }, []);
 
+  // When provinces loaded + city already set (from user prefill), load wards
+  useEffect(() => {
+    if (provinces.length > 0 && form.city) {
+      const prov = provinces.find((p: any) => p.fullname === form.city);
+      if (prov) {
+        setWards(prov.wards || []);
+      }
+    }
+  }, [provinces, form.city]);
+
   const shipping = subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
   const total = Math.max(0, subtotal + shipping - voucherDiscount);
 
