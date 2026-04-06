@@ -24,15 +24,39 @@ export function DynamicHero() {
   const heroCtaText = settings['hero_cta_text'] || 'Khám Phá Ngay';
   const heroTag = settings['hero_tag'] || 'Bộ Sưu Tập Mới 2026';
   const heroImage = settings['hero_image'] ? getImageUrl(settings['hero_image']) : null;
+  const heroTextColor = settings['hero_text_color'] || '';
+  const heroDescColor = settings['hero_desc_color'] || '';
+  const heroOverlay = settings['hero_overlay'] || 'left-dark';
 
   // Split title into parts for styling (first line em, second normal)
   const titleParts = heroTitle.split('\n');
 
+  // Overlay gradient based on setting
+  const overlayGradients: Record<string, string> = {
+    'left-dark': 'linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.4) 45%, rgba(0,0,0,0.05) 70%, transparent 100%)',
+    'left-light': 'linear-gradient(to right, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.5) 45%, rgba(255,255,255,0.05) 70%, transparent 100%)',
+    'full-dark': 'linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.3) 100%)',
+    'full-light': 'linear-gradient(to bottom, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.3) 100%)',
+    'none': 'none',
+  };
+
+  const hasImage = !!heroImage;
+  const overlayBg = hasImage ? (overlayGradients[heroOverlay] || overlayGradients['left-dark']) : 'none';
+  const isDarkOverlay = heroOverlay.includes('dark');
+
+  // Auto text colors: if custom color set, use it. Otherwise derive from overlay type
+  const titleColor = heroTextColor || (hasImage ? (isDarkOverlay ? '#ffffff' : 'var(--color-text-heading)') : 'var(--color-text-heading)');
+  const descColor = heroDescColor || (hasImage ? (isDarkOverlay ? 'rgba(255,255,255,0.85)' : 'var(--color-text-light)') : 'var(--color-text-light)');
+  const textShadow = hasImage ? (isDarkOverlay ? '0 2px 12px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.4)' : '0 1px 6px rgba(255,255,255,0.6)') : 'none';
+
   return (
-    <section className="hero" style={heroImage ? { backgroundImage: `url(${heroImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}>
+    <section className="hero" style={hasImage ? { backgroundImage: `url(${heroImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}>
       <div className="hero__bg">
+        {hasImage && (
+          <div className="hero__overlay" style={{ position: 'absolute', inset: 0, background: overlayBg, zIndex: 1 }} />
+        )}
         <div className="hero__bg-gradient" />
-        {!heroImage && (
+        {!hasImage && (
           <div className="hero__particles">
             {Array.from({ length: 15 }).map((_, i) => (
               <div key={i} className="hero__particle" style={{
@@ -43,18 +67,18 @@ export function DynamicHero() {
           </div>
         )}
       </div>
-      <div className="container" style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 'var(--space-3xl)', minHeight: '100vh' }}>
+      <div className="container" style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', gap: 'var(--space-3xl)', minHeight: '100vh' }}>
         <div className="hero__content">
-          <div className="hero__tag">✦ {heroTag}</div>
-          <h1 className="hero__title">
+          <div className="hero__tag" style={hasImage && isDarkOverlay ? { background: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.25)', color: '#fff' } : undefined}>✦ {heroTag}</div>
+          <h1 className="hero__title" style={{ color: titleColor, textShadow }}>
             {titleParts.length > 1 ? (
               <>{titleParts[0]}<br />{titleParts.slice(1).join(' ')}</>
             ) : heroTitle}
           </h1>
-          <p className="hero__desc">{heroDesc}</p>
+          <p className="hero__desc" style={{ color: descColor, textShadow }}>{heroDesc}</p>
           <div className="hero__actions">
             <Link href="/san-pham" className="btn btn-primary btn-lg">{heroCtaText} <FiArrowRight /></Link>
-            <Link href="/thu-kinh-ao" className="btn btn-secondary btn-lg">Thử Kính AI</Link>
+            <Link href="/thu-kinh-ao" className="btn btn-secondary btn-lg" style={hasImage && isDarkOverlay ? { borderColor: 'rgba(255,255,255,0.4)', color: '#fff' } : undefined}>Thử Kính AI</Link>
           </div>
         </div>
         <div className="hero__visual">
