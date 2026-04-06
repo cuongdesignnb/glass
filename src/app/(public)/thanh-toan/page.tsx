@@ -50,8 +50,14 @@ export default function CheckoutPage() {
   });
 
   // Auto-fill form with user profile when logged in
+  // Pending ward from user profile (set after wards are loaded)
+  const pendingWardRef = useRef<string>('');
+
+  // Auto-fill form with user profile when logged in
   useEffect(() => {
     if (user && !userPrefilled) {
+      // Save the ward to restore after wards list loads
+      pendingWardRef.current = user.ward || '';
       setForm(prev => ({
         ...prev,
         customer_name: prev.customer_name || user.name || '',
@@ -59,7 +65,7 @@ export default function CheckoutPage() {
         customer_phone: prev.customer_phone || user.phone || '',
         address: prev.address || user.address_detail || '',
         city: prev.city || user.province || '',
-        ward: prev.ward || user.ward || '',
+        ward: '', // Will be set after wards load
       }));
       setUserPrefilled(true);
     }
@@ -88,7 +94,16 @@ export default function CheckoutPage() {
     if (provinces.length > 0 && form.city) {
       const prov = provinces.find((p: any) => p.fullname === form.city);
       if (prov) {
-        setWards(prov.wards || []);
+        const wardsList = prov.wards || [];
+        setWards(wardsList);
+        // Restore pending ward value from user profile
+        if (pendingWardRef.current) {
+          const wardExists = wardsList.some((w: any) => w.fullname === pendingWardRef.current);
+          if (wardExists) {
+            setForm(prev => ({ ...prev, ward: pendingWardRef.current }));
+          }
+          pendingWardRef.current = '';
+        }
       }
     }
   }, [provinces, form.city]);
@@ -565,9 +580,19 @@ export default function CheckoutPage() {
                         {item.colorName}
                       </div>
                     )}
+                    {item.addons && item.addons.length > 0 && (
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)', marginTop: '2px' }}>
+                        {item.addons.map((a: any, j: number) => (
+                          <div key={j}>
+                            {a.groupName}: {a.optionName}
+                            {a.price > 0 && <span style={{ color: 'var(--color-gold)' }}> (+{formatPrice(a.price)})</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="checkout-summary__item-price">
-                    {formatPrice((item.salePrice || item.price) * item.quantity)}
+                    {formatPrice(((item.salePrice || item.price) + (item.addonTotal || 0)) * item.quantity)}
                   </div>
                 </div>
               ))}
