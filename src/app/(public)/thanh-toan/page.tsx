@@ -96,13 +96,17 @@ export default function CheckoutPage() {
       if (prov) {
         const wardsList = prov.wards || [];
         setWards(wardsList);
-        // Restore pending ward value from user profile
-        if (pendingWardRef.current) {
-          const wardExists = wardsList.some((w: any) => w.fullname === pendingWardRef.current);
-          if (wardExists) {
-            setForm(prev => ({ ...prev, ward: pendingWardRef.current }));
-          }
+        // Restore pending ward value from user profile after wards render
+        const savedWard = pendingWardRef.current;
+        if (savedWard) {
           pendingWardRef.current = '';
+          const wardExists = wardsList.some((w: any) => w.fullname === savedWard);
+          if (wardExists) {
+            // Defer to next tick so wards options are rendered first
+            setTimeout(() => {
+              setForm(prev => ({ ...prev, ward: savedWard }));
+            }, 0);
+          }
         }
       }
     }
