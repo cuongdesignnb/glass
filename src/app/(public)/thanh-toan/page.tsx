@@ -114,10 +114,12 @@ export default function CheckoutPage() {
           name: item.name,
           slug: item.slug,
           image: item.image,
-          price: item.salePrice || item.price,
+          price: (item.salePrice || item.price) + (item.addonTotal || 0),
           quantity: item.quantity,
           color: item.color,
           color_name: item.colorName,
+          addons: item.addons || [],
+          addon_total: item.addonTotal || 0,
         })),
       };
 

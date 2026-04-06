@@ -141,6 +141,7 @@ export default function AdminDashboard() {
                     <td>
                       <span className={`admin-badge admin-badge--${
                         order.status === 'delivered' ? 'success' :
+                        order.status === 'confirmed' ? 'success' :
                         order.status === 'cancelled' ? 'danger' :
                         order.status === 'shipping' ? 'info' : 'warning'
                       }`}>

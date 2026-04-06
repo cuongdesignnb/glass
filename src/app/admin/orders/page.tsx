@@ -60,7 +60,7 @@ export default function AdminOrdersPage() {
       case 'delivered': return 'admin-badge--success';
       case 'cancelled': return 'admin-badge--danger';
       case 'shipping': return 'admin-badge--info';
-      case 'confirmed': return 'admin-badge--info';
+      case 'confirmed': return 'admin-badge--success';
       default: return 'admin-badge--warning';
     }
   };
