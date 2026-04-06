@@ -30,7 +30,8 @@ export default function Footer({ menus }: { menus?: MenuItem[] }) {
       { id: 'f2-2', name: 'Chính Sách Đổi Trả', url: '/chinh-sach-doi-tra' },
       { id: 'f2-3', name: 'Chính Sách Bảo Hành', url: '/chinh-sach-bao-hanh' },
       { id: 'f2-4', name: 'Vận Chuyển', url: '/van-chuyen' },
-      { id: 'f2-5', name: 'Thử Kính AI', url: '/thu-kinh-ao' }
+      { id: 'f2-5', name: 'Thử Kính AI', url: '/thu-kinh-ao' },
+      { id: 'f2-6', name: 'Tra Cứu Đơn Hàng', url: '/tra-cuu-don-hang' }
     ] }
   ];
 

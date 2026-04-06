@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\CollectionController;
 use App\Http\Controllers\Api\VoucherController;
 use App\Http\Controllers\Api\AddonGroupController;
 use App\Http\Controllers\Api\ProductAttributeController;
+use App\Http\Controllers\Api\ShippingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -32,6 +33,7 @@ use App\Http\Controllers\Api\ProductAttributeController;
 // SEPAY WEBHOOK
 // ==========================================
 Route::post('/webhook/sepay', [SepayWebhookController::class, 'handle']);
+Route::post('/webhook/viettelpost', [ShippingController::class, 'webhook']);
 
 // ==========================================
 // PUBLIC ROUTES
@@ -112,6 +114,13 @@ Route::prefix('public')->group(function () {
     // Reviews
     Route::get('/products/{productId}/reviews', [ReviewController::class, 'productReviews']);
     Route::post('/reviews', [ReviewController::class, 'store']);
+
+    // Viettel Post public
+    Route::post('/shipping/track', [ShippingController::class, 'trackOrder']);
+    Route::post('/shipping/calculate-fee', [ShippingController::class, 'calculateFee']);
+    Route::get('/shipping/provinces', [ShippingController::class, 'getProvinces']);
+    Route::get('/shipping/districts', [ShippingController::class, 'getDistricts']);
+    Route::get('/shipping/wards', [ShippingController::class, 'getWards']);
 
     // AI
     Route::post('/ai/try-on', [AiController::class, 'tryOn']);
@@ -242,4 +251,10 @@ Route::middleware('auth:sanctum')->group(function () {
             ->paginate(request('per_page', 20));
         return response()->json($txns);
     });
+
+    // === Viettel Post Shipping (Admin) ===
+    Route::post('/shipping/get-token', [ShippingController::class, 'getToken']);
+    Route::get('/shipping/test-connection', [ShippingController::class, 'testConnection']);
+    Route::post('/shipping/push-order/{order}', [ShippingController::class, 'pushOrder']);
+    Route::post('/shipping/cancel-order/{order}', [ShippingController::class, 'cancelVtpOrder']);
 });

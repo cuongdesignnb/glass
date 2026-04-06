@@ -137,7 +137,8 @@ export default function Header({ menus }: HeaderProps) {
     ]},
     { id: '3', name: 'Thử Kính AI', url: '/thu-kinh-ao' },
     { id: '4', name: 'Bài Viết', url: '/bai-viet' },
-    { id: '5', name: 'Liên Hệ', url: '/lien-he' },
+    { id: '5', name: 'Tra Cứu', url: '/tra-cuu-don-hang' },
+    { id: '6', name: 'Liên Hệ', url: '/lien-he' },
   ];
 
   return (

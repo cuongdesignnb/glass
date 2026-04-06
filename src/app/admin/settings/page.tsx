@@ -7,7 +7,7 @@ import MediaPicker from '@/components/admin/MediaPicker';
 import {
   FiSave, FiGlobe, FiMail, FiPhone, FiMapPin, FiSearch, FiShare2,
   FiKey, FiImage, FiX, FiHome, FiToggleLeft, FiToggleRight, FiEye, FiEyeOff,
-  FiCreditCard, FiType, FiUpload, FiTrash2, FiGift,
+  FiCreditCard, FiType, FiUpload, FiTrash2, FiGift, FiTruck, FiRefreshCw, FiCheckCircle, FiZap,
 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { invalidateSettings } from '@/lib/useSettings';
@@ -89,6 +89,7 @@ export default function AdminSettingsPage() {
     if (key.startsWith('gemini_') || key.startsWith('openai_') || key.startsWith('google_') || key.startsWith('facebook_')) return 'api';
     if (key.includes('api_key') || key.includes('analytics') || key.includes('pixel')) return 'api';
     if (key.startsWith('reward_') || key.startsWith('voucher_') || key.startsWith('points_') || key.startsWith('register_') || key.startsWith('min_redeem')) return 'rewards';
+    if (key.startsWith('vtp_')) return 'shipping';
     return 'general';
   };
 
@@ -99,6 +100,7 @@ export default function AdminSettingsPage() {
     { id: 'seo',      label: 'SEO',            icon: <FiSearch /> },
     { id: 'social',   label: 'Mạng xã hội',   icon: <FiShare2 /> },
     { id: 'payment',  label: 'Thanh toán',     icon: <FiCreditCard /> },
+    { id: 'shipping', label: 'Vận chuyển',     icon: <FiTruck /> },
     { id: 'rewards',   label: 'Phần thưởng',    icon: <FiGift /> },
     { id: 'font',     label: 'Font chữ',       icon: <FiType /> },
     { id: 'api',      label: 'API & Tích hợp', icon: <FiKey /> },
@@ -294,6 +296,101 @@ export default function AdminSettingsPage() {
         hint: 'Dùng để tracking server-side, giúp tăng độ chính xác cho Facebook Ads. Nâng cao.',
       },
     ],
+
+    // ── Vận chuyển (Viettel Post) ─────────────────────────────────────────
+    shipping: [
+      {
+        key: 'vtp_username',
+        label: 'Email / Username Viettel Post',
+        placeholder: 'email@example.com',
+        section: 'Tài khoản Viettel Post',
+        hint: 'Email đăng ký tài khoản đối tác trên partner.viettelpost.vn',
+      },
+      {
+        key: 'vtp_password',
+        label: 'Mật khẩu Viettel Post',
+        placeholder: '••••••••',
+        isPassword: true,
+        hint: 'Mật khẩu tài khoản đối tác Viettel Post',
+      },
+      {
+        key: 'vtp_environment',
+        label: 'Môi trường',
+        placeholder: 'production',
+        hint: 'Nhập "dev" để dùng sandbox (test), để trống hoặc "production" cho thực tế',
+      },
+      {
+        key: 'vtp_sender_name',
+        label: 'Tên người gửi',
+        placeholder: 'Glass Eyewear',
+        section: 'Thông tin người gửi (Cửa hàng)',
+      },
+      {
+        key: 'vtp_sender_phone',
+        label: 'Số điện thoại người gửi',
+        placeholder: '0123456789',
+      },
+      {
+        key: 'vtp_sender_address',
+        label: 'Địa chỉ người gửi',
+        placeholder: '123 Nguyễn Huệ, Phường Bến Nghé, Quận 1',
+        hint: 'Địa chỉ chi tiết kho hàng/cửa hàng',
+      },
+      {
+        key: 'vtp_sender_province_id',
+        label: 'Province ID (Tỉnh/TP)',
+        placeholder: 'VD: 2 (TP.HCM)',
+        hint: 'ID tỉnh/thành phố theo hệ thống Viettel Post. Xem danh sách tại Hướng dẫn VTP.',
+      },
+      {
+        key: 'vtp_sender_district_id',
+        label: 'District ID (Quận/Huyện)',
+        placeholder: 'VD: 38',
+      },
+      {
+        key: 'vtp_sender_wards_id',
+        label: 'Wards ID (Phường/Xã)',
+        placeholder: 'VD: 622',
+      },
+      {
+        key: 'vtp_default_service',
+        label: 'Dịch vụ mặc định',
+        placeholder: 'LCOD',
+        section: 'Cấu hình giao hàng',
+        hint: 'VCN (Nhanh), VHT (Hỏa tốc), LCOD (COD thường), VCBO (Bộ), SCOD (Economy), PHS (Phát hàng nhanh)',
+      },
+      {
+        key: 'vtp_default_weight',
+        label: 'Khối lượng mặc định (gram)',
+        placeholder: '500',
+        hint: 'Khối lượng mặc định cho 1 đơn hàng nếu không chỉ định',
+      },
+      {
+        key: 'vtp_order_payment',
+        label: 'Bên trả phí ship',
+        placeholder: '3',
+        hint: '1 = Người gửi trả | 2 = Người nhận trả | 3 = Không thu tiền COD | 4 = Nhận hàng trả tiền',
+      },
+      {
+        key: 'vtp_group_address_id',
+        label: 'Group Address ID',
+        placeholder: '0',
+        hint: 'ID nhóm địa chỉ từ Viettel Post (nếu có). Mặc định: 0',
+      },
+      {
+        key: 'vtp_customer_id',
+        label: 'Customer ID (VTP)',
+        placeholder: '0',
+        hint: 'Mã khách hàng trên hệ thống Viettel Post (CUS_ID)',
+      },
+      {
+        key: 'vtp_auto_push',
+        label: 'Tự động gửi đơn sang VTP khi xác nhận',
+        isToggle: true,
+        section: 'Tự động hóa',
+        hint: 'Khi bật, đơn hàng sẽ tự động được gửi sang Viettel Post khi admin xác nhận đơn.',
+      },
+    ],
   };
 
   // ── Render ─────────────────────────────────────────────────────────────
@@ -487,6 +584,123 @@ export default function AdminSettingsPage() {
             </div>
           </div>
         ))}
+
+        {/* Viettel Post Token & Test Section */}
+        {activeTab === 'shipping' && (
+          <div className="admin-card" style={{ marginBottom: '20px' }}>
+            <div style={{
+              padding: '14px 20px',
+              borderBottom: '1px solid rgba(255,255,255,0.06)',
+              fontSize: '0.8125rem', fontWeight: 700,
+              letterSpacing: '0.06em', textTransform: 'uppercase',
+              color: 'var(--color-gold)',
+            }}>
+              Kết Nối & Token
+            </div>
+            <div className="admin-form">
+              <div className="admin-form__group">
+                <label className="admin-form__label">Token hiện tại</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  {settings['vtp_token'] ? (
+                    <span style={{
+                      padding: '8px 16px',
+                      background: 'rgba(16,185,129,0.1)',
+                      border: '1px solid rgba(16,185,129,0.3)',
+                      borderRadius: '8px',
+                      color: '#10b981',
+                      fontWeight: 600,
+                      fontSize: '0.85rem',
+                      fontFamily: 'monospace',
+                    }}>
+                      <FiCheckCircle style={{ marginRight: '6px', verticalAlign: 'middle' }} />
+                      {settings['vtp_token'].substring(0, 30)}...
+                    </span>
+                  ) : (
+                    <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.875rem' }}>
+                      Chưa có token. Nhấn &quot;Lấy Token&quot; để kết nối.
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="admin-form__group">
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="admin-btn admin-btn--primary admin-btn--sm"
+                    onClick={async () => {
+                      if (!token) return;
+                      const t = toast.loading('Đang lấy token Viettel Post...');
+                      try {
+                        // Cần lưu username/password trước
+                        const settingsArr = Object.entries(settings).map(([key, value]) => ({
+                          key, value, group: getGroup(key),
+                        }));
+                        await adminApi.updateSettings(token, settingsArr);
+                        const res = await adminApi.vtpGetToken(token);
+                        if (res.success) {
+                          toast.success(res.message, { id: t });
+                          loadSettings();
+                        } else {
+                          toast.error(res.message, { id: t });
+                        }
+                      } catch (err: any) {
+                        toast.error(err.message || 'Lỗi lấy token', { id: t });
+                      }
+                    }}
+                  >
+                    <FiRefreshCw /> Lấy Token (1 năm)
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-btn admin-btn--secondary admin-btn--sm"
+                    onClick={async () => {
+                      if (!token) return;
+                      const t = toast.loading('Đang kiểm tra kết nối...');
+                      try {
+                        const res = await adminApi.vtpTestConnection(token);
+                        if (res.success) {
+                          toast.success(res.message, { id: t });
+                        } else {
+                          toast.error(res.message, { id: t });
+                        }
+                      } catch (err: any) {
+                        toast.error(err.message || 'Lỗi kết nối', { id: t });
+                      }
+                    }}
+                  >
+                    <FiZap /> Kiểm Tra Kết Nối
+                  </button>
+                </div>
+                <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginTop: '8px', lineHeight: 1.5 }}>
+                  💡 Hệ thống sẽ lưu cài đặt trước khi lấy token. Token có hiệu lực 1 năm. Khi hết hạn, nhấn lấy lại.
+                </p>
+              </div>
+
+              <div className="admin-form__group">
+                <label className="admin-form__label">URL Webhook (đăng ký tại Viettel Post)</label>
+                <div style={{
+                  padding: '10px 16px',
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  fontFamily: 'monospace',
+                  fontSize: '0.8125rem',
+                  color: 'var(--color-gold)',
+                  wordBreak: 'break-all',
+                }}>
+                  {typeof window !== 'undefined'
+                    ? `${window.location.origin.replace(':3000', ':8000').replace(':13000', ':8000')}/api/webhook/viettelpost`
+                    : 'https://your-domain.com/api/webhook/viettelpost'
+                  }
+                </div>
+                <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginTop: '5px', lineHeight: 1.5 }}>
+                  Đăng ký URL này tại partner.viettelpost.vn → Webhook Settings. VTP sẽ gửi cập nhật trạng thái đơn hàng tự động.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Font Upload Section */}
         {activeTab === 'font' && (

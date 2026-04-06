@@ -120,6 +120,26 @@ export const publicApi = {
       body: JSON.stringify({ order_number: orderNumber, phone }),
     }),
 
+  // Shipping / Viettel Post
+  trackOrder: (orderNumber: string, phone: string) =>
+    fetchApi('/public/shipping/track', {
+      method: 'POST',
+      body: JSON.stringify({ order_number: orderNumber, phone }),
+    }),
+  calculateShippingFee: (data: {
+    sender_province: number; sender_district: number;
+    receiver_province: number; receiver_district: number;
+    weight?: number; price?: number; money_collection?: number;
+  }) => fetchApi('/public/shipping/calculate-fee', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  getShippingProvinces: () => fetchApi('/public/shipping/provinces'),
+  getShippingDistricts: (provinceId: number) =>
+    fetchApi(`/public/shipping/districts?province_id=${provinceId}`),
+  getShippingWards: (districtId: number) =>
+    fetchApi(`/public/shipping/wards?district_id=${districtId}`),
+
   // Reviews
   getProductReviews: (productId: number, params?: Record<string, string>) => {
     const query = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -418,6 +438,24 @@ export const adminApi = {
     fetchApi(`/orders/${id}`, { token }),
   updateOrderStatus: (token: string, id: number, data: any) =>
     fetchApi(`/orders/${id}/status`, { method: 'PUT', body: JSON.stringify(data), token }),
+
+  // Shipping / Viettel Post
+  vtpGetToken: (token: string) =>
+    fetchApi('/shipping/get-token', { method: 'POST', token }),
+  vtpTestConnection: (token: string) =>
+    fetchApi('/shipping/test-connection', { token }),
+  vtpPushOrder: (token: string, orderId: number, service?: string) =>
+    fetchApi(`/shipping/push-order/${orderId}`, {
+      method: 'POST',
+      body: JSON.stringify({ service }),
+      token,
+    }),
+  vtpCancelOrder: (token: string, orderId: number, note?: string) =>
+    fetchApi(`/shipping/cancel-order/${orderId}`, {
+      method: 'POST',
+      body: JSON.stringify({ note }),
+      token,
+    }),
 
   // Reviews
   getReviews: (token: string, params?: Record<string, string>) => {

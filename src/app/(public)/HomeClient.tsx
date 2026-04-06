@@ -459,3 +459,16 @@ export function DynamicVouchers() {
     </div>
   );
 }
+
+// ── Consult Button (reads phone from settings) ──
+export function DynamicConsultButton() {
+  const { settings } = useSettings();
+  const phone = settings['contact_phone'] || '0123456789';
+  return (
+    <div style={{ textAlign: 'center', marginTop: 'var(--space-3xl)' }}>
+      <a href={`tel:${phone.replace(/\s/g, '')}`} className="btn btn-primary btn-lg">
+        Đặt Lịch Tư Vấn <FiArrowRight />
+      </a>
+    </div>
+  );
+}

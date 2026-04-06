@@ -9,7 +9,7 @@ import { publicApi, userApi } from '@/lib/api';
 import { formatPrice, PAYMENT_METHODS } from '@/lib/constants';
 import Breadcrumb from '@/components/layout/Breadcrumb';
 import Link from 'next/link';
-import { FiCheck, FiArrowLeft, FiShoppingBag, FiCopy, FiRefreshCw, FiClock, FiTag, FiX } from 'react-icons/fi';
+import { FiCheck, FiArrowLeft, FiShoppingBag, FiCopy, FiRefreshCw, FiClock, FiTag, FiX, FiTruck } from 'react-icons/fi';
 import { RiGlassesLine } from 'react-icons/ri';
 import './checkout.css';
 
@@ -255,7 +255,7 @@ export default function CheckoutPage() {
               <div className="order-success__number">Mã đơn: <strong>{orderSuccess.order_number}</strong></div>
               <div className="order-success__actions">
                 <Link href="/san-pham" className="btn btn-primary btn-lg"><FiShoppingBag /> Tiếp tục mua sắm</Link>
-                <Link href="/" className="btn btn-secondary btn-lg">Về trang chủ</Link>
+                <Link href="/tra-cuu-don-hang" className="btn btn-secondary btn-lg"><FiTruck /> Tra cứu đơn hàng</Link>
               </div>
             </div>
           ) : isBankTransfer ? (
@@ -325,7 +325,7 @@ export default function CheckoutPage() {
 
               <div className="order-success__actions">
                 <Link href="/san-pham" className="btn btn-primary btn-lg"><FiShoppingBag /> Tiếp tục mua sắm</Link>
-                <Link href="/" className="btn btn-secondary btn-lg">Về trang chủ</Link>
+                <Link href="/tra-cuu-don-hang" className="btn btn-secondary btn-lg"><FiTruck /> Tra cứu đơn hàng</Link>
               </div>
             </div>
           ) : (
@@ -338,7 +338,7 @@ export default function CheckoutPage() {
               <p className="order-success__note">Chúng tôi sẽ liên hệ với bạn qua số điện thoại để xác nhận đơn hàng.</p>
               <div className="order-success__actions">
                 <Link href="/san-pham" className="btn btn-primary btn-lg"><FiShoppingBag /> Tiếp tục mua sắm</Link>
-                <Link href="/" className="btn btn-secondary btn-lg">Về trang chủ</Link>
+                <Link href="/tra-cuu-don-hang" className="btn btn-secondary btn-lg"><FiTruck /> Tra cứu đơn hàng</Link>
               </div>
             </div>
           )}

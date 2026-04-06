@@ -10,10 +10,13 @@ class Order extends Model
     protected $fillable = [
         'order_number', 'payment_code', 'user_id',
         'customer_name', 'customer_email', 'customer_phone',
-        'address', 'city', 'district', 'ward',
+        'address', 'city', 'city_id', 'district', 'district_id', 'ward', 'ward_id',
         'subtotal', 'shipping', 'discount', 'total',
         'status', 'payment_method', 'payment_status', 'note',
         'voucher_code', 'points_used', 'points_discount',
+        // Viettel Post shipping
+        'vtp_order_number', 'vtp_status_code', 'vtp_status_name',
+        'vtp_status_date', 'vtp_service', 'vtp_shipping_fee', 'vtp_tracking_log',
     ];
 
     public function user()
@@ -24,10 +27,12 @@ class Order extends Model
     protected function casts(): array
     {
         return [
-            'subtotal' => 'decimal:0',
-            'shipping' => 'decimal:0',
-            'discount' => 'decimal:0',
-            'total'    => 'decimal:0',
+            'subtotal'         => 'decimal:0',
+            'shipping'         => 'decimal:0',
+            'discount'         => 'decimal:0',
+            'total'            => 'decimal:0',
+            'vtp_shipping_fee' => 'decimal:0',
+            'vtp_status_date'  => 'datetime',
         ];
     }
 

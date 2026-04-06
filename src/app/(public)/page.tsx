@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { FiArrowRight, FiTruck, FiShield, FiRefreshCw, FiAward, FiEye, FiCamera, FiPhone, FiCircle, FiSquare, FiHeart, FiMaximize } from 'react-icons/fi';
 import { RiGlassesLine, RiSunLine, RiVipCrownLine, RiPriceTag3Line } from 'react-icons/ri';
 import { publicApi } from '@/lib/api';
-import { DynamicCategories, DynamicProducts, DynamicCollections, DynamicVouchers, DynamicHero, DynamicStats } from './HomeClient';
+import { DynamicCategories, DynamicProducts, DynamicCollections, DynamicVouchers, DynamicHero, DynamicStats, DynamicConsultButton } from './HomeClient';
 import Newsletter from '@/components/layout/Newsletter';
 import './home.css';
 
@@ -167,9 +167,7 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-          <div style={{ textAlign: 'center', marginTop: 'var(--space-3xl)' }}>
-            <Link href="/lien-he" className="btn btn-primary btn-lg">Đặt Lịch Tư Vấn <FiArrowRight /></Link>
-          </div>
+          <DynamicConsultButton />
         </div>
       </section>
 

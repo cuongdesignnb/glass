@@ -47,8 +47,11 @@ class OrderController extends Controller
             'customer_phone' => 'required|string|max:20',
             'address' => 'required|string',
             'city' => 'nullable|string',
+            'city_id' => 'nullable|integer',
             'district' => 'nullable|string',
+            'district_id' => 'nullable|integer',
             'ward' => 'nullable|string',
+            'ward_id' => 'nullable|integer',
             'payment_method' => 'nullable|string|in:cod,bank_transfer',
             'note' => 'nullable|string',
             'voucher_code' => 'nullable|string',
@@ -114,8 +117,11 @@ class OrderController extends Controller
             'customer_phone' => $data['customer_phone'],
             'address'        => $data['address'],
             'city'           => $data['city'] ?? null,
+            'city_id'        => $data['city_id'] ?? null,
             'district'       => $data['district'] ?? null,
+            'district_id'    => $data['district_id'] ?? null,
             'ward'           => $data['ward'] ?? null,
+            'ward_id'        => $data['ward_id'] ?? null,
             'subtotal'       => $subtotal,
             'shipping'       => $shipping,
             'discount'       => $discount,
@@ -168,6 +174,22 @@ class OrderController extends Controller
         $oldStatus = $order->status;
         $order->update($data);
 
+        // Auto-push to Viettel Post when confirmed
+        if ($data['status'] === 'confirmed' && $oldStatus !== 'confirmed') {
+            $autoPush = Setting::getValue('vtp_auto_push', '0');
+            if ($autoPush === '1' && !$order->vtp_order_number && $order->city_id) {
+                try {
+                    $shippingCtrl = new \App\Http\Controllers\Api\ShippingController();
+                    $shippingCtrl->pushOrder($request, $order);
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error('Auto-push VTP failed', [
+                        'order_id' => $order->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
+
         // Cộng điểm khi đơn hàng delivered
         if ($data['status'] === 'delivered' && $oldStatus !== 'delivered' && $order->user_id) {
             $settings = Setting::where('group', 'rewards')->pluck('value', 'key');
@@ -179,7 +201,7 @@ class OrderController extends Controller
                     $user = User::find($order->user_id);
                     if ($user) {
                         $user->increment('points', $earnedPoints);
-                        $user->increment('total_spent', $order->total);
+                        $user->increment('total_spent', intval($order->total));
 
                         LoyaltyTransaction::create([
                             'user_id' => $user->id,
