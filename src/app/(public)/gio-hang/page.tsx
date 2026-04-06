@@ -1,6 +1,7 @@
 'use client';
 
 import { useCart } from '@/lib/useCart';
+import { useSettings } from '@/lib/useSettings';
 import { formatPrice } from '@/lib/constants';
 import Link from 'next/link';
 import Breadcrumb from '@/components/layout/Breadcrumb';
@@ -8,11 +9,12 @@ import { FiTrash2, FiMinus, FiPlus, FiShoppingBag, FiArrowRight } from 'react-ic
 import { RiGlassesLine } from 'react-icons/ri';
 import './cart.css';
 
-const SHIPPING_THRESHOLD = 500000;
-const SHIPPING_FEE = 30000;
-
 export default function CartPage() {
   const { items, removeItem, updateQuantity, clearCart, subtotal, totalItems } = useCart();
+  const { settings } = useSettings();
+
+  const SHIPPING_THRESHOLD = Number(settings['payment_free_shipping_threshold']) || 500000;
+  const SHIPPING_FEE = Number(settings['payment_shipping_fee']) || 30000;
 
   const shipping = subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
   const total = subtotal + shipping;

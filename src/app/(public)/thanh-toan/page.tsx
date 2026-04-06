@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/lib/useCart';
-import { publicApi } from '@/lib/api';
+import { useAuth } from '@/lib/useAuth';
+import { useSettings } from '@/lib/useSettings';
+import { publicApi, userApi } from '@/lib/api';
 import { formatPrice, PAYMENT_METHODS } from '@/lib/constants';
 import Breadcrumb from '@/components/layout/Breadcrumb';
 import Link from 'next/link';
@@ -11,18 +13,22 @@ import { FiCheck, FiArrowLeft, FiShoppingBag, FiCopy, FiRefreshCw, FiClock, FiTa
 import { RiGlassesLine } from 'react-icons/ri';
 import './checkout.css';
 
-const SHIPPING_THRESHOLD = 500000;
-const SHIPPING_FEE = 30000;
-
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, subtotal, clearCart } = useCart();
+  const { user, token, refreshUser } = useAuth();
+  const { settings } = useSettings();
   const [submitting, setSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<any>(null);
   const [error, setError] = useState('');
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'paid'>('pending');
   const [copied, setCopied] = useState<string | null>(null);
   const pollingRef = useRef<any>(null);
+  const [userPrefilled, setUserPrefilled] = useState(false);
+
+  // Shipping from settings (fallback to defaults)
+  const SHIPPING_THRESHOLD = Number(settings['payment_free_shipping_threshold']) || 500000;
+  const SHIPPING_FEE = Number(settings['payment_shipping_fee']) || 30000;
 
   // Cleanup polling khi unmount tránh memory leak
   useEffect(() => {
@@ -42,6 +48,22 @@ export default function CheckoutPage() {
     payment_method: 'cod',
     note: '',
   });
+
+  // Auto-fill form with user profile when logged in
+  useEffect(() => {
+    if (user && !userPrefilled) {
+      setForm(prev => ({
+        ...prev,
+        customer_name: prev.customer_name || user.name || '',
+        customer_email: prev.customer_email || user.email || '',
+        customer_phone: prev.customer_phone || user.phone || '',
+        address: prev.address || user.address_detail || '',
+        city: prev.city || user.province || '',
+        ward: prev.ward || user.ward || '',
+      }));
+      setUserPrefilled(true);
+    }
+  }, [user, userPrefilled]);
 
   // Location data
   const [provinces, setProvinces] = useState<any[]>([]);
@@ -126,6 +148,20 @@ export default function CheckoutPage() {
       const result = await publicApi.createOrder(orderData);
       setOrderSuccess(result);
       clearCart();
+
+      // If user is logged in, update their profile with checkout info
+      if (token && user) {
+        try {
+          await userApi.updateProfile(token, {
+            name: form.customer_name,
+            phone: form.customer_phone,
+            province: form.city,
+            ward: form.ward,
+            address_detail: form.address,
+          });
+          refreshUser();
+        } catch {} // Don't block checkout on profile update failure
+      }
 
       // Nếu là bank_transfer → bắt đầu polling kiểm tra thanh toán
       if (form.payment_method === 'bank_transfer' && result?.id) {

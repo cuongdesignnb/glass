@@ -65,7 +65,9 @@ class OrderController extends Controller
 
         // Calculate totals
         $subtotal = collect($data['items'])->sum(fn($item) => $item['price'] * $item['quantity']);
-        $shipping = $subtotal >= 500000 ? 0 : 30000;
+        $freeShipThreshold = (int)(Setting::getValue('payment_free_shipping_threshold') ?: 500000);
+        $shippingFee = (int)(Setting::getValue('payment_shipping_fee') ?: 30000);
+        $shipping = ($freeShipThreshold > 0 && $subtotal >= $freeShipThreshold) ? 0 : $shippingFee;
         $discount = 0;
         $pointsDiscount = 0;
         $pointsUsed = 0;

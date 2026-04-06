@@ -153,7 +153,38 @@ export default function AdminOrdersPage() {
                 <div>
                   <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>Địa chỉ</div>
                   <div style={{ fontSize: '0.875rem' }}>{selectedOrder.address}</div>
+                  {(selectedOrder.ward || selectedOrder.district || selectedOrder.city) && (
+                    <div style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.5)', marginTop: '4px' }}>
+                      {[selectedOrder.ward, selectedOrder.district, selectedOrder.city].filter(Boolean).join(', ')}
+                    </div>
+                  )}
                 </div>
+
+                {selectedOrder.payment_method && (
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>Thanh toán</div>
+                    <div style={{ fontSize: '0.875rem' }}>
+                      {selectedOrder.payment_method === 'bank_transfer' ? 'Chuyển khoản ngân hàng' : 'COD - Thanh toán khi nhận hàng'}
+                      {selectedOrder.payment_code && (
+                        <span style={{ marginLeft: '8px', color: 'var(--color-gold)', fontSize: '0.8125rem' }}>({selectedOrder.payment_code})</span>
+                      )}
+                    </div>
+                    {selectedOrder.payment_status && (
+                      <span className={`admin-badge admin-badge--${selectedOrder.payment_status === 'paid' ? 'success' : 'warning'}`} style={{ marginTop: '6px', display: 'inline-block' }}>
+                        {selectedOrder.payment_status === 'paid' ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {selectedOrder.note && (
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '4px' }}>Ghi chú</div>
+                    <div style={{ fontSize: '0.875rem', fontStyle: 'italic', padding: '8px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', borderLeft: '3px solid var(--color-gold)' }}>
+                      {selectedOrder.note}
+                    </div>
+                  </div>
+                )}
 
                 {selectedOrder.items && selectedOrder.items.length > 0 && (
                   <div>
