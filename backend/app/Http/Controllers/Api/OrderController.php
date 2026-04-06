@@ -61,6 +61,10 @@ class OrderController extends Controller
             'items.*.price' => 'required|numeric|min:0',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.prescription' => 'nullable|string',
+            'items.*.color' => 'nullable|string',
+            'items.*.color_name' => 'nullable|string',
+            'items.*.addons' => 'nullable|array',
+            'items.*.addon_total' => 'nullable|numeric|min:0',
         ]);
 
         // Calculate totals
