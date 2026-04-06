@@ -52,11 +52,8 @@ export default function HomePage() {
       </section>
 
       {/* Voucher Slider */}
-      <section className="section voucher-home-section" style={{ paddingTop: 'var(--space-2xl)' }}>
+      <section className="section voucher-home-section" style={{ paddingTop: 'var(--space-lg)', paddingBottom: 'var(--space-lg)' }}>
         <div className="container">
-          <div className="section__header">
-            <span className="section__tag">Ưu Đãi</span>
-          </div>
           <DynamicVouchers />
         </div>
       </section>
