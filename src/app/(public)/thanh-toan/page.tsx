@@ -49,28 +49,6 @@ export default function CheckoutPage() {
     note: '',
   });
 
-  // Auto-fill form with user profile when logged in
-  // Pending ward from user profile (set after wards are loaded)
-  const pendingWardRef = useRef<string>('');
-
-  // Auto-fill form with user profile when logged in
-  useEffect(() => {
-    if (user && !userPrefilled) {
-      // Save the ward to restore after wards list loads
-      pendingWardRef.current = user.ward || '';
-      setForm(prev => ({
-        ...prev,
-        customer_name: prev.customer_name || user.name || '',
-        customer_email: prev.customer_email || user.email || '',
-        customer_phone: prev.customer_phone || user.phone || '',
-        address: prev.address || user.address_detail || '',
-        city: prev.city || user.province || '',
-        ward: '', // Will be set after wards load
-      }));
-      setUserPrefilled(true);
-    }
-  }, [user, userPrefilled]);
-
   // Location data
   const [provinces, setProvinces] = useState<any[]>([]);
   const [wards, setWards] = useState<any[]>([]);
@@ -89,28 +67,50 @@ export default function CheckoutPage() {
       .catch(() => {});
   }, []);
 
-  // When provinces loaded + city already set (from user prefill), load wards
+  // Auto-fill from user profile — waits for both user AND provinces to be ready
   useEffect(() => {
-    if (provinces.length > 0 && form.city) {
-      const prov = provinces.find((p: any) => p.fullname === form.city);
+    if (!user || userPrefilled) return;
+
+    const userProvince = user.province || '';
+    const userWard = user.ward || '';
+
+    // Find matching province and its wards
+    let wardsList: any[] = [];
+    if (userProvince && provinces.length > 0) {
+      const prov = provinces.find((p: any) => p.fullname === userProvince);
       if (prov) {
-        const wardsList = prov.wards || [];
+        wardsList = prov.wards || [];
         setWards(wardsList);
-        // Restore pending ward value from user profile after wards render
-        const savedWard = pendingWardRef.current;
-        if (savedWard) {
-          pendingWardRef.current = '';
-          const wardExists = wardsList.some((w: any) => w.fullname === savedWard);
-          if (wardExists) {
-            // Defer to next tick so wards options are rendered first
-            setTimeout(() => {
-              setForm(prev => ({ ...prev, ward: savedWard }));
-            }, 0);
-          }
-        }
       }
     }
-  }, [provinces, form.city]);
+
+    // If user has a province but provinces haven't loaded yet, wait
+    if (userProvince && provinces.length === 0) return;
+
+    // Check if ward exists in the list
+    const wardValue = wardsList.some((w: any) => w.fullname === userWard) ? userWard : '';
+
+    setForm(prev => ({
+      ...prev,
+      customer_name: prev.customer_name || user.name || '',
+      customer_email: prev.customer_email || user.email || '',
+      customer_phone: prev.customer_phone || user.phone || '',
+      address: prev.address || user.address_detail || '',
+      city: prev.city || userProvince,
+      ward: prev.ward || wardValue,
+    }));
+    setUserPrefilled(true);
+  }, [user, userPrefilled, provinces]);
+
+  // When user manually changes city, load wards for the new city
+  useEffect(() => {
+    if (userPrefilled && provinces.length > 0 && form.city) {
+      const prov = provinces.find((p: any) => p.fullname === form.city);
+      if (prov) {
+        setWards(prov.wards || []);
+      }
+    }
+  }, [form.city, provinces, userPrefilled]);
 
   const shipping = subtotal >= SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
   const total = Math.max(0, subtotal + shipping - voucherDiscount);
