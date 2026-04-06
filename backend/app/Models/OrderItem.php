@@ -10,12 +10,16 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id', 'product_id', 'name', 'slug',
         'image', 'price', 'quantity', 'prescription',
-        'color', 'color_name',
+        'color', 'color_name', 'addons', 'addon_total',
     ];
 
     protected function casts(): array
     {
-        return ['price' => 'decimal:0'];
+        return [
+            'price' => 'decimal:0',
+            'addon_total' => 'decimal:0',
+            'addons' => 'array',
+        ];
     }
 
     public function order(): BelongsTo

@@ -190,12 +190,30 @@ export default function AdminOrdersPage() {
                   <div>
                     <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '8px' }}>Sản phẩm</div>
                     {selectedOrder.items.map((item: any, i: number) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.06)', fontSize: '0.8125rem' }}>
-                        <div>
-                          <div style={{ fontWeight: 600, color: 'var(--color-white)' }}>{item.name}</div>
-                          <div style={{ color: 'rgba(255,255,255,0.4)' }}>SL: {item.quantity}</div>
+                      <div key={i} style={{ padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.06)', fontSize: '0.8125rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 600, color: 'var(--color-white)' }}>{item.name}</div>
+                            <div style={{ color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>SL: {item.quantity}</div>
+                            {item.color_name && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                                <span style={{ width: 14, height: 14, borderRadius: '50%', background: item.color || '#999', display: 'inline-block', border: '1px solid rgba(255,255,255,0.2)' }} />
+                                <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)' }}>{item.color_name}</span>
+                              </div>
+                            )}
+                            {item.addons && item.addons.length > 0 && (
+                              <div style={{ marginTop: '4px', fontSize: '0.75rem' }}>
+                                {item.addons.map((a: any, j: number) => (
+                                  <div key={j} style={{ color: 'rgba(255,255,255,0.5)' }}>
+                                    {a.groupName}: <span style={{ color: 'rgba(255,255,255,0.8)', fontWeight: 500 }}>{a.optionName}</span>
+                                    {a.price > 0 && <span style={{ color: 'var(--color-gold)', marginLeft: '4px' }}>(+{formatPrice(a.price)})</span>}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ fontWeight: 600, whiteSpace: 'nowrap', marginLeft: '12px' }}>{formatPrice(item.price * item.quantity)}</div>
                         </div>
-                        <div style={{ fontWeight: 600 }}>{formatPrice(item.price * item.quantity)}</div>
                       </div>
                     ))}
                   </div>
