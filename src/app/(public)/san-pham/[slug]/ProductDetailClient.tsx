@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { publicApi } from '@/lib/api';
 import { formatPrice, COLORS } from '@/lib/constants';
 import Link from 'next/link';
-import { FiStar, FiShoppingBag, FiHeart, FiShare2, FiChevronLeft, FiChevronRight, FiCheck, FiCamera, FiX, FiCheckCircle, FiTruck, FiRefreshCw, FiShield } from 'react-icons/fi';
+import { FiStar, FiShoppingBag, FiHeart, FiShare2, FiChevronLeft, FiChevronRight, FiCheck, FiCamera, FiX, FiCheckCircle, FiTruck, FiRefreshCw, FiShield, FiArrowRight } from 'react-icons/fi';
 import { RiGlassesLine } from 'react-icons/ri';
 import TryOnModal from '@/components/layout/TryOnModal';
 import './product-detail.css';
@@ -307,7 +307,17 @@ export default function ProductDetailClient({ product, reviewData, apiMediaUrl }
 
           {/* Short description */}
           {product.description && (
-            <p className="product-info__desc">{product.description}</p>
+            <div className="product-info__desc">
+              {product.description.includes('- ') ? (
+                <ul className="product-info__desc-list">
+                  {product.description.split(/(?:^|\n)\s*-\s*/).filter(Boolean).map((line: string, i: number) => (
+                    <li key={i}>{line.trim()}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p>{product.description}</p>
+              )}
+            </div>
           )}
 
           {/* Color Selection */}
@@ -472,10 +482,10 @@ export default function ProductDetailClient({ product, reviewData, apiMediaUrl }
 
           {/* Trust badges inline */}
           <div className="product-info__trust">
-            <div className="product-trust-item"><FiCheckCircle /> Hàng chính hãng 100%</div>
-            <div className="product-trust-item"><FiTruck /> Miễn phí vận chuyển</div>
-            <div className="product-trust-item"><FiRefreshCw /> Đổi trả 30 ngày</div>
-            <div className="product-trust-item"><FiShield /> Bảo hành 12 tháng</div>
+            <div className="product-trust-item"><FiCheckCircle /> Tận tâm chăm sóc đôi mắt của bạn</div>
+            <div className="product-trust-item"><FiTruck /> Miễn phí vận chuyển từ 250K</div>
+            <div className="product-trust-item"><FiRefreshCw /> Đổi trả 15 ngày</div>
+            <div className="product-trust-item"><FiShield /> Ưu đãi thành viên độc quyền</div>
           </div>
         </div>
       </div>
@@ -776,6 +786,77 @@ export default function ProductDetailClient({ product, reviewData, apiMediaUrl }
         }}
         selectedColor={selectedColor}
       />
+
+      {/* Related Products */}
+      <RelatedProducts
+        categoryId={product.category_id}
+        currentProductId={product.id}
+        apiMediaUrl={apiMediaUrl}
+      />
     </div>
+  );
+}
+
+/* ── Related Products Slider ── */
+function RelatedProducts({ categoryId, currentProductId, apiMediaUrl }: { categoryId: number; currentProductId: number; apiMediaUrl: string }) {
+  const [products, setProducts] = useState<any[]>([]);
+  const sliderRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!categoryId) return;
+    publicApi.getProducts({ category_id: String(categoryId), per_page: '12' })
+      .then((res: any) => {
+        const items = (res.data || res).filter((p: any) => p.id !== currentProductId);
+        setProducts(items.slice(0, 10));
+      })
+      .catch(() => {});
+  }, [categoryId, currentProductId]);
+
+  if (products.length === 0) return null;
+
+  const scroll = (dir: number) => {
+    if (!sliderRef.current) return;
+    sliderRef.current.scrollBy({ left: dir * 280, behavior: 'smooth' });
+  };
+
+  const getImg = (p: any) => {
+    const src = p.thumbnail || p.images?.[0];
+    if (!src) return null;
+    return src.startsWith('http') ? src : `${apiMediaUrl}${src}`;
+  };
+
+  return (
+    <section className="related-products">
+      <div className="container">
+        <div className="related-products__header">
+          <h2 className="related-products__title">Sản Phẩm Liên Quan</h2>
+          <div className="related-products__nav">
+            <button onClick={() => scroll(-1)} className="related-products__arrow"><FiChevronLeft /></button>
+            <button onClick={() => scroll(1)} className="related-products__arrow"><FiChevronRight /></button>
+          </div>
+        </div>
+        <div className="related-products__slider" ref={sliderRef}>
+          {products.map((p: any) => {
+            const img = getImg(p);
+            const discount = p.sale_price ? Math.round(((p.price - p.sale_price) / p.price) * 100) : 0;
+            return (
+              <Link key={p.id} href={`/san-pham/${p.slug}`} className="related-products__card">
+                <div className="related-products__img">
+                  {img ? <img src={img} alt={p.name} /> : <RiGlassesLine />}
+                  {discount > 0 && <span className="related-products__badge">-{discount}%</span>}
+                </div>
+                <div className="related-products__info">
+                  <h3 className="related-products__name">{p.name}</h3>
+                  <div className="related-products__price">
+                    <span className="related-products__price-current">{formatPrice(p.sale_price || p.price)}</span>
+                    {p.sale_price && <span className="related-products__price-original">{formatPrice(p.price)}</span>}
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </section>
   );
 }
