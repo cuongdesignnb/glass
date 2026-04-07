@@ -248,9 +248,25 @@ export default function ProductFormPage() {
                   <select className="admin-form__input" value={form.category_id}
                     onChange={e => setForm({ ...form, category_id: e.target.value })}>
                     <option value="">-- Chọn danh mục --</option>
-                    {categories.map((c: any) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
+                    {(() => {
+                      const flatList: { id: number; name: string; depth: number }[] = [];
+                      const flatten = (cats: any[], depth: number) => {
+                        cats.forEach((c: any) => {
+                          flatList.push({ id: c.id, name: c.name, depth });
+                          if (c.children?.length) flatten(c.children, depth + 1);
+                        });
+                      };
+                      flatten(categories.filter((c: any) => !c.parent_id), 0);
+                      // Also add orphan categories that have parent_id not in root
+                      categories.filter((c: any) => c.parent_id && !flatList.find(f => f.id === c.id)).forEach((c: any) => {
+                        flatList.push({ id: c.id, name: c.name, depth: 1 });
+                      });
+                      return flatList.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {'—'.repeat(c.depth)} {c.depth > 0 ? ' ' : ''}{c.name}
+                        </option>
+                      ));
+                    })()}
                   </select>
                 </div>
                 <div className="admin-form__group">

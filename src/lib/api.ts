@@ -100,6 +100,7 @@ export const publicApi = {
 
   // Collections
   getCollections: () => fetchApi('/public/collections'),
+  getCollection: (slug: string) => fetchApi(`/public/collections/${slug}`),
 
   // Vouchers
   getVouchers: () => fetchApi('/public/vouchers'),
@@ -410,6 +411,8 @@ export const adminApi = {
   // Collections
   getCollections: (token: string) =>
     fetchApi('/collections?all=1', { token }),
+  getCollection: (token: string, id: number) =>
+    fetchApi(`/collections/${id}`, { token }),
   createCollection: (token: string, data: any) =>
     fetchApi('/collections', { method: 'POST', body: JSON.stringify(data), token }),
   updateCollection: (token: string, id: number, data: any) =>

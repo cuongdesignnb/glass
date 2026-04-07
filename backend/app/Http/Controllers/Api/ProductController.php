@@ -45,8 +45,8 @@ class ProductController extends Controller
         if ($request->filled('price_min') || $request->filled('price_max')) {
             $query->filterByPrice($request->price_min, $request->price_max);
         }
-        if ($request->filled('is_featured')) {
-            $query->featured()->orderBy('featured_order', 'asc');
+        if ($request->filled('is_featured') || $request->filled('featured')) {
+            $query->featured()->orderBy('featured_order', 'asc')->orderBy('id', 'asc');
         }
         if ($request->filled('is_new')) {
             $query->where('is_new', true);
@@ -187,6 +187,7 @@ class ProductController extends Controller
             'is_active' => 'nullable|boolean',
             'is_featured' => 'nullable|boolean',
             'is_new' => 'nullable|boolean',
+            'featured_order' => 'nullable|integer|min:0',
             'stock' => 'nullable|integer|min:0',
             'weight' => 'nullable|string',
             'frame_width' => 'nullable|string',
@@ -261,6 +262,7 @@ class ProductController extends Controller
             'is_active' => 'nullable|boolean',
             'is_featured' => 'nullable|boolean',
             'is_new' => 'nullable|boolean',
+            'featured_order' => 'nullable|integer|min:0',
             'stock' => 'nullable|integer|min:0',
             'weight' => 'nullable|string',
             'frame_width' => 'nullable|string',

@@ -37,6 +37,7 @@ const emptyForm = {
   accent_color: '#c9a96e',
   order: 0,
   is_active: true,
+  product_ids: [] as number[],
 };
 
 export default function AdminCollectionsPage() {
@@ -47,8 +48,20 @@ export default function AdminCollectionsPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [showMediaPicker, setShowMediaPicker] = useState(false);
+  const [allProducts, setAllProducts] = useState<any[]>([]);
+  const [productSearch, setProductSearch] = useState('');
 
-  useEffect(() => { if (token) loadCollections(); }, [token]);
+  useEffect(() => { if (token) { loadCollections(); loadProducts(); } }, [token]);
+
+  const loadProducts = async () => {
+    if (!token) return;
+    try {
+      const res = await adminApi.getProducts(token, { per_page: '200', show_all: '1' });
+      setAllProducts(Array.isArray(res) ? res : (res?.data || []));
+    } catch { }
+  };
+
+
 
   const loadCollections = async () => {
     if (!token) return;
@@ -83,10 +96,11 @@ export default function AdminCollectionsPage() {
     if (!token || !form.name) return;
     const saveToast = toast.loading('Đang lưu...');
     try {
+      const payload = { ...form };
       if (editingId) {
-        await adminApi.updateCollection(token, editingId, form);
+        await adminApi.updateCollection(token, editingId, payload);
       } else {
-        await adminApi.createCollection(token, form);
+        await adminApi.createCollection(token, payload);
       }
       toast.success(editingId ? 'Đã cập nhật bộ sưu tập' : 'Đã tạo bộ sưu tập mới', { id: saveToast });
       resetForm();
@@ -96,8 +110,15 @@ export default function AdminCollectionsPage() {
     }
   };
 
-  const handleEdit = (col: any) => {
+  const handleEdit = async (col: any) => {
     setEditingId(col.id);
+    let productIds: number[] = [];
+    if (token) {
+      try {
+        const full = await adminApi.getCollection(token, col.id);
+        productIds = (full.products || []).map((p: any) => p.id);
+      } catch { }
+    }
     setForm({
       name: col.name || '',
       description: col.description || '',
@@ -110,6 +131,7 @@ export default function AdminCollectionsPage() {
       accent_color: col.accent_color || '#c9a96e',
       order: col.order || 0,
       is_active: col.is_active ?? true,
+      product_ids: productIds,
     });
     setShowForm(true);
   };
@@ -313,6 +335,55 @@ export default function AdminCollectionsPage() {
                     {form.is_active ? 'Hiển thị công khai' : 'Đang ẩn'}
                   </label>
                 </div>
+              </div>
+              {/* Product Picker */}
+              <div className="admin-form__group">
+                <label className="admin-form__label">Sản phẩm trong bộ sưu tập ({form.product_ids.length})</label>
+                <input
+                  className="admin-form__input"
+                  placeholder="Tìm sản phẩm để thêm..."
+                  value={productSearch}
+                  onChange={e => setProductSearch(e.target.value)}
+                  style={{ marginBottom: '8px' }}
+                />
+                {/* Search results */}
+                {productSearch.trim().length > 0 && (
+                  <div style={{ maxHeight: '180px', overflowY: 'auto', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', marginBottom: '12px' }}>
+                    {allProducts
+                      .filter((p: any) => !form.product_ids.includes(p.id) && p.name.toLowerCase().includes(productSearch.toLowerCase()))
+                      .slice(0, 20)
+                      .map((p: any) => (
+                        <button key={p.id} type="button"
+                          onClick={() => { setForm(f => ({ ...f, product_ids: [...f.product_ids, p.id] })); setProductSearch(''); }}
+                          style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '8px 12px', background: 'none', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#fff', cursor: 'pointer', textAlign: 'left', fontSize: '0.8125rem' }}
+                        >
+                          <FiPlus style={{ color: 'var(--color-gold)', flexShrink: 0 }} />
+                          <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+                          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem' }}>{p.sku || ''}</span>
+                        </button>
+                      ))}
+                    {allProducts.filter((p: any) => !form.product_ids.includes(p.id) && p.name.toLowerCase().includes(productSearch.toLowerCase())).length === 0 && (
+                      <div style={{ padding: '12px', textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: '0.8125rem' }}>Không tìm thấy</div>
+                    )}
+                  </div>
+                )}
+                {/* Selected products */}
+                {form.product_ids.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {form.product_ids.map((pid: number) => {
+                      const p = allProducts.find((x: any) => x.id === pid);
+                      return (
+                        <div key={pid} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(201,169,110,0.15)', border: '1px solid rgba(201,169,110,0.3)', borderRadius: '8px', padding: '4px 10px', fontSize: '0.75rem', color: '#fff' }}>
+                          <span>{p?.name || `#${pid}`}</span>
+                          <button type="button" onClick={() => setForm(f => ({ ...f, product_ids: f.product_ids.filter(id => id !== pid) }))}
+                            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', padding: '0', fontSize: '0.875rem', lineHeight: 1 }}>
+                            <FiX />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <button className="admin-btn admin-btn--primary" onClick={handleSave} disabled={!form.name}>

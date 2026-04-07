@@ -52,8 +52,13 @@ class SettingController extends Controller
     public function uploadFont(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|max:5120|mimes:ttf,otf,woff,woff2',
+            'file' => 'required|file|max:5120',
         ]);
+
+        $ext = strtolower($request->file('file')->getClientOriginalExtension());
+        if (!in_array($ext, ['ttf', 'otf', 'woff', 'woff2'])) {
+            return response()->json(['message' => 'File phải có định dạng: ttf, otf, woff, woff2'], 422);
+        }
 
         $file = $request->file('file');
         $originalName = $file->getClientOriginalName();

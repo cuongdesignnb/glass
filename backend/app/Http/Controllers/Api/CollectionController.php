@@ -10,11 +10,11 @@ use Illuminate\Http\Request;
 class CollectionController extends Controller
 {
     /**
-     * Public: Get active collections (ordered)
+     * Public: Get active collections (ordered) with product count
      */
     public function index(Request $request)
     {
-        $query = Collection::orderBy('order');
+        $query = Collection::withCount('products')->orderBy('order');
 
         // Public call: only active
         if (!$request->boolean('all', false)) {
@@ -25,11 +25,15 @@ class CollectionController extends Controller
     }
 
     /**
-     * Get single collection by slug or id
+     * Get single collection by slug or id — includes products
      */
     public function show(string $slugOrId)
     {
-        $collection = Collection::where('slug', $slugOrId)
+        $collection = Collection::with(['products' => function ($q) {
+                $q->where('is_active', true)->orderByPivot('order');
+            }])
+            ->withCount('products')
+            ->where('slug', $slugOrId)
             ->orWhere('id', is_numeric($slugOrId) ? $slugOrId : 0)
             ->firstOrFail();
 
@@ -65,7 +69,16 @@ class CollectionController extends Controller
 
         $collection = Collection::create($data);
 
-        return response()->json($collection, 201);
+        // Sync products if provided
+        if ($request->has('product_ids') && is_array($request->product_ids)) {
+            $syncData = [];
+            foreach ($request->product_ids as $i => $pid) {
+                $syncData[$pid] = ['order' => $i];
+            }
+            $collection->products()->sync($syncData);
+        }
+
+        return response()->json($collection->load('products')->loadCount('products'), 201);
     }
 
     /**
@@ -97,7 +110,16 @@ class CollectionController extends Controller
 
         $collection->update($data);
 
-        return response()->json($collection);
+        // Sync products if provided
+        if ($request->has('product_ids') && is_array($request->product_ids)) {
+            $syncData = [];
+            foreach ($request->product_ids as $i => $pid) {
+                $syncData[$pid] = ['order' => $i];
+            }
+            $collection->products()->sync($syncData);
+        }
+
+        return response()->json($collection->load('products')->loadCount('products'));
     }
 
     /**
@@ -105,6 +127,7 @@ class CollectionController extends Controller
      */
     public function destroy(Collection $collection)
     {
+        $collection->products()->detach();
         $collection->delete();
         return response()->json(['message' => 'Xóa bộ sưu tập thành công']);
     }
