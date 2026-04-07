@@ -3,48 +3,57 @@
 import { publicApi } from '@/lib/api';
 import { GENDERS, FACE_SHAPES, FRAME_STYLES, MATERIALS, COLORS, SORT_OPTIONS, formatPrice } from '@/lib/constants';
 import Link from 'next/link';
-import { useState, useEffect, useCallback, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useState, useEffect, useCallback } from 'react';
 import { FiFilter, FiX, FiChevronDown, FiGrid, FiList, FiSearch } from 'react-icons/fi';
 import { RiGlassesLine } from 'react-icons/ri';
 import './products.css';
 
 export default function ProductListingPage() {
-  return (
-    <Suspense fallback={
-      <div style={{ paddingTop: 'var(--header-height)', minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="skeleton" style={{ width: '100%', maxWidth: '1200px', height: '400px', borderRadius: '12px', margin: '0 auto' }} />
-      </div>
-    }>
-      <ProductListingContent />
-    </Suspense>
-  );
-}
-
-function ProductListingContent() {
-  const searchParams = useSearchParams();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState<any>({});
   const [showMobileFilter, setShowMobileFilter] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [ready, setReady] = useState(false);
 
-  // Filter state — initialized from URL params
+  // Filter state
   const [filters, setFilters] = useState({
-    gender: searchParams.get('gender') || '',
-    color: searchParams.get('color') || '',
-    face_shape: searchParams.get('face') || searchParams.get('face_shape') || '',
-    frame_style: searchParams.get('frame_style') || '',
-    material: searchParams.get('material') || '',
-    category_slug: searchParams.get('category') || '',
-    price_min: searchParams.get('price_min') || '',
-    price_max: searchParams.get('price_max') || '',
-    sort: searchParams.get('sort') || 'newest',
-    search: searchParams.get('search') || '',
+    gender: '',
+    color: '',
+    face_shape: '',
+    frame_style: '',
+    material: '',
+    category_slug: '',
+    price_min: '',
+    price_max: '',
+    sort: 'newest',
+    search: '',
     page: '1',
   });
 
+  // Read URL params on mount (avoids useSearchParams + Suspense issue)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      setFilters(prev => ({
+        ...prev,
+        gender: params.get('gender') || '',
+        color: params.get('color') || '',
+        face_shape: params.get('face') || params.get('face_shape') || '',
+        frame_style: params.get('frame_style') || '',
+        material: params.get('material') || '',
+        category_slug: params.get('category') || '',
+        price_min: params.get('price_min') || '',
+        price_max: params.get('price_max') || '',
+        sort: params.get('sort') || 'newest',
+        search: params.get('search') || '',
+      }));
+    }
+    setReady(true);
+  }, []);
+
   const fetchProducts = useCallback(async () => {
+    if (!ready) return;
     setLoading(true);
     try {
       const params: Record<string, string> = {};
@@ -63,7 +72,7 @@ function ProductListingContent() {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, ready]);
 
   // Dynamic attributes from API
   const [attrs, setAttrs] = useState<Record<string, { value: string; label: string; extra?: string }[]>>({});
