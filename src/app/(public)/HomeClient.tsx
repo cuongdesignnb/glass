@@ -136,16 +136,6 @@ function SliderWrap({ children, scrollRef }: { children: ReactNode; scrollRef: R
 const formatPrice = (price: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
 
-const fbIcons: Record<string, string> = {
-  'kinh-can': '👓', 'kinh-ram': '🕶️',
-  'kinh-thoi-trang': '💎', 'gong-kinh': '🏷️'
-};
-
-const fbDesc: Record<string, string> = {
-  'kinh-can': 'Gọng đẹp, tròng rõ', 'kinh-ram': 'Thời trang & bảo vệ',
-  'kinh-thoi-trang': 'Phong cách cá nhân', 'gong-kinh': 'Chất liệu cao cấp'
-};
-
 export function DynamicCategories() {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -153,7 +143,9 @@ export function DynamicCategories() {
   useEffect(() => {
     publicApi.getCategories(false)
       .then((data: any[]) => {
-        setCategories(data.slice(0, 4));
+        // Only show active categories (backend may not filter)
+        const active = Array.isArray(data) ? data.filter((c: any) => c.is_active !== false) : [];
+        setCategories(active);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -172,27 +164,25 @@ export function DynamicCategories() {
     );
   }
 
-  const items = categories.length > 0 ? categories : [
-    { name: 'Kính Cận', slug: 'kinh-can', products_count: 0, description: 'Gọng đẹp, tròng rõ' },
-    { name: 'Kính Râm', slug: 'kinh-ram', products_count: 0, description: 'Thời trang & bảo vệ' },
-    { name: 'Kính Thời Trang', slug: 'kinh-thoi-trang', products_count: 0, description: 'Phong cách cá nhân' },
-    { name: 'Gọng Kính', slug: 'gong-kinh', products_count: 0, description: 'Chất liệu cao cấp' },
-  ];
+  if (categories.length === 0) return null;
 
   return (
     <div className="categories-grid">
-      {items.map((cat: any) => (
-        <Link key={cat.slug} href={`/san-pham?category=${cat.slug}`} className="category-card">
+      {categories.map((cat: any) => (
+        <Link key={cat.slug || cat.id} href={`/san-pham?category=${cat.slug}`} className="category-card">
           <div className="category-card__emoji">
             {cat.icon ? (
               <img src={cat.icon.startsWith('http') ? cat.icon : `${API_BASE}${cat.icon}`}
                 alt="" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
+            ) : cat.image ? (
+              <img src={cat.image.startsWith('http') ? cat.image : `${API_BASE}${cat.image}`}
+                alt="" style={{ width: '48px', height: '48px', objectFit: 'contain', borderRadius: '8px' }} />
             ) : (
-              <span style={{ fontSize: '2.5rem' }}>{fbIcons[cat.slug] || '👓'}</span>
+              <RiGlassesLine style={{ fontSize: '2.5rem', color: 'var(--color-brand)' }} />
             )}
           </div>
           <h3 className="category-card__name">{cat.name}</h3>
-          <p className="category-card__desc">{cat.description || fbDesc[cat.slug] || 'Khám phá ngay'}</p>
+          <p className="category-card__desc">{cat.description || 'Khám phá ngay'}</p>
           <span className="category-card__count">{cat.products_count || 0} sản phẩm</span>
           <div className="category-card__arrow"><FiArrowRight /></div>
         </Link>
