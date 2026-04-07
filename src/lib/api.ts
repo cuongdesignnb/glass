@@ -106,9 +106,10 @@ export const publicApi = {
   getVouchers: () => fetchApi('/public/vouchers'),
 
   // Orders
-  createOrder: (data: any) => fetchApi('/public/orders', {
+  createOrder: (data: any, token?: string) => fetchApi('/public/orders', {
     method: 'POST',
     body: JSON.stringify(data),
+    ...(token ? { token } : {}),
   }),
   validateVoucher: (code: string, subtotal?: number) =>
     fetchApi('/public/orders/validate-voucher', {

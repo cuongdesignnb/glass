@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import FontLoader from '@/components/layout/FontLoader';
 
 export const metadata: Metadata = {
   title: {
@@ -96,6 +97,7 @@ export default function RootLayout({
             }),
           }}
         />
+        <FontLoader />
         {children}
         <script
           dangerouslySetInnerHTML={{

@@ -32,7 +32,8 @@ export default function ProductFormPage() {
   const [form, setForm] = useState({
     name: '', sku: '', description: '', content: '',
     price: '', sale_price: '', category_id: '',
-    gender: 'unisex', brand: '',
+    category_ids: [] as number[],
+    gender: [] as string[], brand: '',
     colors: [] as string[], color_names: [] as string[],
     face_shapes: [] as string[], frame_styles: [] as string[], materials: [] as string[],
     images: [] as string[], thumbnail: '',
@@ -90,7 +91,7 @@ export default function ProductFormPage() {
           description: product.description || '', content: product.content || '',
           price: String(product.price || ''), sale_price: product.sale_price ? String(product.sale_price) : '',
           category_id: product.category_id ? String(product.category_id) : '',
-          gender: product.gender || 'unisex', brand: product.brand || '',
+          gender: Array.isArray(product.gender) ? product.gender : (product.gender ? [product.gender] : []), brand: product.brand || '',
           colors: product.colors || [], color_names: product.color_names || [],
           face_shapes: product.face_shapes || [], frame_styles: product.frame_styles || [],
           materials: product.materials || [],
@@ -110,6 +111,7 @@ export default function ProductFormPage() {
             return acc;
           }, {}),
           collection_ids: (product.collections || []).map((c: any) => c.id),
+          category_ids: (product.categories || []).map((c: any) => c.id),
         });
         // Load per-product constraints
         setProductConstraints(product.addon_constraints || []);
@@ -250,11 +252,9 @@ export default function ProductFormPage() {
                   <input className="admin-form__input" value={form.sku}
                     onChange={e => setForm({ ...form, sku: e.target.value })} placeholder="GLS-001" />
                 </div>
-                <div className="admin-form__group">
-                  <label className="admin-form__label">Danh mục</label>
-                  <select className="admin-form__input" value={form.category_id}
-                    onChange={e => setForm({ ...form, category_id: e.target.value })}>
-                    <option value="">-- Chọn danh mục --</option>
+                <div className="admin-form__group" style={{ gridColumn: 'span 2' }}>
+                  <label className="admin-form__label">Danh mục (chọn nhiều)</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                     {(() => {
                       const flatList: { id: number; name: string; depth: number }[] = [];
                       const flatten = (cats: any[], depth: number) => {
@@ -264,17 +264,32 @@ export default function ProductFormPage() {
                         });
                       };
                       flatten(categories.filter((c: any) => !c.parent_id), 0);
-                      // Also add orphan categories that have parent_id not in root
                       categories.filter((c: any) => c.parent_id && !flatList.find(f => f.id === c.id)).forEach((c: any) => {
                         flatList.push({ id: c.id, name: c.name, depth: 1 });
                       });
                       return flatList.map(c => (
-                        <option key={c.id} value={c.id}>
-                          {'—'.repeat(c.depth)} {c.depth > 0 ? ' ' : ''}{c.name}
-                        </option>
+                        <label key={c.id} style={{
+                          display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer',
+                          padding: '6px 12px', borderRadius: '8px', fontSize: '0.8125rem',
+                          background: form.category_ids.includes(c.id) ? 'rgba(201,169,110,0.15)' : 'rgba(255,255,255,0.04)',
+                          border: `1px solid ${form.category_ids.includes(c.id) ? 'rgba(201,169,110,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                          color: form.category_ids.includes(c.id) ? 'var(--color-gold)' : 'rgba(255,255,255,0.6)',
+                          transition: 'all 0.2s',
+                          paddingLeft: `${12 + c.depth * 16}px`,
+                        }}>
+                          <input type="checkbox" checked={form.category_ids.includes(c.id)}
+                            onChange={() => {
+                              const newIds = form.category_ids.includes(c.id)
+                                ? form.category_ids.filter(id => id !== c.id)
+                                : [...form.category_ids, c.id];
+                              setForm(f => ({ ...f, category_ids: newIds, category_id: newIds[0]?.toString() || '' }));
+                            }}
+                            style={{ accentColor: 'var(--color-gold)' }} />
+                          {'—'.repeat(c.depth)}{c.depth > 0 ? ' ' : ''}{c.name}
+                        </label>
                       ));
                     })()}
-                  </select>
+                  </div>
                 </div>
                 <div className="admin-form__group">
                   <label className="admin-form__label">Thương hiệu</label>
@@ -367,11 +382,11 @@ export default function ProductFormPage() {
           {activeTab === 'filters' && (
             <div className="admin-form">
               <div className="admin-form__group">
-                <label className="admin-form__label">Giới tính</label>
+                <label className="admin-form__label">Giới tính (chọn nhiều)</label>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   {dGenders.map((g: any) => (
-                    <button key={g.value} onClick={() => setForm({ ...form, gender: g.value })}
-                      className={`admin-btn admin-btn--sm ${form.gender === g.value ? 'admin-btn--primary' : 'admin-btn--secondary'}`}>{g.label}</button>
+                    <button key={g.value} onClick={() => setForm({ ...form, gender: toggleArray(form.gender, g.value) })}
+                      className={`admin-btn admin-btn--sm ${form.gender.includes(g.value) ? 'admin-btn--primary' : 'admin-btn--secondary'}`}>{g.label}</button>
                   ))}
                 </div>
               </div>

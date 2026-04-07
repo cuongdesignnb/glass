@@ -25,6 +25,7 @@ class Product extends Model
     {
         return [
             'images' => 'array',
+            'gender' => 'array',
             'colors' => 'array',
             'color_names' => 'array',
             'prescription' => 'array',
@@ -51,6 +52,11 @@ class Product extends Model
             ->withTimestamps();
     }
 
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(Category::class, 'category_product');
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
@@ -64,7 +70,10 @@ class Product extends Model
     public function scopeFilterByGender($query, ?string $gender)
     {
         if ($gender) {
-            return $query->where('gender', $gender);
+            return $query->where(function($q) use ($gender) {
+                $q->whereJsonContains('gender', $gender)
+                  ->orWhere('gender', $gender);
+            });
         }
         return $query;
     }
@@ -112,7 +121,7 @@ class Product extends Model
         return $query;
     }
 
-    public function getEffectivePriceAttribute(): float
+    public function getEffectivePriceAttribute(): mixed
     {
         return $this->sale_price ?? $this->price;
     }

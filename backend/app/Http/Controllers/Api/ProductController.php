@@ -20,11 +20,19 @@ class ProductController extends Controller
 
         // Filters
         if ($request->filled('category_id')) {
-            $query->where('category_id', $request->category_id);
+            $catId = $request->category_id;
+            $query->where(function($q) use ($catId) {
+                $q->where('category_id', $catId)
+                  ->orWhereHas('categories', fn($r) => $r->where('categories.id', $catId));
+            });
         } elseif ($request->filled('category_slug')) {
             $cat = \App\Models\Category::where('slug', $request->category_slug)->first();
             if ($cat) {
-                $query->where('category_id', $cat->id);
+                $catId = $cat->id;
+                $query->where(function($q) use ($catId) {
+                    $q->where('category_id', $catId)
+                      ->orWhereHas('categories', fn($r) => $r->where('categories.id', $catId));
+                });
             }
         }
         if ($request->filled('gender')) {
@@ -98,7 +106,7 @@ class ProductController extends Controller
     public function show(string $slugOrId)
     {
         // Load product with safe relations (addon tables may not exist yet)
-        $product = Product::with(['category', 'faqs' => function($q) {
+        $product = Product::with(['category', 'categories', 'faqs' => function($q) {
             $q->where('is_active', true)->orderBy('order', 'asc');
         }])
             ->where('slug', $slugOrId)
@@ -173,7 +181,7 @@ class ProductController extends Controller
             'colors' => 'nullable|array',
             'color_names' => 'nullable|array',
             'prescription' => 'nullable|array',
-            'gender' => 'nullable|string|in:nam,nu,unisex',
+            'gender' => 'nullable|array',
             'face_shapes' => 'nullable|array',
             'frame_styles' => 'nullable|array',
             'materials' => 'nullable|array',
@@ -238,7 +246,16 @@ class ProductController extends Controller
             $product->collections()->sync($syncData);
         }
 
-        return response()->json($product->load(['faqs', 'addonGroups.options', 'addonPrices', 'collections']), 201);
+        // Handle categories (multi-select)
+        if ($request->has('category_ids') && is_array($request->category_ids)) {
+            $product->categories()->sync($request->category_ids);
+            // Keep primary category_id in sync (first selected)
+            if (!empty($request->category_ids)) {
+                $product->update(['category_id' => $request->category_ids[0]]);
+            }
+        }
+
+        return response()->json($product->load(['faqs', 'addonGroups.options', 'addonPrices', 'collections', 'categories']), 201);
     }
 
     /**
@@ -257,7 +274,7 @@ class ProductController extends Controller
             'colors' => 'nullable|array',
             'color_names' => 'nullable|array',
             'prescription' => 'nullable|array',
-            'gender' => 'nullable|string|in:nam,nu,unisex',
+            'gender' => 'nullable|array',
             'face_shapes' => 'nullable|array',
             'frame_styles' => 'nullable|array',
             'materials' => 'nullable|array',
@@ -323,7 +340,15 @@ class ProductController extends Controller
             $product->collections()->sync($syncData);
         }
 
-        return response()->json($product->load(['faqs', 'addonGroups.options', 'addonPrices', 'collections']));
+        // Handle categories (multi-select)
+        if ($request->has('category_ids') && is_array($request->category_ids)) {
+            $product->categories()->sync($request->category_ids);
+            if (!empty($request->category_ids)) {
+                $product->update(['category_id' => $request->category_ids[0]]);
+            }
+        }
+
+        return response()->json($product->load(['faqs', 'addonGroups.options', 'addonPrices', 'collections', 'categories']));
     }
 
     /**

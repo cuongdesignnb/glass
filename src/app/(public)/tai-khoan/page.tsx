@@ -273,6 +273,66 @@ function PointsTab({ token }: { token: string }) {
         <div className="points-card"><div className="points-card__value">{data.config?.points_per_vnd?.toLocaleString()}đ</div><div className="points-card__label">= 1 điểm</div></div>
       </div>
 
+      {/* Loyalty Tier Progress */}
+      {(() => {
+        const tiers = [
+          { name: 'Đồng', min: 0, icon: '🥉', color: '#cd7f32' },
+          { name: 'Bạc', min: 2000000, icon: '🥈', color: '#a8a29e' },
+          { name: 'Vàng', min: 5000000, icon: '🥇', color: '#c9a96e' },
+          { name: 'Kim Cương', min: 15000000, icon: '💎', color: '#60a5fa' },
+        ];
+        const spent = Number(data.total_spent) || 0;
+        const currentTier = [...tiers].reverse().find(t => spent >= t.min) || tiers[0];
+        const currentIdx = tiers.indexOf(currentTier);
+        const nextTier = tiers[currentIdx + 1];
+        const progress = nextTier
+          ? Math.min(100, ((spent - currentTier.min) / (nextTier.min - currentTier.min)) * 100)
+          : 100;
+        const remaining = nextTier ? nextTier.min - spent : 0;
+
+        return (
+          <div style={{ background: 'var(--color-gray-50)', borderRadius: '14px', padding: '20px 24px', marginBottom: 'var(--space-xl)', border: '1px solid var(--color-gray-200)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.5rem' }}>{currentTier.icon}</span>
+                <div>
+                  <div style={{ fontWeight: 700, color: currentTier.color, fontSize: '1rem' }}>Hạng {currentTier.name}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)' }}>Thành viên hiện tại</div>
+                </div>
+              </div>
+              {nextTier && (
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-gray-500)' }}>Hạng tiếp theo</div>
+                  <div style={{ fontWeight: 600, color: nextTier.color, fontSize: '0.875rem' }}>{nextTier.icon} {nextTier.name}</div>
+                </div>
+              )}
+            </div>
+            {/* Progress bar */}
+            <div style={{ background: 'var(--color-gray-200)', borderRadius: '8px', height: '8px', overflow: 'hidden', marginBottom: '8px' }}>
+              <div style={{ width: `${progress}%`, height: '100%', borderRadius: '8px', background: `linear-gradient(90deg, ${currentTier.color}, ${nextTier?.color || currentTier.color})`, transition: 'width 0.5s ease' }} />
+            </div>
+            {/* Tier markers */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.6875rem', color: 'var(--color-gray-400)' }}>
+              {tiers.map((t, i) => (
+                <span key={i} style={{ color: spent >= t.min ? t.color : undefined, fontWeight: spent >= t.min ? 600 : 400 }}>
+                  {t.icon} {t.min > 0 ? `${(t.min / 1000000).toFixed(0)}tr` : '0'}
+                </span>
+              ))}
+            </div>
+            {nextTier && (
+              <div style={{ marginTop: '10px', fontSize: '0.8125rem', color: 'var(--color-gray-600)', textAlign: 'center' }}>
+                Còn <strong style={{ color: 'var(--color-brand)' }}>{remaining.toLocaleString('vi-VN')}đ</strong> nữa để lên hạng <strong>{nextTier.name}</strong>
+              </div>
+            )}
+            {!nextTier && (
+              <div style={{ marginTop: '10px', fontSize: '0.8125rem', color: currentTier.color, textAlign: 'center', fontWeight: 600 }}>
+                🎉 Bạn đã đạt hạng cao nhất!
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       <div className="redeem-section">
         <h3>Đổi điểm lấy voucher</h3>
         <p style={{ fontSize: '.8125rem', color: 'var(--color-neutral-500)', marginBottom: 12 }}>

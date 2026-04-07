@@ -213,7 +213,7 @@ export default function ProductDetailClient({ product, reviewData, apiMediaUrl }
   const specs = [
     { label: 'Thương hiệu', value: product.brand },
     { label: 'SKU', value: product.sku },
-    { label: 'Giới tính', value: product.gender === 'nam' ? 'Nam' : product.gender === 'nu' ? 'Nữ' : 'Unisex' },
+    { label: 'Giới tính', value: (() => { const gMap: Record<string,string> = {nam:'Nam',nu:'Nữ',unisex:'Unisex'}; const g = product.gender; if (Array.isArray(g)) return g.map((v:string) => gMap[v]||v).join(', '); return gMap[g as string] || g; })() },
     { label: 'Trọng lượng', value: product.weight },
     { label: 'Độ rộng gọng', value: product.frame_width },
     { label: 'Độ rộng mắt kính', value: product.lens_width },

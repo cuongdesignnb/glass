@@ -174,7 +174,7 @@ export default function CheckoutPage() {
         })),
       };
 
-      const result = await publicApi.createOrder(orderData);
+      const result = await publicApi.createOrder(orderData, token || undefined);
       setOrderSuccess(result);
       clearCart();
 
