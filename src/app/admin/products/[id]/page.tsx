@@ -42,7 +42,10 @@ export default function ProductFormPage() {
     faqs: [] as { question: string, answer: string, is_active: boolean }[],
     addon_group_ids: [] as number[],
     addon_prices: {} as Record<number, { additional_price: string; is_available: boolean }>,
+    collection_ids: [] as number[],
   });
+
+  const [allCollections, setAllCollections] = useState<any[]>([]);
 
   const [allAddonGroups, setAllAddonGroups] = useState<any[]>([]);
   const [productConstraints, setProductConstraints] = useState<{ option_id: number; blocked_option_id: number }[]>([]);
@@ -60,6 +63,9 @@ export default function ProductFormPage() {
         setAllAddonGroups(groups);
         const gc = Array.isArray(data) ? [] : (data?.constraints || []);
         setGlobalConstraints(gc);
+      }).catch(() => {});
+      adminApi.getCollections(token).then((data: any) => {
+        setAllCollections(Array.isArray(data) ? data : (data?.data || []));
       }).catch(() => {});
     }
   }, [isEdit, token]);
@@ -103,6 +109,7 @@ export default function ProductFormPage() {
             acc[p.option_id] = { additional_price: String(p.additional_price || 0), is_available: p.is_available ?? true };
             return acc;
           }, {}),
+          collection_ids: (product.collections || []).map((c: any) => c.id),
         });
         // Load per-product constraints
         setProductConstraints(product.addon_constraints || []);
@@ -275,6 +282,34 @@ export default function ProductFormPage() {
                     onChange={e => setForm({ ...form, brand: e.target.value })} placeholder="Glass Premium" />
                 </div>
               </div>
+              {/* Bộ sưu tập */}
+              {allCollections.length > 0 && (
+                <div className="admin-form__group">
+                  <label className="admin-form__label">Bộ sưu tập</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {allCollections.map((col: any) => (
+                      <label key={col.id} style={{
+                        display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer',
+                        padding: '6px 12px', borderRadius: '8px', fontSize: '0.8125rem',
+                        background: form.collection_ids.includes(col.id) ? 'rgba(201,169,110,0.15)' : 'rgba(255,255,255,0.04)',
+                        border: `1px solid ${form.collection_ids.includes(col.id) ? 'rgba(201,169,110,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                        color: form.collection_ids.includes(col.id) ? 'var(--color-gold)' : 'rgba(255,255,255,0.6)',
+                        transition: 'all 0.2s',
+                      }}>
+                        <input type="checkbox" checked={form.collection_ids.includes(col.id)}
+                          onChange={() => setForm(f => ({
+                            ...f,
+                            collection_ids: f.collection_ids.includes(col.id)
+                              ? f.collection_ids.filter(id => id !== col.id)
+                              : [...f.collection_ids, col.id]
+                          }))}
+                          style={{ accentColor: 'var(--color-gold)' }} />
+                        {col.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="admin-form__row" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
                 <div className="admin-form__group">
                   <label className="admin-form__label">Tồn kho</label>

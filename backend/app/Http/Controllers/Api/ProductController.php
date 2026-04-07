@@ -108,7 +108,7 @@ class ProductController extends Controller
         // Try loading addon relations (tables may not be migrated yet)
         $constraints = [];
         try {
-            $product->load(['addonGroups.options', 'addonPrices']);
+            $product->load(['addonGroups.options', 'addonPrices', 'collections']);
 
             // Load constraints: per-product first, fallback to global
             $optionIds = $product->addonGroups->pluck('options')->flatten()->pluck('id')->toArray();
@@ -229,7 +229,16 @@ class ProductController extends Controller
             $this->syncAddonPrices($product, $request->addon_prices);
         }
 
-        return response()->json($product->load(['faqs', 'addonGroups.options', 'addonPrices']), 201);
+        // Handle collections
+        if ($request->has('collection_ids') && is_array($request->collection_ids)) {
+            $syncData = [];
+            foreach ($request->collection_ids as $i => $cid) {
+                $syncData[$cid] = ['order' => $i];
+            }
+            $product->collections()->sync($syncData);
+        }
+
+        return response()->json($product->load(['faqs', 'addonGroups.options', 'addonPrices', 'collections']), 201);
     }
 
     /**
@@ -305,7 +314,16 @@ class ProductController extends Controller
             $this->syncAddonPrices($product, $request->addon_prices);
         }
 
-        return response()->json($product->load(['faqs', 'addonGroups.options', 'addonPrices']));
+        // Handle collections
+        if ($request->has('collection_ids') && is_array($request->collection_ids)) {
+            $syncData = [];
+            foreach ($request->collection_ids as $i => $cid) {
+                $syncData[$cid] = ['order' => $i];
+            }
+            $product->collections()->sync($syncData);
+        }
+
+        return response()->json($product->load(['faqs', 'addonGroups.options', 'addonPrices', 'collections']));
     }
 
     /**
