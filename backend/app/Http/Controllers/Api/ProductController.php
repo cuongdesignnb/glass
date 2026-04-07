@@ -41,7 +41,7 @@ class ProductController extends Controller
             $query->filterByPrice($request->price_min, $request->price_max);
         }
         if ($request->filled('is_featured')) {
-            $query->featured();
+            $query->featured()->orderBy('featured_order', 'asc');
         }
         if ($request->filled('is_new')) {
             $query->where('is_new', true);

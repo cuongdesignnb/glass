@@ -17,6 +17,7 @@ class Product extends Model
         'lens_height', 'bridge_width', 'temple_length',
         'category_id', 'meta_title', 'meta_desc', 'meta_keywords', 'og_image',
         'is_active', 'is_featured', 'is_new', 'stock', 'sold', 'views',
+        'featured_order',
     ];
 
     protected function casts(): array

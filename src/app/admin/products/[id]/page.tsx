@@ -38,7 +38,7 @@ export default function ProductFormPage() {
     images: [] as string[], thumbnail: '',
     weight: '', frame_width: '', lens_width: '', lens_height: '', bridge_width: '', temple_length: '',
     meta_title: '', meta_desc: '', meta_keywords: '', og_image: '',
-    is_active: true, is_featured: false, is_new: false, stock: '0',
+    is_active: true, is_featured: false, is_new: false, stock: '0', featured_order: '0',
     faqs: [] as { question: string, answer: string, is_active: boolean }[],
     addon_group_ids: [] as number[],
     addon_prices: {} as Record<number, { additional_price: string; is_available: boolean }>,
@@ -96,6 +96,7 @@ export default function ProductFormPage() {
           meta_keywords: product.meta_keywords || '', og_image: product.og_image || '',
           is_active: product.is_active ?? true, is_featured: product.is_featured ?? false,
           is_new: product.is_new ?? false, stock: String(product.stock || 0),
+          featured_order: String(product.featured_order || 0),
           faqs: product.faqs || [],
           addon_group_ids: (product.addon_groups || []).map((g: any) => g.id),
           addon_prices: (product.addon_prices || []).reduce((acc: any, p: any) => {
@@ -120,6 +121,7 @@ export default function ProductFormPage() {
         sale_price: form.sale_price ? Number(form.sale_price) : null,
         category_id: form.category_id ? Number(form.category_id) : null,
         stock: Number(form.stock),
+        featured_order: form.is_featured ? Number(form.featured_order || 0) : 0,
         addon_groups: form.addon_group_ids,
         addon_prices: Object.entries(form.addon_prices).map(([optionId, data]) => ({
           option_id: Number(optionId),
@@ -271,9 +273,17 @@ export default function ProductFormPage() {
                         style={{ accentColor: 'var(--color-gold)' }} /> Hiển thị
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>
-                      <input type="checkbox" checked={form.is_featured} onChange={e => setForm({ ...form, is_featured: e.target.checked })}
+                      <input type="checkbox" checked={form.is_featured} onChange={e => setForm({ ...form, is_featured: e.target.checked, featured_order: e.target.checked ? (form.featured_order || '0') : '0' })}
                         style={{ accentColor: 'var(--color-gold)' }} /> Nổi bật
                     </label>
+                    {form.is_featured && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <label style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>Thứ tự:</label>
+                        <input type="number" min="0" value={form.featured_order} onChange={e => setForm({ ...form, featured_order: e.target.value })}
+                          style={{ width: '60px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px', padding: '4px 8px', color: '#fff', fontSize: '0.8rem', textAlign: 'center' }}
+                          placeholder="0" title="Số nhỏ hiện trước (1 = đầu tiên)" />
+                      </div>
+                    )}
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: 'rgba(255,255,255,0.7)', fontSize: '0.875rem' }}>
                       <input type="checkbox" checked={form.is_new} onChange={e => setForm({ ...form, is_new: e.target.checked })}
                         style={{ accentColor: 'var(--color-gold)' }} /> Mới
