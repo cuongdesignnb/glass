@@ -3,13 +3,25 @@
 import { publicApi } from '@/lib/api';
 import { GENDERS, FACE_SHAPES, FRAME_STYLES, MATERIALS, COLORS, SORT_OPTIONS, formatPrice } from '@/lib/constants';
 import Link from 'next/link';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { FiFilter, FiX, FiChevronDown, FiGrid, FiList, FiSearch } from 'react-icons/fi';
 import { RiGlassesLine } from 'react-icons/ri';
 import './products.css';
 
 export default function ProductListingPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ paddingTop: 'var(--header-height)', minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="skeleton" style={{ width: '100%', maxWidth: '1200px', height: '400px', borderRadius: '12px', margin: '0 auto' }} />
+      </div>
+    }>
+      <ProductListingContent />
+    </Suspense>
+  );
+}
+
+function ProductListingContent() {
   const searchParams = useSearchParams();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
