@@ -129,7 +129,8 @@ export default function AdminSettingsPage() {
       { key: 'brand_color',      label: 'Màu chủ đạo',   isColor: true, section: 'Giao Diện', hint: 'Chọn màu chủ đạo cho website. Màu này sẽ áp dụng cho tất cả nút bấm, link, accent trên toàn bộ trang.' },
     ],
     homepage: [
-      { key: 'hero_image',    label: 'Ảnh Hero (nền)',          isImage: true, section: 'Hero Section' },
+      { key: 'hero_image',    label: 'Ảnh Hero PC (nền)',       isImage: true, section: 'Hero Section', hint: 'Kích thước khuyến nghị: 1920 × 800px (tỷ lệ ngang 2.4:1)' },
+      { key: 'hero_image_mobile', label: 'Ảnh Hero Mobile',     isImage: true, hint: 'Kích thước khuyến nghị: 750 × 1000px (tỷ lệ dọc 3:4). Nếu để trống sẽ dùng ảnh PC.' },
       { key: 'hero_title',    label: 'Tiêu đề Hero',            placeholder: 'Phong Cách Đẳng Cấp Qua Mỗi Ánh Nhìn' },
       { key: 'hero_subtitle', label: 'Mô tả Hero',              placeholder: 'Khám phá bộ sưu tập kính mắt cao cấp...', isTextarea: true },
       { key: 'hero_cta_text', label: 'Nội dung nút CTA chính',  placeholder: 'Khám Phá Ngay' },

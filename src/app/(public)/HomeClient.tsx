@@ -49,11 +49,27 @@ export function DynamicHero() {
   const descColor = heroDescColor || (hasImage ? (isDarkOverlay ? 'rgba(255,255,255,0.85)' : 'var(--color-text-light)') : 'var(--color-text-light)');
   const textShadow = hasImage ? (isDarkOverlay ? '0 2px 12px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.4)' : '0 1px 6px rgba(255,255,255,0.6)') : 'none';
 
+  const heroMobileImage = settings['hero_image_mobile'] ? getImageUrl(settings['hero_image_mobile']) : null;
+
   return (
-    <section className="hero" style={hasImage ? { backgroundImage: `url(${heroImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}>
+    <section className="hero">
       <div className="hero__bg">
         {hasImage && (
-          <div className="hero__overlay" style={{ position: 'absolute', inset: 0, background: overlayBg, zIndex: 1 }} />
+          <>
+            {/* Desktop image */}
+            <img
+              src={heroImage!}
+              alt="Hero"
+              className="hero__bg-img hero__bg-img--desktop"
+            />
+            {/* Mobile image: use separate mobile image if set, else fallback to desktop */}
+            <img
+              src={heroMobileImage || heroImage!}
+              alt="Hero"
+              className="hero__bg-img hero__bg-img--mobile"
+            />
+            <div className="hero__overlay" style={{ position: 'absolute', inset: 0, background: overlayBg, zIndex: 1 }} />
+          </>
         )}
         <div className="hero__bg-gradient" />
         {!hasImage && (

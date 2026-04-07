@@ -981,6 +981,28 @@ h1, h2, h3, h4, h5, h6 {
   z-index: 0;
 }
 
+/* Hero background images (responsive)
+   Recommended sizes:
+   - PC: 1920 x 800px (tỷ lệ ~2.4:1)
+   - Mobile: 750 x 1000px (tỷ lệ ~3:4)
+*/
+.hero__bg-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 0;
+}
+.hero__bg-img--desktop { display: block; }
+.hero__bg-img--mobile { display: none; }
+
+@media (max-width: 768px) {
+  .hero__bg-img--desktop { display: none; }
+  .hero__bg-img--mobile { display: block; }
+}
+
 .hero__bg-gradient {
   position: absolute;
   inset: 0;
