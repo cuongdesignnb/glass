@@ -6,7 +6,7 @@ import { useToken } from '@/lib/useToken';
 import { adminApi } from '@/lib/api';
 import { useAdminProducts, invalidateAdmin } from '@/lib/useAdmin';
 import { formatPrice, formatDate } from '@/lib/constants';
-import { FiPlus, FiEdit2, FiTrash2, FiSearch, FiEye, FiStar, FiZap, FiDownload, FiUpload, FiX, FiFileText } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiSearch, FiEye, FiStar, FiZap, FiDownload, FiUpload, FiX, FiFileText, FiCopy } from 'react-icons/fi';
 import { RiGlassesLine } from 'react-icons/ri';
 import toast from 'react-hot-toast';
 
@@ -39,6 +39,20 @@ export default function AdminProductsPage() {
     } catch (err: any) {
       console.error(err);
       toast.error('Lỗi xóa sản phẩm');
+    }
+  };
+
+  const handleClone = async (id: number) => {
+    if (!confirm('Nhân bản sản phẩm này?')) return;
+    if (!token) return;
+    try {
+      const result = await adminApi.cloneProduct(token, id);
+      toast.success(result.message || 'Đã nhân bản sản phẩm');
+      invalidateAdmin('/admin/products');
+      refresh();
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Lỗi nhân bản sản phẩm');
     }
   };
 
@@ -206,6 +220,7 @@ export default function AdminProductsPage() {
                       <div className="admin-table__actions">
                         <Link href={`/san-pham/${product.slug}`} className="admin-table__action" target="_blank" title="Xem"><FiEye /></Link>
                         <Link href={`/admin/products/${product.id}`} className="admin-table__action" title="Sửa"><FiEdit2 /></Link>
+                        <button className="admin-table__action" onClick={() => handleClone(product.id)} title="Nhân bản" style={{ color: '#3b82f6' }}><FiCopy /></button>
                         <button className="admin-table__action admin-table__action--danger" onClick={() => handleDelete(product.id)} title="Xóa"><FiTrash2 /></button>
                       </div>
                     </td>

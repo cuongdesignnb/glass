@@ -163,6 +163,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/products-import', [ProductController::class, 'importExcel']);
     Route::get('/products-import-template', [ProductController::class, 'importTemplate']);
     Route::put('/products/{product}/constraints', [ProductController::class, 'saveConstraints']);
+    Route::post('/products/{product}/clone', [ProductController::class, 'clone']);
 
     // Categories CRUD
     Route::apiResource('categories', CategoryController::class);

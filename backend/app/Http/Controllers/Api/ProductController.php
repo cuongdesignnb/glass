@@ -696,4 +696,64 @@ class ProductController extends Controller
             );
         }
     }
+
+    /**
+     * Clone a product with unique slug
+     */
+    public function clone(Product $product)
+    {
+        // Generate unique slug
+        $baseSlug = preg_replace('/-copy(-\d+)?$/', '', $product->slug);
+        $newSlug = $baseSlug . '-copy';
+        $counter = 1;
+        while (Product::where('slug', $newSlug)->exists()) {
+            $counter++;
+            $newSlug = $baseSlug . '-copy-' . $counter;
+        }
+
+        // Generate unique SKU
+        $newSku = $product->sku ? $product->sku . '-COPY' : null;
+        if ($newSku) {
+            $skuCounter = 1;
+            while (Product::where('sku', $newSku)->exists()) {
+                $skuCounter++;
+                $newSku = $product->sku . '-COPY-' . $skuCounter;
+            }
+        }
+
+        // Clone product
+        $newProduct = $product->replicate();
+        $newProduct->name = $product->name . ' (Bản sao)';
+        $newProduct->slug = $newSlug;
+        $newProduct->sku = $newSku;
+        $newProduct->is_active = false; // Start as inactive
+        $newProduct->views = 0;
+        $newProduct->sold = 0;
+        $newProduct->save();
+
+        // Clone addon group associations
+        try {
+            $groupIds = $product->addonGroups()->pluck('product_addon_groups.id')->toArray();
+            if (!empty($groupIds)) {
+                $newProduct->addonGroups()->attach($groupIds);
+            }
+
+            // Clone addon prices
+            foreach ($product->addonPrices as $price) {
+                ProductAddonPrice::create([
+                    'product_id' => $newProduct->id,
+                    'option_id' => $price->option_id,
+                    'additional_price' => $price->additional_price,
+                    'is_available' => $price->is_available,
+                ]);
+            }
+        } catch (\Exception $e) {
+            // Addon tables may not exist, skip silently
+        }
+
+        return response()->json([
+            'message' => 'Đã nhân bản sản phẩm thành công',
+            'product' => $newProduct->load('category'),
+        ]);
+    }
 }
