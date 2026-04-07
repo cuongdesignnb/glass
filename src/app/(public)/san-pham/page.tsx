@@ -4,28 +4,31 @@ import { publicApi } from '@/lib/api';
 import { GENDERS, FACE_SHAPES, FRAME_STYLES, MATERIALS, COLORS, SORT_OPTIONS, formatPrice } from '@/lib/constants';
 import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { FiFilter, FiX, FiChevronDown, FiGrid, FiList, FiSearch } from 'react-icons/fi';
 import { RiGlassesLine } from 'react-icons/ri';
 import './products.css';
 
 export default function ProductListingPage() {
+  const searchParams = useSearchParams();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState<any>({});
   const [showMobileFilter, setShowMobileFilter] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  // Filter state
+  // Filter state — initialized from URL params
   const [filters, setFilters] = useState({
-    gender: '',
-    color: '',
-    face_shape: '',
-    frame_style: '',
-    material: '',
-    price_min: '',
-    price_max: '',
-    sort: 'newest',
-    search: '',
+    gender: searchParams.get('gender') || '',
+    color: searchParams.get('color') || '',
+    face_shape: searchParams.get('face') || searchParams.get('face_shape') || '',
+    frame_style: searchParams.get('frame_style') || '',
+    material: searchParams.get('material') || '',
+    category_slug: searchParams.get('category') || '',
+    price_min: searchParams.get('price_min') || '',
+    price_max: searchParams.get('price_max') || '',
+    sort: searchParams.get('sort') || 'newest',
+    search: searchParams.get('search') || '',
     page: '1',
   });
 
@@ -52,10 +55,14 @@ export default function ProductListingPage() {
 
   // Dynamic attributes from API
   const [attrs, setAttrs] = useState<Record<string, { value: string; label: string; extra?: string }[]>>({});
+  const [categories, setCategories] = useState<any[]>([]);
 
   useEffect(() => {
     publicApi.getProductAttributes()
       .then((data: any) => setAttrs(data))
+      .catch(() => {});
+    publicApi.getCategories(false)
+      .then((data: any[]) => setCategories(Array.isArray(data) ? data.filter((c: any) => c.is_active !== false) : []))
       .catch(() => {});
   }, []);
 
@@ -77,7 +84,7 @@ export default function ProductListingPage() {
   const clearFilters = () => {
     setFilters({
       gender: '', color: '', face_shape: '', frame_style: '',
-      material: '', price_min: '', price_max: '', sort: 'newest',
+      material: '', category_slug: '', price_min: '', price_max: '', sort: 'newest',
       search: '', page: '1',
     });
   };
@@ -156,6 +163,26 @@ export default function ProductListingPage() {
                 <FiX />
               </button>
             </div>
+
+            {/* Category */}
+            {categories.length > 0 && (
+              <div className="filter-group">
+                <div className="filter-group__title">Danh Mục</div>
+                <div className="filter-group__items">
+                  {categories.map((c: any) => (
+                    <label key={c.slug} className="filter-checkbox">
+                      <input
+                        type="radio"
+                        name="category"
+                        checked={filters.category_slug === c.slug}
+                        onChange={() => updateFilter('category_slug', filters.category_slug === c.slug ? '' : c.slug)}
+                      />
+                      <span className="filter-checkbox__label">{c.name} ({c.products_count || 0})</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Gender */}
             <div className="filter-group">

@@ -21,6 +21,11 @@ class ProductController extends Controller
         // Filters
         if ($request->filled('category_id')) {
             $query->where('category_id', $request->category_id);
+        } elseif ($request->filled('category_slug')) {
+            $cat = \App\Models\Category::where('slug', $request->category_slug)->first();
+            if ($cat) {
+                $query->where('category_id', $cat->id);
+            }
         }
         if ($request->filled('gender')) {
             $query->filterByGender($request->gender);
