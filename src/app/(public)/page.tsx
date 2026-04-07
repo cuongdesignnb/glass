@@ -43,10 +43,10 @@ export default function HomePage() {
       <section className="trust-badges">
         <div className="container">
           <div className="trust-badges__grid">
-            <div className="trust-badge"><div className="trust-badge__icon"><FiTruck /></div><div><div className="trust-badge__title">Miễn Phí Vận Chuyển</div><div className="trust-badge__desc">Đơn hàng từ 500.000đ</div></div></div>
-            <div className="trust-badge"><div className="trust-badge__icon"><FiShield /></div><div><div className="trust-badge__title">Bảo Hành 12 Tháng</div><div className="trust-badge__desc">Đổi mới nếu lỗi sản xuất</div></div></div>
-            <div className="trust-badge"><div className="trust-badge__icon"><FiRefreshCw /></div><div><div className="trust-badge__title">Đổi Trả 30 Ngày</div><div className="trust-badge__desc">Không cần lý do</div></div></div>
-            <div className="trust-badge"><div className="trust-badge__icon"><FiAward /></div><div><div className="trust-badge__title">Chất Lượng Premium</div><div className="trust-badge__desc">100% chính hãng</div></div></div>
+            <div className="trust-badge"><div className="trust-badge__icon"><FiTruck /></div><div><div className="trust-badge__title">Miễn Phí Vận Chuyển</div><div className="trust-badge__desc">Đơn hàng từ 250.000đ</div></div></div>
+            <div className="trust-badge"><div className="trust-badge__icon"><FiShield /></div><div><div className="trust-badge__title">Ưu Đãi Thành Viên</div><div className="trust-badge__desc">Đăng ký để nhận ưu đãi độc quyền</div></div></div>
+            <div className="trust-badge"><div className="trust-badge__icon"><FiRefreshCw /></div><div><div className="trust-badge__title">Đổi Trả 15 Ngày</div><div className="trust-badge__desc">Không cần lý do</div></div></div>
+            <div className="trust-badge"><div className="trust-badge__icon"><FiAward /></div><div><div className="trust-badge__title">Chất Lượng Premium</div><div className="trust-badge__desc">Tận tâm chăm sóc đôi mắt của bạn</div></div></div>
           </div>
         </div>
       </section>
