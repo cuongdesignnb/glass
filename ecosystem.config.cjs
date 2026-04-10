@@ -4,7 +4,7 @@ module.exports = {
       name: 'glass',
       script: 'node_modules/next/dist/bin/next',
       args: 'start -p 3222',
-      cwd: '/www/wwwroot/glass.cuongdesign.net',
+      cwd: '/www/wwwroot/kinhmathongnhong.vn',
       instances: 1,
       exec_mode: 'fork',
 
@@ -21,8 +21,8 @@ module.exports = {
       kill_timeout: 5000,         // Cho 5s để graceful shutdown
 
       // === Logs ===
-      error_file: '/www/wwwroot/glass.cuongdesign.net/logs/pm2-error.log',
-      out_file: '/www/wwwroot/glass.cuongdesign.net/logs/pm2-out.log',
+      error_file: '/www/wwwroot/kinhmathongnhong.vn/logs/pm2-error.log',
+      out_file: '/www/wwwroot/kinhmathongnhong.vn/logs/pm2-out.log',
       merge_logs: true,
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
 
