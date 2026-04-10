@@ -33,4 +33,4 @@ pm2 restart glass
 
 echo ""
 echo "✅ Deploy hoàn tất!"
-echo "🌐 Website: https://kinhmathongnhong.vn"
+echo "🌐 Website: https://kinhmathongnhung.vn"
