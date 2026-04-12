@@ -20,14 +20,18 @@ function ssrHeaders(): Record<string, string> {
 }
 
 async function getProduct(slug: string) {
+  const url = `${SSR_API}/public/products/${slug}`;
+  console.log('[SSR getProduct] Fetching:', url, '| INTERNAL_API:', INTERNAL_API || '(empty)', '| API_BASE:', API_BASE, '| Host:', API_HOST || '(none)');
   try {
-    const res = await fetch(`${SSR_API}/public/products/${slug}`, {
+    const res = await fetch(url, {
       cache: 'no-store',
       headers: ssrHeaders(),
     });
+    console.log('[SSR getProduct] Response status:', res.status);
     if (!res.ok) return null;
     return res.json();
-  } catch {
+  } catch (err: any) {
+    console.error('[SSR getProduct] FETCH ERROR:', err.message);
     return null;
   }
 }
