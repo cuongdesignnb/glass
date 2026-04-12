@@ -7,13 +7,23 @@ import ProductDetailClient from './ProductDetailClient';
 export const dynamic = 'force-dynamic';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const INTERNAL_API = process.env.INTERNAL_API_URL || '';
+const API_HOST = process.env.API_HOST || '';
+const SSR_API = INTERNAL_API || API_BASE; // SSR dùng internal URL tránh server tự gọi chính nó
 const API_MEDIA_URL = (process.env.NEXT_PUBLIC_API_URL || '').replace('/api', '');
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
+function ssrHeaders(): Record<string, string> {
+  const h: Record<string, string> = {};
+  if (INTERNAL_API && API_HOST) h['Host'] = API_HOST;
+  return h;
+}
+
 async function getProduct(slug: string) {
   try {
-    const res = await fetch(`${API_BASE}/public/products/${slug}`, {
+    const res = await fetch(`${SSR_API}/public/products/${slug}`, {
       cache: 'no-store',
+      headers: ssrHeaders(),
     });
     if (!res.ok) return null;
     return res.json();
@@ -24,8 +34,9 @@ async function getProduct(slug: string) {
 
 async function getProductReviews(productId: number) {
   try {
-    const res = await fetch(`${API_BASE}/public/products/${productId}/reviews?per_page=5`, {
+    const res = await fetch(`${SSR_API}/public/products/${productId}/reviews?per_page=5`, {
       cache: 'no-store',
+      headers: ssrHeaders(),
     });
     if (!res.ok) return null;
     return res.json();

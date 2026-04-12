@@ -5,12 +5,22 @@ import { Metadata } from 'next';
 export const dynamic = 'force-dynamic';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const INTERNAL_API = process.env.INTERNAL_API_URL || '';
+const API_HOST = process.env.API_HOST || '';
+const SSR_API = INTERNAL_API || API_BASE;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+function ssrHeaders(): Record<string, string> {
+  const h: Record<string, string> = {};
+  if (INTERNAL_API && API_HOST) h['Host'] = API_HOST;
+  return h;
+}
 
 async function getPage(slug: string) {
   try {
-    const res = await fetch(`${API_BASE}/public/pages/${slug}`, {
+    const res = await fetch(`${SSR_API}/public/pages/${slug}`, {
       cache: 'no-store',
+      headers: ssrHeaders(),
     });
     if (!res.ok) return null;
     return res.json();
