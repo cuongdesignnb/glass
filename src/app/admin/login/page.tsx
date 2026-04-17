@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { adminApi } from '@/lib/api';
 import { RiGlassesLine } from 'react-icons/ri';
 import { FiMail, FiLock } from 'react-icons/fi';
+import { useSettings } from '@/lib/useSettings';
 import '../admin.css';
 
 export default function AdminLoginPage() {
@@ -13,6 +14,9 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { settings } = useSettings();
+  const siteLogo = settings['site_logo'];
+  const siteName = settings['site_name'] || 'GLASS';
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +39,19 @@ export default function AdminLoginPage() {
     <div className="admin-login">
       <div className="admin-login__card">
         <div className="admin-login__logo">
-          <h1><RiGlassesLine /> GLASS</h1>
+          <h1>
+            {siteLogo ? (
+              <img
+                src={siteLogo}
+                alt={siteName}
+                style={{ height: '36px', width: 'auto', objectFit: 'contain', verticalAlign: 'middle', marginRight: '8px' }}
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+              />
+            ) : (
+              <RiGlassesLine />
+            )}
+            {siteName}
+          </h1>
           <p>Đăng nhập vào trang quản trị</p>
         </div>
 

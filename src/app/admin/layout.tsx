@@ -10,6 +10,7 @@ import {
   FiCpu, FiFile, FiChevronLeft, FiStar, FiHelpCircle, FiBell, FiLayers, FiGift, FiSliders, FiDatabase
 } from 'react-icons/fi';
 import { Toaster } from 'react-hot-toast';
+import { useSettings } from '@/lib/useSettings';
 import './admin.css';
 
 const adminMenuItems = [
@@ -46,6 +47,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const { settings } = useSettings();
+  const siteLogo = settings['site_logo'];
+  const siteName = settings['site_name'] || 'GLASS';
 
   useEffect(() => {
     if (pathname === '/admin/login') return;
@@ -78,7 +82,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="admin-layout">
       <aside className={`admin-sidebar ${sidebarOpen ? '' : 'admin-sidebar--collapsed'}`}>
         <Link href="/admin" className="admin-sidebar__logo">
-          <RiGlassesLine /> GLASS <span style={{ fontSize: '0.625rem', color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>Admin</span>
+          {siteLogo ? (
+            <img
+              src={siteLogo}
+              alt={siteName}
+              style={{ height: '28px', width: 'auto', objectFit: 'contain' }}
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+            />
+          ) : (
+            <RiGlassesLine />
+          )}
+          {siteName} <span style={{ fontSize: '0.625rem', color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>Admin</span>
         </Link>
         <nav className="admin-sidebar__nav">
           {adminMenuItems.map((item, i) => {
