@@ -113,10 +113,10 @@ class Product extends Model
     public function scopeFilterByPrice($query, ?float $min, ?float $max)
     {
         if ($min !== null) {
-            $query->where('price', '>=', $min);
+            $query->whereRaw('COALESCE(NULLIF(sale_price, 0), price) >= ?', [$min]);
         }
         if ($max !== null) {
-            $query->where('price', '<=', $max);
+            $query->whereRaw('COALESCE(NULLIF(sale_price, 0), price) <= ?', [$max]);
         }
         return $query;
     }

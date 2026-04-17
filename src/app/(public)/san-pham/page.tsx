@@ -3,7 +3,7 @@
 import { publicApi } from '@/lib/api';
 import { GENDERS, FACE_SHAPES, FRAME_STYLES, MATERIALS, COLORS, SORT_OPTIONS, formatPrice } from '@/lib/constants';
 import Link from 'next/link';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { FiFilter, FiX, FiChevronDown, FiGrid, FiList, FiSearch } from 'react-icons/fi';
 import { RiGlassesLine } from 'react-icons/ri';
 import './products.css';
@@ -15,6 +15,7 @@ export default function ProductListingPage() {
   const [showMobileFilter, setShowMobileFilter] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [ready, setReady] = useState(false);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
 
   // Filter state
   const [filters, setFilters] = useState({
@@ -31,12 +32,16 @@ export default function ProductListingPage() {
     page: '1',
   });
 
+  // Debounced search/price text (not sent to API until debounce fires)
+  const [searchInput, setSearchInput] = useState('');
+  const [priceMinInput, setPriceMinInput] = useState('');
+  const [priceMaxInput, setPriceMaxInput] = useState('');
+
   // Read URL params on mount (avoids useSearchParams + Suspense issue)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      setFilters(prev => ({
-        ...prev,
+      const initial = {
         gender: params.get('gender') || '',
         color: params.get('color') || '',
         face_shape: params.get('face') || params.get('face_shape') || '',
@@ -47,7 +52,12 @@ export default function ProductListingPage() {
         price_max: params.get('price_max') || '',
         sort: params.get('sort') || 'newest',
         search: params.get('search') || '',
-      }));
+        page: params.get('page') || '1',
+      };
+      setFilters(prev => ({ ...prev, ...initial }));
+      setSearchInput(initial.search);
+      setPriceMinInput(initial.price_min);
+      setPriceMaxInput(initial.price_max);
     }
     setReady(true);
   }, []);
@@ -98,8 +108,50 @@ export default function ProductListingPage() {
     fetchProducts();
   }, [fetchProducts]);
 
+  // Sync URL with filter state
+  useEffect(() => {
+    if (!ready) return;
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (!value) return;
+      if (key === 'sort' && value === 'newest') return;
+      if (key === 'page' && value === '1') return;
+      const urlKey = key === 'category_slug' ? 'category' : key === 'face_shape' ? 'face' : key;
+      params.set(urlKey, value);
+    });
+    const qs = params.toString();
+    const newUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+    window.history.replaceState(null, '', newUrl);
+  }, [filters, ready]);
+
   const updateFilter = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value, page: '1' }));
+  };
+
+  // Debounce search input
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setFilters(prev => ({ ...prev, search: value, page: '1' }));
+    }, 500);
+  };
+
+  // Debounce price inputs
+  const handlePriceMinChange = (value: string) => {
+    setPriceMinInput(value);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setFilters(prev => ({ ...prev, price_min: value, page: '1' }));
+    }, 800);
+  };
+
+  const handlePriceMaxChange = (value: string) => {
+    setPriceMaxInput(value);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setFilters(prev => ({ ...prev, price_max: value, page: '1' }));
+    }, 800);
   };
 
   const clearFilters = () => {
@@ -108,6 +160,9 @@ export default function ProductListingPage() {
       material: '', category_slug: '', price_min: '', price_max: '', sort: 'newest',
       search: '', page: '1',
     });
+    setSearchInput('');
+    setPriceMinInput('');
+    setPriceMaxInput('');
   };
 
   const activeFilterCount = Object.entries(filters).filter(
@@ -146,8 +201,8 @@ export default function ProductListingPage() {
               <input
                 type="text"
                 placeholder="Tìm kiếm..."
-                value={filters.search}
-                onChange={(e) => updateFilter('search', e.target.value)}
+                value={searchInput}
+                onChange={(e) => handleSearchChange(e.target.value)}
               />
             </div>
             <select
@@ -304,15 +359,15 @@ export default function ProductListingPage() {
                 <input
                   type="number"
                   placeholder="Từ"
-                  value={filters.price_min}
-                  onChange={(e) => updateFilter('price_min', e.target.value)}
+                  value={priceMinInput}
+                  onChange={(e) => handlePriceMinChange(e.target.value)}
                 />
                 <span>—</span>
                 <input
                   type="number"
                   placeholder="Đến"
-                  value={filters.price_max}
-                  onChange={(e) => updateFilter('price_max', e.target.value)}
+                  value={priceMaxInput}
+                  onChange={(e) => handlePriceMaxChange(e.target.value)}
                 />
               </div>
             </div>

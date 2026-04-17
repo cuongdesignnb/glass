@@ -276,7 +276,7 @@ export default function ProductDetailClient({ product, reviewData, apiMediaUrl }
         {/* Product Info */}
         <div className="product-info">
           {product.category && (
-            <Link href={`/san-pham?category_id=${product.category.id}`} className="product-info__category">
+            <Link href={`/san-pham?category=${product.category.slug}`} className="product-info__category">
               {product.category.name}
             </Link>
           )}

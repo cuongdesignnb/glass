@@ -77,10 +77,10 @@ class ProductController extends Controller
         $sort = $request->get('sort', 'newest');
         switch ($sort) {
             case 'price-asc':
-                $query->orderBy('price', 'asc');
+                $query->orderByRaw('COALESCE(NULLIF(sale_price, 0), price) ASC');
                 break;
             case 'price-desc':
-                $query->orderBy('price', 'desc');
+                $query->orderByRaw('COALESCE(NULLIF(sale_price, 0), price) DESC');
                 break;
             case 'popular':
                 $query->orderBy('views', 'desc');
