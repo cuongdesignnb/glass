@@ -394,13 +394,14 @@
 }
 
 .tryon-modal__result-img {
+  position: relative;
   border-radius: var(--radius-lg);
   overflow: hidden;
   border: 2px solid rgba(201, 169, 110, 0.2);
   box-shadow: 0 8px 32px rgba(0,0,0,0.3);
 }
 
-.tryon-modal__result-img img {
+.tryon-modal__result-img > img {
   width: 100%;
   display: block;
 }

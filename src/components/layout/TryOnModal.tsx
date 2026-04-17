@@ -26,11 +26,13 @@ interface TryOnModalProps {
 export default function TryOnModal({ isOpen, onClose, product, selectedColor: initialColor }: TryOnModalProps) {
   const { settings } = useSettings();
   const siteName = settings['site_name'] || 'GLASS EYEWEAR';
-  const siteLogo = settings['site_logo']
+  const siteLogoUrl = settings['site_logo']
     ? (settings['site_logo'].startsWith('http')
       ? settings['site_logo']
-      : `${API_MEDIA}${settings['site_logo']}`)
-    : '/icons/icon-192x192.png';
+      : `${(process.env.NEXT_PUBLIC_API_URL || '').replace('/api', '')}${settings['site_logo']}`)
+    : '';
+  const fallbackLogo = '/icons/icon-192x192.png';
+  const siteLogo = siteLogoUrl || fallbackLogo;
 
   const [faceImage, setFaceImage] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
@@ -232,7 +234,6 @@ export default function TryOnModal({ isOpen, onClose, product, selectedColor: in
   const downloadResult = () => {
     if (!resultImage) return;
 
-    // Bake watermark vào ảnh khi tải
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
@@ -241,17 +242,16 @@ export default function TryOnModal({ isOpen, onClose, product, selectedColor: in
       const ctx = canvas.getContext('2d')!;
       ctx.drawImage(img, 0, 0);
 
-      // Logo watermark ở giữa ảnh (mờ 15%)
-      const logoImg = new Image();
-      logoImg.crossOrigin = 'anonymous';
-      logoImg.onload = () => {
-        const logoW = canvas.width * 0.35;
-        const logoH = logoW * (logoImg.height / logoImg.width);
-        ctx.save();
-        ctx.globalAlpha = 0.15;
-        ctx.filter = 'grayscale(0.3)';
-        ctx.drawImage(logoImg, (canvas.width - logoW) / 2, (canvas.height - logoH) / 2, logoW, logoH);
-        ctx.restore();
+      const drawWatermarkAndSave = (logoImage?: HTMLImageElement) => {
+        // Logo watermark ở giữa ảnh (mờ 15%)
+        if (logoImage && logoImage.width > 0) {
+          const logoW = canvas.width * 0.35;
+          const logoH = logoW * (logoImage.height / logoImage.width);
+          ctx.save();
+          ctx.globalAlpha = 0.15;
+          ctx.drawImage(logoImage, (canvas.width - logoW) / 2, (canvas.height - logoH) / 2, logoW, logoH);
+          ctx.restore();
+        }
 
         // Text watermark lặp lại mờ 15% xoay chéo
         ctx.save();
@@ -289,41 +289,18 @@ export default function TryOnModal({ isOpen, onClose, product, selectedColor: in
         link.href = canvas.toDataURL('image/jpeg', 0.92);
         link.click();
       };
+
+      // Try load logo -> fallback -> render
+      const logoImg = new Image();
+      logoImg.crossOrigin = 'anonymous';
+      logoImg.onload = () => drawWatermarkAndSave(logoImg);
       logoImg.onerror = () => {
-        // Fallback nếu không load được logo: chỉ dùng text watermark
-        ctx.save();
-        ctx.globalAlpha = 0.15;
-        ctx.font = `bold ${Math.max(20, canvas.width * 0.04)}px 'Inter', sans-serif`;
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'center';
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate(-Math.PI / 6);
-        const text = siteName;
-        for (let y = -canvas.height; y < canvas.height; y += Math.max(80, canvas.height * 0.15)) {
-          for (let x = -canvas.width; x < canvas.width; x += Math.max(200, canvas.width * 0.4)) {
-            ctx.fillText(text, x, y);
-          }
+        if (siteLogoUrl && logoImg.src !== fallbackLogo) {
+          // Thử fallback logo
+          logoImg.src = fallbackLogo;
+        } else {
+          drawWatermarkAndSave(); // Không có logo, chỉ dùng text
         }
-        ctx.restore();
-
-        const wmSize = Math.max(14, canvas.width * 0.025);
-        ctx.font = `bold ${wmSize}px 'Inter', sans-serif`;
-        ctx.textAlign = 'center';
-        const wmText = `✦ ${siteName} — Virtual Try-On ✦`;
-        const wmY = canvas.height - wmSize * 2;
-        const wmMetrics = ctx.measureText(wmText);
-        ctx.fillStyle = 'rgba(10, 10, 26, 0.6)';
-        ctx.fillRect(canvas.width / 2 - wmMetrics.width / 2 - 16, wmY - wmSize, wmMetrics.width + 32, wmSize * 2.2);
-        ctx.fillStyle = '#c9a96e';
-        ctx.fillText(wmText, canvas.width / 2, wmY);
-        ctx.font = `${wmSize * 0.7}px 'Inter', sans-serif`;
-        ctx.fillStyle = 'rgba(255,255,255,0.6)';
-        ctx.fillText(product.name, canvas.width / 2, wmY + wmSize);
-
-        const link = document.createElement('a');
-        link.download = `glass-tryon-${product.name.replace(/\s/g, '-')}-${Date.now()}.jpg`;
-        link.href = canvas.toDataURL('image/jpeg', 0.92);
-        link.click();
       };
       logoImg.src = siteLogo;
     };
@@ -487,7 +464,7 @@ export default function TryOnModal({ isOpen, onClose, product, selectedColor: in
           {/* Result */}
           {resultImage && !processing && (
             <div className="tryon-modal__result tryon-fade-in">
-              <div className="tryon-modal__result-img" style={{ position: 'relative' }}>
+              <div className="tryon-modal__result-img">
                 <img src={resultImage} alt="Try-on result" />
                 {/* CSS Overlay Watermark - Logo giữa ảnh 15% opacity */}
                 <div style={{
@@ -495,11 +472,13 @@ export default function TryOnModal({ isOpen, onClose, product, selectedColor: in
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   pointerEvents: 'none', zIndex: 2,
                 }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={siteLogo}
                     alt=""
+                    onError={(e) => { (e.target as HTMLImageElement).src = fallbackLogo; }}
                     style={{
-                      width: '35%', maxWidth: '180px',
+                      width: '35%', maxWidth: '180px', height: 'auto',
                       opacity: 0.15, filter: 'grayscale(0.3)',
                       userSelect: 'none', pointerEvents: 'none',
                     }}
