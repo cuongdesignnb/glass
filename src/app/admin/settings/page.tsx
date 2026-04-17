@@ -86,7 +86,7 @@ export default function AdminSettingsPage() {
     if (key.startsWith('brand_')) return 'general';
     if (key.startsWith('payment_')) return 'payment';
     if (key.startsWith('font_') || key.startsWith('custom_font_')) return 'font';
-    if (key.startsWith('gemini_') || key.startsWith('openai_') || key.startsWith('google_') || key.startsWith('facebook_')) return 'api';
+    if (key.startsWith('gemini_') || key.startsWith('openai_') || key.startsWith('google_') || key.startsWith('facebook_') || key.startsWith('merchant_')) return 'api';
     if (key.includes('api_key') || key.includes('analytics') || key.includes('pixel')) return 'api';
     if (key.startsWith('reward_') || key.startsWith('voucher_') || key.startsWith('points_') || key.startsWith('register_') || key.startsWith('min_redeem')) return 'rewards';
     if (key.startsWith('vtp_')) return 'shipping';
@@ -299,6 +299,53 @@ export default function AdminSettingsPage() {
         isPassword: true,
         hint: 'Dùng để tracking server-side, giúp tăng độ chính xác cho Facebook Ads. Nâng cao.',
       },
+
+      // Google Merchant Center
+      {
+        key: 'merchant_center_id',
+        label: 'Merchant Center ID',
+        placeholder: '123456789',
+        section: 'Google Merchant Center – Đẩy sản phẩm lên Google Shopping',
+        hint: 'Lấy tại: merchants.google.com → Cài đặt → Mã người bán (Merchant ID). Cần cấu hình Service Account có quyền Content API.',
+      },
+      {
+        key: 'merchant_service_account_json',
+        label: 'Service Account JSON',
+        placeholder: '{"type":"service_account","project_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\\n..."}',
+        isTextarea: true,
+        isPassword: true,
+        hint: 'Dán toàn bộ nội dung file JSON của Service Account. Tạo tại: console.cloud.google.com → IAM & Admin → Service Accounts → Create Key (JSON). Cấp quyền Content API (shoppingcontent.googleapis.com) và add email service account vào Merchant Center với quyền Admin.',
+      },
+      {
+        key: 'merchant_country',
+        label: 'Target Country',
+        placeholder: 'VN',
+        hint: 'Mã quốc gia ISO 3166-1 alpha-2 (VD: VN, US, JP). Mặc định: VN',
+      },
+      {
+        key: 'merchant_language',
+        label: 'Content Language',
+        placeholder: 'vi',
+        hint: 'Mã ngôn ngữ ISO 639-1 (VD: vi, en). Mặc định: vi',
+      },
+      {
+        key: 'merchant_currency',
+        label: 'Currency',
+        placeholder: 'VND',
+        hint: 'Mã tiền tệ ISO 4217. Mặc định: VND',
+      },
+      {
+        key: 'merchant_brand_default',
+        label: 'Brand mặc định',
+        placeholder: 'Glass Eyewear',
+        hint: 'Dùng khi sản phẩm không có trường Brand. Mặc định: tên website.',
+      },
+      {
+        key: 'site_url',
+        label: 'URL Website (dùng cho sitemap & Merchant)',
+        placeholder: 'https://glass.example.com',
+        hint: 'URL đầy đủ của website (không có / ở cuối). Dùng để tạo link sản phẩm gửi lên Google Merchant.',
+      },
     ],
 
     // ── Vận chuyển (Viettel Post) ─────────────────────────────────────────
@@ -464,12 +511,31 @@ export default function AdminSettingsPage() {
       );
     }
     if (field.isTextarea) {
+      const revealed = revealedKeys.has(field.key);
+      const isSensitive = !!field.isPassword;
       return (
-        <textarea className="admin-form__input" rows={3}
-          value={settings[field.key] || ''}
-          onChange={(e) => updateSetting(field.key, e.target.value)}
-          placeholder={field.placeholder} style={{ resize: 'vertical' }}
-        />
+        <div style={{ position: 'relative' }}>
+          <textarea className="admin-form__input" rows={field.isPassword ? 6 : 3}
+            value={settings[field.key] || ''}
+            onChange={(e) => updateSetting(field.key, e.target.value)}
+            placeholder={field.placeholder}
+            style={{
+              resize: 'vertical',
+              fontFamily: isSensitive ? 'monospace' : undefined,
+              filter: isSensitive && !revealed && settings[field.key] ? 'blur(4px)' : undefined,
+              transition: 'filter 0.2s',
+            }}
+          />
+          {isSensitive && (
+            <button type="button" onClick={() => toggleReveal(field.key)} style={{
+              position: 'absolute', right: '12px', top: '12px',
+              background: 'rgba(0,0,0,0.6)', border: 'none', cursor: 'pointer',
+              color: 'rgba(255,255,255,0.8)', fontSize: '1rem', padding: '4px 8px', borderRadius: '6px',
+            }} title={revealed ? 'Ẩn' : 'Hiện'}>
+              {revealed ? <FiEyeOff /> : <FiEye />}
+            </button>
+          )}
+        </div>
       );
     }
     if (field.isPassword) {

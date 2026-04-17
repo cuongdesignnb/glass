@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\VoucherController;
 use App\Http\Controllers\Api\AddonGroupController;
 use App\Http\Controllers\Api\ProductAttributeController;
 use App\Http\Controllers\Api\ShippingController;
+use App\Http\Controllers\Api\MerchantController;
 
 /*
 |--------------------------------------------------------------------------
@@ -258,4 +259,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/shipping/test-connection', [ShippingController::class, 'testConnection']);
     Route::post('/shipping/push-order/{order}', [ShippingController::class, 'pushOrder']);
     Route::post('/shipping/cancel-order/{order}', [ShippingController::class, 'cancelVtpOrder']);
+
+    // === Google Merchant Center (Admin) ===
+    Route::get('/merchant/status', [MerchantController::class, 'status']);
+    Route::post('/merchant/sync-all', [MerchantController::class, 'syncAll']);
+    Route::post('/merchant/sync/{product}', [MerchantController::class, 'syncOne']);
+    Route::delete('/merchant/delete/{product}', [MerchantController::class, 'deleteOne']);
 });

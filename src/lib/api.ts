@@ -463,6 +463,20 @@ export const adminApi = {
       token,
     }),
 
+  // Google Merchant Center
+  merchantStatus: (token: string) =>
+    fetchApi('/merchant/status', { token }),
+  merchantSyncAll: (token: string, onlyActive = true) =>
+    fetchApi('/merchant/sync-all', {
+      method: 'POST',
+      body: JSON.stringify({ only_active: onlyActive }),
+      token,
+    }),
+  merchantSyncOne: (token: string, productId: number) =>
+    fetchApi(`/merchant/sync/${productId}`, { method: 'POST', token }),
+  merchantDeleteOne: (token: string, productId: number) =>
+    fetchApi(`/merchant/delete/${productId}`, { method: 'DELETE', token }),
+
   // Reviews
   getReviews: (token: string, params?: Record<string, string>) => {
     const query = params ? '?' + new URLSearchParams(params).toString() : '';

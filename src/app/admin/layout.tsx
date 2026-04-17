@@ -36,6 +36,7 @@ const adminMenuItems = [
   { name: 'Thông Báo', icon: <FiBell />, href: '/admin/notifications' },
   { section: 'AI & Công Cụ' },
   { name: 'AI Content', icon: <FiCpu />, href: '/admin/ai-content' },
+  { name: 'Google Merchant', icon: <FiDatabase />, href: '/admin/merchant' },
   { section: 'Hệ Thống' },
   { name: 'Cài Đặt', icon: <FiSettings />, href: '/admin/settings' },
 ];
