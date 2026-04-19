@@ -11,13 +11,26 @@ class CategoryController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Category::withCount('products');
+        // products_count = distinct products attached either via primary category_id
+        // OR via pivot `category_product` (many-to-many). Must match the filter
+        // behaviour in ProductController@index to keep "Kính Thời Trang (2)"
+        // and the listing result in sync.
+        $countSubquery = "(
+            SELECT COUNT(DISTINCT p.id)
+              FROM products p
+         LEFT JOIN category_product cp ON cp.product_id = p.id
+             WHERE p.category_id = categories.id OR cp.category_id = categories.id
+        ) AS products_count";
+
+        $query = Category::select('categories.*')
+            ->selectRaw($countSubquery);
 
         if ($request->boolean('tree', false)) {
-            // Return tree structure
             $categories = $query->whereNull('parent_id')
-                ->with(['children' => function ($q) {
-                    $q->withCount('products')->orderBy('order');
+                ->with(['children' => function ($q) use ($countSubquery) {
+                    $q->select('categories.*')
+                      ->selectRaw($countSubquery)
+                      ->orderBy('order');
                 }])
                 ->orderBy('order')
                 ->get();
