@@ -114,7 +114,7 @@ export default function AdminLayout({
             <img
               src={siteLogo}
               alt={siteName}
-              style={{ height: "28px", width: "auto", objectFit: "contain" }}
+              style={{ height: "32px", width: "auto", objectFit: "contain" }}
               onError={(e) => {
                 (e.currentTarget as HTMLImageElement).style.display = "none";
               }}
@@ -122,15 +122,17 @@ export default function AdminLayout({
           ) : (
             <RiGlassesLine />
           )}
-          {siteName}{" "}
-          <span
-            style={{
-              fontSize: "0.625rem",
-              color: "rgba(255,255,255,0.3)",
-              fontWeight: 400,
-            }}
-          >
-            Admin
+          <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {siteName}{" "}
+            <span
+              style={{
+                fontSize: "0.625rem",
+                color: "rgba(255,255,255,0.3)",
+                fontWeight: 400,
+              }}
+            >
+              Admin
+            </span>
           </span>
         </Link>
         <nav className="admin-sidebar__nav">

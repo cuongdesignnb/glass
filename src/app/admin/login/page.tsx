@@ -45,11 +45,10 @@ export default function AdminLoginPage() {
                 src={siteLogo}
                 alt={siteName}
                 style={{
-                  height: "36px",
+                  height: "40px",
                   width: "auto",
                   objectFit: "contain",
                   verticalAlign: "middle",
-                  marginRight: "8px",
                 }}
                 onError={(e) => {
                   (e.currentTarget as HTMLImageElement).style.display = "none";
@@ -58,7 +57,7 @@ export default function AdminLoginPage() {
             ) : (
               <RiGlassesLine />
             )}
-            {siteName}
+            <span>{siteName}</span>
           </h1>
           <p>Đăng nhập vào trang quản trị</p>
         </div>
