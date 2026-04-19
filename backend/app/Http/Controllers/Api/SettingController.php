@@ -104,4 +104,36 @@ class SettingController extends Controller
 
         return response()->json(['message' => 'Đã xóa font tùy chỉnh']);
     }
+
+    /**
+     * Serve custom font file with CORS headers.
+     * Routed via /api so it survives nginx "/" -> Next.js proxy.
+     */
+    public function serveFont()
+    {
+        $fontUrl = Setting::getValue('custom_font_url');
+        if (!$fontUrl) {
+            return response('', 404);
+        }
+
+        $filePath = public_path(ltrim(parse_url($fontUrl, PHP_URL_PATH) ?: $fontUrl, '/'));
+        if (!file_exists($filePath)) {
+            return response('', 404);
+        }
+
+        $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        $mimeMap = [
+            'ttf'   => 'font/ttf',
+            'otf'   => 'font/otf',
+            'woff'  => 'font/woff',
+            'woff2' => 'font/woff2',
+        ];
+        $mime = $mimeMap[$ext] ?? 'application/octet-stream';
+
+        return response()->file($filePath, [
+            'Content-Type'                => $mime,
+            'Access-Control-Allow-Origin' => '*',
+            'Cache-Control'               => 'public, max-age=2592000',
+        ]);
+    }
 }

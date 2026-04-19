@@ -50,6 +50,7 @@ Route::prefix('public')->group(function () {
     Route::get('/banners', [BannerController::class, 'index']);
     Route::get('/menus', [MenuController::class, 'index']);
     Route::get('/settings', [SettingController::class, 'index']);
+    Route::get('/font-file', [SettingController::class, 'serveFont']);
     Route::get('/faqs', [FaqController::class, 'index']);
     Route::get('/collections', [CollectionController::class, 'index']);
     Route::get('/collections/{slugOrId}', [CollectionController::class, 'show']);
