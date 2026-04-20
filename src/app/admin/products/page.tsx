@@ -21,7 +21,7 @@ export default function AdminProductsPage() {
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const params: Record<string, string> = { per_page: '15', page };
+  const params: Record<string, string> = { per_page: '15', page, show_all: '1' };
   if (search) params.search = search;
 
   const { data, isLoading, mutate: refresh } = useAdminProducts(token, params);
@@ -232,12 +232,55 @@ export default function AdminProductsPage() {
 
           {/* Pagination */}
           {pagination.lastPage > 1 && (
-            <div className="pagination" style={{ marginTop: '20px' }}>
-              {Array.from({ length: pagination.lastPage }, (_, i) => i + 1).map(p => (
-                <button key={p}
-                  className={`pagination__btn ${pagination.currentPage === p ? 'pagination__btn--active' : ''}`}
-                  onClick={() => setPage(String(p))}>{p}</button>
-              ))}
+            <div className="admin-pagination">
+              <button
+                className="admin-pagination__btn"
+                onClick={() => setPage(String(pagination.currentPage - 1))}
+                disabled={pagination.currentPage === 1}
+              >
+                ‹ Trước
+              </button>
+              
+              {/* First page */}
+              {pagination.currentPage > 3 && (
+                <>
+                  <button className="admin-pagination__btn" onClick={() => setPage('1')}>1</button>
+                  {pagination.currentPage > 4 && <span className="admin-pagination__ellipsis">...</span>}
+                </>
+              )}
+              
+              {/* Pages around current */}
+              {Array.from({ length: pagination.lastPage }, (_, i) => i + 1)
+                .filter(p => p >= pagination.currentPage - 2 && p <= pagination.currentPage + 2)
+                .map(p => (
+                  <button
+                    key={p}
+                    className={`admin-pagination__btn ${pagination.currentPage === p ? 'admin-pagination__btn--active' : ''}`}
+                    onClick={() => setPage(String(p))}
+                  >
+                    {p}
+                  </button>
+                ))}
+              
+              {/* Last page */}
+              {pagination.currentPage < pagination.lastPage - 2 && (
+                <>
+                  {pagination.currentPage < pagination.lastPage - 3 && <span className="admin-pagination__ellipsis">...</span>}
+                  <button className="admin-pagination__btn" onClick={() => setPage(String(pagination.lastPage))}>{pagination.lastPage}</button>
+                </>
+              )}
+              
+              <button
+                className="admin-pagination__btn"
+                onClick={() => setPage(String(pagination.currentPage + 1))}
+                disabled={pagination.currentPage === pagination.lastPage}
+              >
+                Sau ›
+              </button>
+              
+              <span className="admin-pagination__info">
+                Trang {pagination.currentPage}/{pagination.lastPage} ({pagination.total} sản phẩm)
+              </span>
             </div>
           )}
         </div>

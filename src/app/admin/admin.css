@@ -730,6 +730,70 @@ select.admin-form__input option {
   margin-bottom: 20px;
 }
 
+/* ============================================
+   PAGINATION
+   ============================================ */
+
+.admin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px 0 0;
+  flex-wrap: wrap;
+}
+
+.admin-pagination__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.6);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-pagination__btn:hover:not(:disabled) {
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+}
+
+.admin-pagination__btn--active {
+  background: var(--color-gold);
+  border-color: var(--color-gold);
+  color: #000;
+  font-weight: 600;
+}
+
+.admin-pagination__btn--active:hover {
+  background: var(--color-gold);
+  color: #000;
+}
+
+.admin-pagination__btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.admin-pagination__ellipsis {
+  color: rgba(255,255,255,0.3);
+  padding: 0 4px;
+  font-size: 0.8125rem;
+}
+
+.admin-pagination__info {
+  margin-left: 16px;
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.4);
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .admin-sidebar {
