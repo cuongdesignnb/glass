@@ -640,7 +640,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
                 }
 
                 if ($imageData) {
-                    return $this->saveBase64Image($imageData, $imageMime, $description, $idx);
+                    return $this->saveBase64Image($imageData, $imageMime, $description, $topic, $idx);
                 }
             } catch (\Exception $e) {
                 \Log::warning("AI Image: Exception with model {$model}: " . $e->getMessage());
@@ -653,23 +653,49 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
 
     /**
      * Save base64 image data to storage and Media table.
+     * Generates SEO-friendly filename from topic slug.
      */
-    private function saveBase64Image(string $base64Data, string $mimeType, string $altText, int $idx): string
+    private function saveBase64Image(string $base64Data, string $mimeType, string $altText, string $topic, int $idx): string
     {
         $binary = base64_decode($base64Data);
-        $ext = str_contains($mimeType, 'png') ? 'png' : (str_contains($mimeType, 'webp') ? 'webp' : 'jpg');
         $month = date('Y-m');
-        $timestamp = time();
-        $filename = "ai-article-{$timestamp}-{$idx}.{$ext}";
+
+        // Generate SEO-friendly slug from topic
+        $slug = \Illuminate\Support\Str::slug($topic);
+        $slug = $slug ?: 'ai-image';
+        // Limit slug length to avoid overly long filenames
+        $slug = mb_substr($slug, 0, 60);
+        // Add index suffix for multiple images
+        $suffix = $idx > 0 ? '-' . ($idx + 1) : '';
+        // Use webp for best SEO/performance
+        $filename = "{$slug}{$suffix}.webp";
 
         $dir = storage_path("app/public/uploads/{$month}");
         if (!is_dir($dir)) {
             mkdir($dir, 0755, true);
         }
 
+        // Ensure unique filename
         $relativePath = "uploads/{$month}/{$filename}";
         $fullPath = storage_path("app/public/{$relativePath}");
-        file_put_contents($fullPath, $binary);
+        if (file_exists($fullPath)) {
+            $filename = "{$slug}{$suffix}-" . time() . '.webp';
+            $relativePath = "uploads/{$month}/{$filename}";
+            $fullPath = storage_path("app/public/{$relativePath}");
+        }
+
+        // Convert to WebP if possible, otherwise save as-is
+        try {
+            $image = \Intervention\Image\Laravel\Facades\Image::read($binary);
+            if ($image->width() > 1200) {
+                $image->scaleDown(width: 1200);
+            }
+            $image->toWebp(85)->save($fullPath);
+            $mimeType = 'image/webp';
+        } catch (\Throwable $e) {
+            // Fallback: save raw binary
+            file_put_contents($fullPath, $binary);
+        }
 
         $width = null;
         $height = null;
@@ -677,6 +703,9 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
             $info = @getimagesize($fullPath);
             if ($info) { $width = $info[0]; $height = $info[1]; }
         }
+
+        // SEO alt text in Vietnamese
+        $seoAlt = mb_substr($altText, 0, 255);
 
         Media::create([
             'filename'      => $filename,
@@ -687,7 +716,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
             'size'          => filesize($fullPath),
             'width'         => $width,
             'height'        => $height,
-            'alt'           => mb_substr($altText, 0, 255),
+            'alt'           => $seoAlt,
             'folder'        => 'ai-generated',
         ]);
 
