@@ -336,6 +336,25 @@ export default function AdminSettingsPage() {
         label: "TikTok URL",
         placeholder: "https://tiktok.com/@glass",
       },
+      {
+        key: "zalo_oa_id",
+        label: "Zalo OA ID",
+        placeholder: "4564283129778229325",
+        section: "Chat Widget – Hiển thị nút chat góc phải màn hình",
+        hint: "ID của Zalo Official Account. Lấy tại oa.zalo.me → Cài đặt → Thông tin OA.",
+      },
+      {
+        key: "zalo_phone",
+        label: "Zalo Số Điện Thoại",
+        placeholder: "0901234567",
+        hint: "Số điện thoại liên kết Zalo. Dùng khi không có OA ID.",
+      },
+      {
+        key: "messenger_page_id",
+        label: "Facebook Messenger Page ID",
+        placeholder: "123456789012345",
+        hint: "Page ID của Facebook Fanpage. Lấy tại Facebook → Page Settings → About → Page ID.",
+      },
     ],
 
     // ── Thanh toán ───────────────────────────────────────────────────────
