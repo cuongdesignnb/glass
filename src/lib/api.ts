@@ -76,6 +76,12 @@ export const publicApi = {
   },
   getArticle: (slug: string) => fetchApi(`/public/articles/${slug}`),
 
+  // Article Categories
+  getArticleCategories: (params?: Record<string, string>) => {
+    const query = params ? "?" + new URLSearchParams(params).toString() : "";
+    return fetchApi(`/public/article-categories${query}&active_only=1`);
+  },
+
   // Pages
   getPage: (slug: string) => fetchApi(`/public/pages/${slug}`),
 
@@ -492,6 +498,24 @@ export const adminApi = {
   deleteArticle: (token: string, id: number) =>
     fetchApi(`/articles/${id}`, { method: "DELETE", token }),
 
+  // Article Categories
+  getArticleCategories: (token: string) =>
+    fetchApi("/article-categories?tree=true", { token }),
+  createArticleCategory: (token: string, data: any) =>
+    fetchApi("/article-categories", {
+      method: "POST",
+      body: JSON.stringify(data),
+      token,
+    }),
+  updateArticleCategory: (token: string, id: number, data: any) =>
+    fetchApi(`/article-categories/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+      token,
+    }),
+  deleteArticleCategory: (token: string, id: number) =>
+    fetchApi(`/article-categories/${id}`, { method: "DELETE", token }),
+
   // Pages
   getPages: (token: string) => fetchApi("/pages", { token }),
   createPage: (token: string, data: any) =>
@@ -644,9 +668,27 @@ export const adminApi = {
       keywords?: string;
       tone?: string;
       length?: string;
+      full_article?: boolean;
     },
   ) =>
     fetchApi("/ai/content", {
+      method: "POST",
+      body: JSON.stringify(data),
+      token,
+    }),
+  aiGenerateContentWithImages: (
+    token: string,
+    data: {
+      topic: string;
+      type?: string;
+      keywords?: string;
+      tone?: string;
+      length?: string;
+      image_count?: number;
+      full_article?: boolean;
+    },
+  ) =>
+    fetchApi("/ai/content-with-images", {
       method: "POST",
       body: JSON.stringify(data),
       token,

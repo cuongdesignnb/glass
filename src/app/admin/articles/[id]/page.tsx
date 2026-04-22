@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { adminApi } from '@/lib/api';
-import { invalidateAdmin } from '@/lib/useAdmin';
+import { invalidateAdmin, useAdminArticleCategories } from '@/lib/useAdmin';
 import { useToken } from '@/lib/useToken';
-import { FiSave, FiArrowLeft, FiCpu, FiEye, FiImage, FiX } from 'react-icons/fi';
+import { FiSave, FiArrowLeft, FiCpu, FiEye, FiImage, FiX, FiZap } from 'react-icons/fi';
 import dynamic from 'next/dynamic';
 import MediaPicker from '@/components/admin/MediaPicker';
 import toast from 'react-hot-toast';
@@ -29,8 +29,21 @@ export default function ArticleFormPage() {
     title: '', excerpt: '', content: '', thumbnail: '',
     author: '', tags: [] as string[], is_published: false, is_featured: false,
     meta_title: '', meta_desc: '', meta_keywords: '', og_image: '',
+    article_category_id: '' as string | number,
   });
   const [tagsInput, setTagsInput] = useState('');
+
+  // Load article categories for dropdown
+  const { data: articleCategories } = useAdminArticleCategories(token);
+  const flattenCats = (cats: any[], depth = 0): any[] => {
+    let result: any[] = [];
+    for (const cat of cats) {
+      result.push({ ...cat, depth });
+      if (cat.children?.length) result = result.concat(flattenCats(cat.children, depth + 1));
+    }
+    return result;
+  };
+  const flatCats = flattenCats(Array.isArray(articleCategories) ? articleCategories : []);
 
   useEffect(() => {
     if (isEdit && token) {
@@ -50,6 +63,7 @@ export default function ArticleFormPage() {
           is_published: article.is_published ?? false, is_featured: article.is_featured ?? false,
           meta_title: article.meta_title || '', meta_desc: article.meta_desc || '',
           meta_keywords: article.meta_keywords || '', og_image: article.og_image || '',
+          article_category_id: article.article_category_id || '',
         });
         setTagsInput((article.tags || []).join(', '));
       }
@@ -62,7 +76,11 @@ export default function ArticleFormPage() {
     setSaving(true);
     const savingToast = toast.loading('Đang lưu bài viết...');
     try {
-      const payload = { ...form, tags: tagsInput.split(',').map(t => t.trim()).filter(Boolean) };
+      const payload = {
+        ...form,
+        tags: tagsInput.split(',').map(t => t.trim()).filter(Boolean),
+        article_category_id: form.article_category_id ? Number(form.article_category_id) : null,
+      };
       if (isEdit) {
         await adminApi.updateArticle(token, Number(params?.id), payload);
       } else {
@@ -77,21 +95,50 @@ export default function ArticleFormPage() {
     finally { setSaving(false); }
   };
 
-  const handleAiGenerate = async () => {
+  const handleAiGenerate = async (mode: 'content' | 'images' | 'full' | 'full_images' = 'content') => {
     if (!token || !form.title) { toast.error('Vui lòng nhập tiêu đề trước'); return; }
     setGeneratingAi(true);
-    const aiToast = toast.loading('Đang tạo nội dung AI...');
+    const labels: Record<string, string> = {
+      content: 'Đang tạo nội dung AI...',
+      images: 'Đang tạo bài viết + ảnh AI... (1-2 phút)',
+      full: 'Đang viết bài hoàn chỉnh (SEO, tags)...',
+      full_images: 'Đang viết bài hoàn chỉnh + ảnh AI... (1-2 phút)',
+    };
+    const aiToast = toast.loading(labels[mode]);
     try {
-      const data = await adminApi.aiGenerateContent(token, {
+      const isFullArticle = mode === 'full' || mode === 'full_images';
+      const withImages = mode === 'images' || mode === 'full_images';
+      const basePayload = {
         topic: form.title,
-        type: 'article',
+        type: 'article' as const,
         keywords: form.meta_keywords || tagsInput,
-        tone: 'professional',
-        length: 'medium',
-      });
+        tone: 'professional' as const,
+        length: 'medium' as const,
+        full_article: isFullArticle,
+      };
+
+      let data: any;
+      if (withImages) {
+        data = await adminApi.aiGenerateContentWithImages(token, { ...basePayload, image_count: 2 });
+      } else {
+        data = await adminApi.aiGenerateContent(token, basePayload);
+      }
+
       if (data.content) {
-        setForm(f => ({ ...f, content: data.content }));
-        toast.success('Đã tạo xong bài viết!', { id: aiToast });
+        const updates: any = { content: data.content };
+        if (data.full_article) {
+          if (data.title) updates.title = data.title;
+          if (data.excerpt) updates.excerpt = data.excerpt;
+          if (data.meta_title) updates.meta_title = data.meta_title;
+          if (data.meta_desc) updates.meta_desc = data.meta_desc;
+          if (data.meta_keywords) updates.meta_keywords = data.meta_keywords;
+          if (data.tags?.length) setTagsInput(data.tags.join(', '));
+        }
+        setForm(f => ({ ...f, ...updates }));
+        const parts: string[] = ['Đã tạo xong'];
+        if (data.full_article) parts.push('(SEO + tags)');
+        if (data.images?.length) parts.push(`(${data.images.length} ảnh)`);
+        toast.success(parts.join(' '), { id: aiToast });
       }
     } catch (err: any) { 
       toast.error('Lỗi AI: ' + (err.message || 'Không thể tạo'), { id: aiToast }); 
@@ -116,8 +163,16 @@ export default function ArticleFormPage() {
           <h1 className="admin-topbar__title">{isEdit ? 'Sửa Bài Viết' : 'Viết Bài Mới'}</h1>
         </div>
         <div className="admin-topbar__actions">
-          <button className="admin-btn admin-btn--secondary admin-btn--sm" onClick={handleAiGenerate} disabled={generatingAi}>
-            <FiCpu /> {generatingAi ? 'Đang tạo AI...' : 'Tạo nội dung AI'}
+          <button className="admin-btn admin-btn--secondary admin-btn--sm" onClick={() => handleAiGenerate('content')} disabled={generatingAi}>
+            <FiCpu /> {generatingAi ? 'Đang tạo...' : 'AI nội dung'}
+          </button>
+          <button className="admin-btn admin-btn--secondary admin-btn--sm" onClick={() => handleAiGenerate('images')} disabled={generatingAi}
+            style={{ background: 'rgba(201,169,110,0.1)', borderColor: 'rgba(201,169,110,0.25)' }}>
+            <FiImage style={{ color: 'var(--color-gold)' }} /> AI + Ảnh
+          </button>
+          <button className="admin-btn admin-btn--secondary admin-btn--sm" onClick={() => handleAiGenerate('full')} disabled={generatingAi}
+            style={{ background: 'rgba(201,169,110,0.2)', borderColor: 'rgba(201,169,110,0.4)', color: 'var(--color-gold)' }}>
+            <FiZap /> Viết bài hoàn chỉnh
           </button>
           <button className="admin-btn admin-btn--primary" onClick={handleSave} disabled={saving}>
             <FiSave /> {saving ? 'Đang lưu...' : 'Lưu Bài Viết'}
@@ -146,9 +201,16 @@ export default function ArticleFormPage() {
                 <div className="admin-form__group">
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <label className="admin-form__label">Nội dung</label>
-                    <button className="admin-btn admin-btn--secondary admin-btn--sm" onClick={handleAiGenerate} disabled={generatingAi}>
-                      <FiCpu /> {generatingAi ? 'Đang tạo...' : 'AI viết bài'}
-                    </button>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      <button className="admin-btn admin-btn--secondary admin-btn--sm" onClick={() => handleAiGenerate('content')} disabled={generatingAi}
+                        style={{ fontSize: '0.75rem' }}>
+                        <FiCpu /> {generatingAi ? 'Đang tạo...' : 'AI nội dung'}
+                      </button>
+                      <button className="admin-btn admin-btn--secondary admin-btn--sm" onClick={() => handleAiGenerate('full')} disabled={generatingAi}
+                        style={{ fontSize: '0.75rem', background: 'rgba(201,169,110,0.2)', borderColor: 'rgba(201,169,110,0.4)', color: 'var(--color-gold)' }}>
+                        <FiZap /> Viết bài hoàn chỉnh
+                      </button>
+                    </div>
                   </div>
                   <RichEditor
                     content={form.content}
@@ -179,6 +241,16 @@ export default function ArticleFormPage() {
                   <input type="checkbox" checked={form.is_featured} onChange={e => setForm({ ...form, is_featured: e.target.checked })} style={{ accentColor: 'var(--color-gold)' }} />
                   Bài viết nổi bật
                 </label>
+                <div className="admin-form__group" style={{ marginTop: '12px' }}>
+                  <label className="admin-form__label">Danh mục bài viết</label>
+                  <select className="admin-form__input" value={form.article_category_id}
+                    onChange={e => setForm({ ...form, article_category_id: e.target.value })}>
+                    <option value="">— Không có danh mục —</option>
+                    {flatCats.map((cat: any) => (
+                      <option key={cat.id} value={cat.id}>{'—'.repeat(cat.depth)} {cat.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 

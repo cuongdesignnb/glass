@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Article extends Model
 {
@@ -10,7 +11,7 @@ class Article extends Model
         'title', 'slug', 'excerpt', 'content', 'thumbnail',
         'author', 'tags', 'is_published', 'is_featured',
         'meta_title', 'meta_desc', 'meta_keywords', 'og_image',
-        'views', 'published_at',
+        'views', 'published_at', 'article_category_id',
     ];
 
     protected function casts(): array
@@ -21,6 +22,11 @@ class Article extends Model
             'is_featured' => 'boolean',
             'published_at' => 'datetime',
         ];
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(ArticleCategory::class, 'article_category_id');
     }
 
     public function scopePublished($query)

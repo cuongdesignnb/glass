@@ -410,9 +410,15 @@ export default function AdminSettingsPage() {
       },
       {
         key: "gemini_model",
-        label: "Gemini Model",
+        label: "Gemini Model (Thử kính)",
         placeholder: "gemini-2.5-flash-image",
-        hint: "Model thử kính ảo. Mặc định: gemini-2.5-flash-image. Hệ thống tự chuyển model nếu bị quota (gemini-3.1-flash-image-preview, etc).",
+        hint: "Model thử kính ảo. Mặc định: gemini-2.5-flash-image. Hệ thống tự chuyển model nếu bị quota.",
+      },
+      {
+        key: "gemini_image_model",
+        label: "Gemini Model (Sinh ảnh bài viết)",
+        placeholder: "gemini-2.0-flash-exp",
+        hint: "Model sinh ảnh cho bài viết AI. Gợi ý: gemini-2.0-flash-exp | imagen-3.0-generate-002. Hệ thống tự fallback nếu model bị lỗi.",
       },
 
       // OpenAI

@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\AddonGroupController;
 use App\Http\Controllers\Api\ProductAttributeController;
 use App\Http\Controllers\Api\ShippingController;
 use App\Http\Controllers\Api\MerchantController;
+use App\Http\Controllers\Api\ArticleCategoryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -46,6 +47,8 @@ Route::prefix('public')->group(function () {
     Route::get('/categories/{slugOrId}', [CategoryController::class, 'show']);
     Route::get('/articles', [ArticleController::class, 'index']);
     Route::get('/articles/{slugOrId}', [ArticleController::class, 'show']);
+    Route::get('/article-categories', [ArticleCategoryController::class, 'index']);
+    Route::get('/article-categories/{slugOrId}', [ArticleCategoryController::class, 'show']);
     Route::get('/pages/{slugOrId}', [PageController::class, 'show']);
     Route::get('/banners', [BannerController::class, 'index']);
     Route::get('/menus', [MenuController::class, 'index']);
@@ -193,6 +196,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Articles
     Route::apiResource('articles', ArticleController::class);
 
+    // Article Categories
+    Route::apiResource('article-categories', ArticleCategoryController::class)->parameters([
+        'article-categories' => 'articleCategory',
+    ]);
+
     // Pages
     Route::apiResource('pages', PageController::class);
 
@@ -227,6 +235,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // AI
     Route::post('/ai/try-on', [AiController::class, 'tryOn']);
     Route::post('/ai/content', [AiController::class, 'generateContent']);
+    Route::post('/ai/content-with-images', [AiController::class, 'generateContentWithImages']);
 
     // === ADMIN: Users ===
     Route::get('/admin/users', [AdminUserController::class, 'index']);

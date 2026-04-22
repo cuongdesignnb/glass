@@ -72,6 +72,8 @@ function createFetcher(token: string | null) {
         return adminApi.getSettings(token);
       case '/admin/articles':
         return adminApi.getArticles(token, searchParams);
+      case '/admin/article-categories':
+        return adminApi.getArticleCategories(token);
       case '/admin/orders':
         return adminApi.getOrders(token, searchParams);
       case '/admin/reviews':
@@ -141,6 +143,14 @@ export function useAdminArticles(token: string | null, params?: Record<string, s
     token ? `/admin/articles${query}` : null,
     createFetcher(token),
     { revalidateOnFocus: false, dedupingInterval: 5000 }
+  );
+}
+
+export function useAdminArticleCategories(token: string | null) {
+  return useSWR(
+    token ? '/admin/article-categories' : null,
+    createFetcher(token),
+    { revalidateOnFocus: false, dedupingInterval: 10000 }
   );
 }
 

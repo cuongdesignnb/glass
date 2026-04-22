@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { adminApi } from '@/lib/api';
-import { useAdminArticles, invalidateAdmin } from '@/lib/useAdmin';
+import { useAdminArticles, useAdminArticleCategories, invalidateAdmin } from '@/lib/useAdmin';
 import { useToken } from '@/lib/useToken';
 import { formatDate } from '@/lib/constants';
 import { FiPlus, FiEdit2, FiTrash2, FiSearch, FiEye, FiStar, FiCpu } from 'react-icons/fi';
@@ -17,8 +17,23 @@ export default function AdminArticlesPage() {
   if (search) params.search = search;
 
   const { data, isLoading, mutate: refresh } = useAdminArticles(token, params);
+  const { data: articleCategories } = useAdminArticleCategories(token);
   const articles = data?.data || [];
   const total = data?.total || 0;
+
+  // Flatten categories for lookup
+  const flattenCats = (cats: any[]): Record<number, string> => {
+    const map: Record<number, string> = {};
+    const walk = (items: any[]) => {
+      for (const c of items) {
+        map[c.id] = c.name;
+        if (c.children?.length) walk(c.children);
+      }
+    };
+    walk(cats);
+    return map;
+  };
+  const catMap = flattenCats(Array.isArray(articleCategories) ? articleCategories : []);
 
   const handleDelete = async (id: number) => {
     if (!confirm('Xác nhận xóa bài viết này?')) return;
@@ -62,6 +77,7 @@ export default function AdminArticlesPage() {
               <tr>
                 <th>Ảnh</th>
                 <th>Tiêu đề</th>
+                <th>Danh mục</th>
                 <th>Tác giả</th>
                 <th>Trạng thái</th>
                 <th>Lượt xem</th>
@@ -71,9 +87,9 @@ export default function AdminArticlesPage() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={7} style={{ textAlign: 'center', padding: '48px' }}>Đang tải...</td></tr>
+                <tr><td colSpan={8} style={{ textAlign: 'center', padding: '48px' }}>Đang tải...</td></tr>
               ) : articles.length === 0 ? (
-                <tr><td colSpan={7} style={{ textAlign: 'center', padding: '48px', color: 'rgba(255,255,255,0.4)' }}>
+                <tr><td colSpan={8} style={{ textAlign: 'center', padding: '48px', color: 'rgba(255,255,255,0.4)' }}>
                   Chưa có bài viết. <Link href="/admin/articles/new" style={{ color: 'var(--color-gold)' }}>Thêm bài mới</Link> hoặc <Link href="/admin/ai-content" style={{ color: 'var(--color-gold)' }}>tạo bằng AI</Link>
                 </td></tr>
               ) : articles.map((article: any) => (
@@ -90,6 +106,11 @@ export default function AdminArticlesPage() {
                       {article.is_featured && <FiStar style={{ color: 'var(--color-gold)', fontSize: '0.75rem' }} />}
                     </div>
                     {article.excerpt && <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{article.excerpt}</div>}
+                  </td>
+                  <td>
+                    {article.article_category_id && catMap[article.article_category_id]
+                      ? <span className="admin-badge admin-badge--info" style={{ fontSize: '0.75rem' }}>{catMap[article.article_category_id]}</span>
+                      : <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.8125rem' }}>—</span>}
                   </td>
                   <td>{article.author || '—'}</td>
                   <td>

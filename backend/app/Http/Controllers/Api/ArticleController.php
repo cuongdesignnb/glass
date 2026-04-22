@@ -11,7 +11,7 @@ class ArticleController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Article::orderBy('created_at', 'desc');
+        $query = Article::with('category')->orderBy('created_at', 'desc');
 
         if ($request->filled('published_only')) {
             $query->published();
@@ -19,6 +19,10 @@ class ArticleController extends Controller
 
         if ($request->filled('featured')) {
             $query->where('is_featured', true);
+        }
+
+        if ($request->filled('article_category_id')) {
+            $query->where('article_category_id', $request->article_category_id);
         }
 
         if ($request->filled('search')) {
@@ -35,7 +39,8 @@ class ArticleController extends Controller
 
     public function show(string $slugOrId)
     {
-        $article = Article::where('slug', $slugOrId)
+        $article = Article::with('category')
+            ->where('slug', $slugOrId)
             ->orWhere('id', is_numeric($slugOrId) ? $slugOrId : 0)
             ->firstOrFail();
 
@@ -60,6 +65,7 @@ class ArticleController extends Controller
             'meta_keywords' => 'nullable|string',
             'og_image' => 'nullable|string',
             'published_at' => 'nullable|date',
+            'article_category_id' => 'nullable|integer|exists:article_categories,id',
         ]);
 
         $data['slug'] = VietnameseSlug::make($data['title']);
@@ -92,6 +98,7 @@ class ArticleController extends Controller
             'meta_keywords' => 'nullable|string',
             'og_image' => 'nullable|string',
             'published_at' => 'nullable|date',
+            'article_category_id' => 'nullable|integer|exists:article_categories,id',
         ]);
 
         if (isset($data['title'])) {
