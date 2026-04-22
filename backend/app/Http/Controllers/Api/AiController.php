@@ -654,25 +654,35 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
     }
 
     /**
-     * Generate image via Gemini/Imagen and save to Media library.
+     * Generate image via Gemini and save to Media library.
+     * Uses the same approach as the working tryOn feature.
      */
     private function generateAndSaveImage(string $apiKey, array $models, string $description, string $slug, int $idx): ?string
     {
-        // Try Gemini generateContent with image modality
+        $prompt = $description . ' Style: modern, clean, editorial photography. No text or watermarks. Output ONLY the image.';
+
+        // Same payload format as tryOn (which works)
         $payload = [
             'contents' => [
-                ['parts' => [['text' => $description . ' Style: modern, clean, editorial photography. No text or watermarks.']]],
+                ['parts' => [['text' => $prompt]]],
             ],
             'generationConfig' => [
-                'responseModalities' => ['IMAGE'],
+                'responseModalities' => ['TEXT', 'IMAGE'],
             ],
         ];
 
-        foreach ($models as $model) {
-            try {
-                // Skip imagen models here (handled below)
-                if (str_contains($model, 'imagen')) continue;
+        // Use same model list as tryOn: gemini-2.5-flash-image first
+        $dbModel = Setting::getValue('gemini_image_model');
+        $modelsToTry = array_unique(array_filter([
+            ($dbModel && trim($dbModel) !== '') ? trim($dbModel) : null,
+            'gemini-2.5-flash-image',
+            'gemini-2.0-flash-preview-image-generation',
+            'gemini-2.0-flash-exp-image-generation',
+            'gemini-2.0-flash-exp',
+        ]));
 
+        foreach ($modelsToTry as $model) {
+            try {
                 $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
                 \Log::info("AI Image: Trying {$model}");
 
@@ -680,8 +690,18 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
                     ->withHeaders(['Content-Type' => 'application/json'])
                     ->post($url, $payload);
 
+                if (in_array($response->status(), [429, 400, 404])) {
+                    $errMsg = $response->json()['error']['message'] ?? '';
+                    \Log::warning("AI Image: {$model} HTTP {$response->status()}: " . substr($errMsg, 0, 150));
+                    // 400 "does not support" → try next model
+                    if ($response->status() === 400 && !str_contains($errMsg, 'does not support')) {
+                        break; // Other 400 error → stop
+                    }
+                    continue;
+                }
+
                 if ($response->failed()) {
-                    \Log::warning("AI Image: {$model} HTTP {$response->status()}: " . substr($response->body(), 0, 200));
+                    \Log::warning("AI Image: {$model} failed HTTP {$response->status()}");
                     continue;
                 }
 
@@ -693,39 +713,10 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
                     return $this->saveBase64Image($imageData['data'], $imageData['mime'], $description, $slug, $idx);
                 }
 
-                \Log::warning("AI Image: {$model} no image in response");
+                \Log::warning("AI Image: {$model} returned no image data");
             } catch (\Exception $e) {
                 \Log::warning("AI Image: {$model} exception: " . $e->getMessage());
             }
-        }
-
-        // Fallback: try Imagen 3 with predict endpoint
-        try {
-            $url = "https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key={$apiKey}";
-            \Log::info("AI Image: Trying imagen-3.0 predict endpoint");
-
-            $response = Http::timeout(60)->withoutVerifying()
-                ->withHeaders(['Content-Type' => 'application/json'])
-                ->post($url, [
-                    'instances' => [['prompt' => $description]],
-                    'parameters' => ['sampleCount' => 1],
-                ]);
-
-            if ($response->successful()) {
-                $result = $response->json();
-                $prediction = $result['predictions'][0] ?? null;
-                if ($prediction && isset($prediction['bytesBase64Encoded'])) {
-                    \Log::info("AI Image: SUCCESS with imagen-3.0 predict");
-                    return $this->saveBase64Image(
-                        $prediction['bytesBase64Encoded'],
-                        $prediction['mimeType'] ?? 'image/png',
-                        $description, $slug, $idx
-                    );
-                }
-            }
-            \Log::warning("AI Image: imagen predict HTTP {$response->status()}: " . substr($response->body(), 0, 200));
-        } catch (\Exception $e) {
-            \Log::warning("AI Image: imagen predict exception: " . $e->getMessage());
         }
 
         \Log::error("AI Image: ALL models failed for: " . substr($description, 0, 80));
