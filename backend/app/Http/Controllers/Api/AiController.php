@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Models\Media;
+use App\Models\Article;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
@@ -435,6 +436,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             'length'      => 'nullable|string|in:short,medium,long',
             'image_count' => 'nullable|integer|min:0|max:5',
             'full_article' => 'nullable|boolean',
+            'category_id' => 'nullable|integer|exists:article_categories,id',
         ]);
 
         $openaiKey = Setting::getValue('openai_api_key') ?: env('OPENAI_API_KEY');
@@ -464,24 +466,31 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
         };
 
         $imgInstruction = $imageCount > 0
-            ? "QUAN TRỌNG: Trong nội dung bài viết (trường content), chèn CHÍNH XÁC {$imageCount} placeholder ảnh với format: [IMG:mô tả chi tiết ảnh bằng tiếng Anh]. Ví dụ: [IMG:A stylish woman wearing trendy cat-eye sunglasses]. Đặt ở vị trí phù hợp."
+            ? "HÌNH ẢNH: Chèn CHÍNH XÁC {$imageCount} placeholder ảnh, mỗi ảnh đặt NGAY SAU một thẻ <h2>. Format: [IMG:English image description|slug-of-heading]. Ví dụ: sau thẻ <h2>Kính Mắt Thời Trang 2026</h2> thì chèn [IMG:Stylish woman wearing modern cat-eye sunglasses in urban setting|kinh-mat-thoi-trang-2026]. Mô tả phải chi tiết, slug lấy từ nội dung heading."
             : "";
 
         if ($fullArticle) {
             $systemPrompt = "Bạn là content writer chuyên nghiệp cho ngành thời trang kính mắt. Viết bằng tiếng Việt. Giọng văn {$tone}.
 
+QUY TẮC CẤU TRÚC BÀI VIẾT:
+- Dùng các thẻ <h2> cho mỗi phần chính, <h3> cho phần phụ
+- Nội dung trong <p>, danh sách dùng <ul><li>
+- Dùng <strong>, <em> để nhấn mạnh từ khóa quan trọng
+- Độ dài: {$lengthGuide}
+{$imgInstruction}
+
 Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu trúc:
 {
   \"title\": \"Tiêu đề bài viết hấp dẫn, chuẩn SEO\",
   \"excerpt\": \"Tóm tắt bài viết 2-3 câu\",
-  \"content\": \"Nội dung HTML dùng h2, h3, p, ul, li, strong, em. Độ dài: {$lengthGuide}. {$imgInstruction}\",
+  \"content\": \"Nội dung HTML theo quy tắc trên\",
   \"meta_title\": \"SEO title (tối đa 60 ký tự)\",
   \"meta_desc\": \"SEO description (tối đa 160 ký tự)\",
   \"meta_keywords\": \"từ khóa 1, từ khóa 2, từ khóa 3\",
   \"tags\": [\"tag1\", \"tag2\", \"tag3\"]
 }";
         } else {
-            $systemPrompt = "Bạn là content writer chuyên nghiệp cho ngành thời trang kính mắt. Viết bài viết chất lượng cao, hấp dẫn, với giọng văn {$tone}. Độ dài: {$lengthGuide}. Viết bằng tiếng Việt. Sử dụng HTML formatting (h2, h3, p, ul, li, strong, em). {$imgInstruction}";
+            $systemPrompt = "Bạn là content writer chuyên nghiệp cho ngành thời trang kính mắt. Viết bài viết chất lượng cao, hấp dẫn, với giọng văn {$tone}. Độ dài: {$lengthGuide}. Viết bằng tiếng Việt. Cấu trúc: dùng <h2> cho phần chính, <h3> cho phần phụ, nội dung trong <p>, danh sách <ul><li>, nhấn mạnh bằng <strong>, <em>. {$imgInstruction}";
         }
 
         $userPrompt = $fullArticle
@@ -532,6 +541,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
 
             // Parse full_article JSON if needed
             $articleMeta = null;
+            $categoryId = $request->get('category_id');
             if ($fullArticle) {
                 $cleaned = trim($rawContent);
                 $cleaned = preg_replace('/^```json\s*/i', '', $cleaned);
@@ -542,27 +552,43 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
                 }
             }
 
-            // ── Generate images for [IMG:...] placeholders ──
+            // ── Generate images for [IMG:desc|slug] or [IMG:desc] placeholders ──
             $generatedImages = [];
             $content = $rawContent;
 
-            if ($imageCount > 0 && preg_match_all('/\[IMG:(.*?)\]/', $content, $matches)) {
+            if ($imageCount > 0 && preg_match_all('/\[IMG:([^|\]]+?)(?:\|([a-z0-9-]+))?\]/', $content, $matches, PREG_SET_ORDER)) {
                 $geminiModel = Setting::getValue('gemini_image_model') ?: 'gemini-2.0-flash-exp';
                 $modelsToTry = array_unique([$geminiModel, 'gemini-2.0-flash-exp', 'imagen-3.0-generate-002']);
 
-                foreach ($matches[1] as $idx => $description) {
-                    \Log::info("AI Images: Generating image {$idx}: " . substr($description, 0, 80));
-                    $imageUrl = $this->generateAndSaveImage($geminiKey, $modelsToTry, $description, $request->topic, $idx);
+                foreach ($matches as $idx => $match) {
+                    $fullPlaceholder = $match[0];
+                    $description = trim($match[1]);
+                    $headingSlug = $match[2] ?? null;
+
+                    // Use heading slug for filename, fallback to topic
+                    $imageSlug = $headingSlug ?: \Illuminate\Support\Str::slug($request->topic);
+
+                    \Log::info("AI Images: #{$idx} slug={$imageSlug} desc=" . substr($description, 0, 60));
+
+                    $imageUrl = $this->generateAndSaveImage($geminiKey, $modelsToTry, $description, $imageSlug, $idx);
 
                     if ($imageUrl) {
-                        $generatedImages[] = ['description' => $description, 'url' => $imageUrl];
-                        $imgHtml = '<figure style="margin:24px 0;text-align:center"><img src="' . $imageUrl . '" alt="' . htmlspecialchars($description) . '" style="max-width:100%;border-radius:8px" /><figcaption style="font-size:0.85em;color:#666;margin-top:8px">' . htmlspecialchars($description) . '</figcaption></figure>';
-                        $content = preg_replace('/\[IMG:' . preg_quote($description, '/') . '\]/', $imgHtml, $content, 1);
+                        // Vietnamese alt text for SEO
+                        $altText = $headingSlug ? str_replace('-', ' ', $headingSlug) : $description;
+                        $generatedImages[] = ['description' => $description, 'slug' => $headingSlug, 'url' => $imageUrl];
+                        $imgHtml = '<figure style="margin:24px 0;text-align:center">'
+                            . '<img src="' . $imageUrl . '" alt="' . htmlspecialchars($altText) . '" style="max-width:100%;border-radius:8px" loading="lazy" />'
+                            . '<figcaption style="font-size:0.85em;color:#666;margin-top:8px">' . htmlspecialchars($altText) . '</figcaption>'
+                            . '</figure>';
+                        $content = str_replace($fullPlaceholder, $imgHtml, $content);
                     } else {
-                        $content = preg_replace('/\[IMG:' . preg_quote($description, '/') . '\]/', '', $content, 1);
+                        $content = str_replace($fullPlaceholder, '', $content);
                     }
                 }
             }
+
+            // ── Internal linking: insert anchor text to related articles ──
+            $content = $this->insertInternalLinks($content, $categoryId);
 
             $responseData = [
                 'success' => true,
@@ -721,5 +747,105 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
         ]);
 
         return "/storage/{$relativePath}";
+    }
+
+    /**
+     * Insert internal links to related articles naturally into HTML content.
+     * Targets ~30% of paragraphs, varies anchor text style.
+     */
+    private function insertInternalLinks(string $content, ?int $categoryId = null): string
+    {
+        // Find related published articles
+        $query = Article::where('is_published', true)
+            ->whereNotNull('slug')
+            ->orderByDesc('created_at')
+            ->limit(10);
+
+        if ($categoryId) {
+            $query->where('article_category_id', $categoryId);
+        }
+
+        $articles = $query->get(['id', 'title', 'slug']);
+
+        if ($articles->isEmpty()) return $content;
+
+        // Find all <p>...</p> blocks
+        if (!preg_match_all('/<p>(.*?)<\/p>/s', $content, $pMatches, PREG_OFFSET_AND_CAPTURE)) {
+            return $content;
+        }
+
+        // Filter: only paragraphs with enough text (> 50 chars) and no existing links
+        $candidates = [];
+        foreach ($pMatches[0] as $i => $match) {
+            $pHtml = $match[0];
+            $innerText = strip_tags($pHtml);
+            if (mb_strlen($innerText) > 50 && !str_contains($pHtml, '<a ')) {
+                $candidates[] = ['index' => $i, 'offset' => $match[1], 'html' => $pHtml, 'inner' => $pMatches[1][$i][0]];
+            }
+        }
+
+        if (empty($candidates)) return $content;
+
+        // Select ~30% of candidates, max = number of articles available
+        $linkCount = max(1, min(count($articles), (int) ceil(count($candidates) * 0.3)));
+        $selectedKeys = (array) array_rand($candidates, min($linkCount, count($candidates)));
+        shuffle($selectedKeys);
+
+        $replacements = [];
+        $usedArticles = [];
+
+        foreach ($selectedKeys as $key) {
+            $candidate = $candidates[$key];
+
+            // Pick an article not yet used
+            $article = null;
+            foreach ($articles as $a) {
+                if (!in_array($a->id, $usedArticles)) {
+                    $article = $a;
+                    $usedArticles[] = $a->id;
+                    break;
+                }
+            }
+            if (!$article) break;
+
+            $url = '/bai-viet/' . $article->slug;
+            $title = $article->title;
+
+            // Vary anchor text style randomly
+            $style = rand(1, 4);
+            switch ($style) {
+                case 1: // Full title link
+                    $anchor = '<a href="' . $url . '" title="' . htmlspecialchars($title) . '">' . htmlspecialchars($title) . '</a>';
+                    $insertion = " Xem thêm: {$anchor}.";
+                    break;
+                case 2: // "Tham khảo" style
+                    $anchor = '<a href="' . $url . '" title="' . htmlspecialchars($title) . '">' . htmlspecialchars($title) . '</a>';
+                    $insertion = " Bạn có thể tham khảo {$anchor}.";
+                    break;
+                case 3: // "Đọc thêm" style
+                    $anchor = '<a href="' . $url . '" title="' . htmlspecialchars($title) . '">' . htmlspecialchars($title) . '</a>';
+                    $insertion = " Đọc thêm: {$anchor}.";
+                    break;
+                default: // Natural mid-sentence
+                    // Extract short keyword from title (first 4-6 words)
+                    $words = explode(' ', $title);
+                    $shortText = implode(' ', array_slice($words, 0, min(6, count($words))));
+                    $anchor = '<a href="' . $url . '" title="' . htmlspecialchars($title) . '">' . htmlspecialchars($shortText) . '</a>';
+                    $insertion = " ({$anchor})";
+                    break;
+            }
+
+            // Append link before closing </p>
+            $original = $candidate['html'];
+            $modified = str_replace('</p>', $insertion . '</p>', $original);
+            $replacements[$original] = $modified;
+        }
+
+        // Apply replacements (in reverse order to preserve offsets)
+        foreach ($replacements as $original => $modified) {
+            $content = preg_replace('/' . preg_quote($original, '/') . '/', $modified, $content, 1);
+        }
+
+        return $content;
     }
 }

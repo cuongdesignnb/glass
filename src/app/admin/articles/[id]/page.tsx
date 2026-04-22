@@ -115,6 +115,7 @@ export default function ArticleFormPage() {
         tone: 'professional' as const,
         length: 'medium' as const,
         full_article: isFullArticle,
+        category_id: form.article_category_id || undefined,
       };
 
       let data: any;

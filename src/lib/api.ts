@@ -669,6 +669,7 @@ export const adminApi = {
       tone?: string;
       length?: string;
       full_article?: boolean;
+      category_id?: number;
     },
   ) =>
     fetchApi("/ai/content", {
@@ -686,6 +687,7 @@ export const adminApi = {
       length?: string;
       image_count?: number;
       full_article?: boolean;
+      category_id?: number;
     },
   ) =>
     fetchApi("/ai/content-with-images", {
