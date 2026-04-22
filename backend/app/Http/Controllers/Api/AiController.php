@@ -309,25 +309,44 @@ Generate ONE realistic photo of this person wearing these exact glasses.
             default => '1000-1500 từ',
         };
 
+        // ── Query related articles for internal linking ──
+        $categoryId = $request->get('category_id');
+        $relatedArticles = $this->getRelatedArticlesForLinking($categoryId);
+        $linkInstruction = '';
+        if (!empty($relatedArticles)) {
+            $linkInstruction = "\nLIÊN KẾT NỘI BỘ (Internal Linking):\nTrong bài viết, hãy chèn LINK đến các bài viết liên quan bên dưới một cách TỰ NHIÊN, XUÔI CÂU. Dùng thẻ <a href=\"URL\">anchor text</a>.\n- Anchor text phải là từ khóa/cụm từ PHÙ HỢP với ngữ cảnh câu văn, KHÔNG phải tiêu đề nguyên văn.\n- Chèn tối đa 2-3 link, rải đều trong bài, không tập trung 1 chỗ.\n- Viết câu có chứa link sao cho đọc lên hoàn toàn tự nhiên, như thể tác giả đang giới thiệu chủ đề liên quan.\n- KHÔNG dùng các mẫu \"Xem thêm:\", \"Đọc thêm:\" — hãy viết xuôi câu.\n\nDanh sách bài liên quan:\n";
+            foreach ($relatedArticles as $ra) {
+                $linkInstruction .= "- \"{$ra['title']}\" → URL: /bai-viet/{$ra['slug']}" . ($ra['keywords'] ? " (từ khóa: {$ra['keywords']})" : "") . "\n";
+            }
+        }
+
         if ($fullArticle) {
             $systemPrompt = "Bạn là content writer chuyên nghiệp cho ngành thời trang kính mắt. Viết bằng tiếng Việt. Giọng văn {$tone}.
+
+QUY TẮC CẤU TRÚC BÀI VIẾT:
+- Dùng các thẻ <h2> cho mỗi phần chính, <h3> cho phần phụ
+- Nội dung trong <p>, danh sách dùng <ul><li>
+- Dùng <strong>, <em> để nhấn mạnh từ khóa quan trọng
+- Độ dài: {$lengthGuide}
+{$linkInstruction}
 
 Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markdown, không ```json```) với cấu trúc:
 {
   \"title\": \"Tiêu đề bài viết hấp dẫn, chuẩn SEO\",
   \"excerpt\": \"Tóm tắt bài viết 2-3 câu, hấp dẫn, dùng làm mô tả ngắn\",
-  \"content\": \"Nội dung HTML đầy đủ dùng h2, h3, p, ul, li, strong, em. Độ dài: {$lengthGuide}\",
+  \"content\": \"Nội dung HTML đầy đủ theo quy tắc trên\",
   \"meta_title\": \"SEO title (tối đa 60 ký tự)\",
   \"meta_desc\": \"SEO description (tối đa 160 ký tự)\",
   \"meta_keywords\": \"từ khóa 1, từ khóa 2, từ khóa 3\",
   \"tags\": [\"tag1\", \"tag2\", \"tag3\", \"tag4\"]
 }";
         } else {
-            $systemPrompt = match($type) {
+            $basePrompt = match($type) {
                 'product_description' => "Bạn là chuyên gia viết mô tả sản phẩm kính mắt. Viết mô tả hấp dẫn, chuyên nghiệp. Giọng văn {$tone}. Viết bằng tiếng Việt.",
                 'seo' => "Bạn là chuyên gia SEO. Viết nội dung chuẩn SEO cho website kính mắt. Viết bằng tiếng Việt.",
                 default => "Bạn là content writer chuyên nghiệp cho ngành thời trang kính mắt. Viết bài viết chất lượng cao, hấp dẫn, với giọng văn {$tone}. Độ dài: {$lengthGuide}. Viết bằng tiếng Việt. Sử dụng HTML formatting (h2, h3, p, ul, li, strong, em).",
             };
+            $systemPrompt = $basePrompt . $linkInstruction;
         }
 
         $userPrompt = $fullArticle
@@ -469,6 +488,17 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             ? "HÌNH ẢNH: Chèn CHÍNH XÁC {$imageCount} placeholder ảnh, mỗi ảnh đặt NGAY SAU một thẻ <h2>. Format: [IMG:English image description|slug-of-heading]. Ví dụ: sau thẻ <h2>Kính Mắt Thời Trang 2026</h2> thì chèn [IMG:Stylish woman wearing modern cat-eye sunglasses in urban setting|kinh-mat-thoi-trang-2026]. Mô tả phải chi tiết, slug lấy từ nội dung heading."
             : "";
 
+        // ── Query related articles for internal linking ──
+        $categoryId = $request->get('category_id');
+        $relatedArticles = $this->getRelatedArticlesForLinking($categoryId);
+        $linkInstruction = '';
+        if (!empty($relatedArticles)) {
+            $linkInstruction = "\nLIÊN KẾT NỘI BỘ (Internal Linking):\nTrong bài viết, hãy chèn LINK đến các bài viết liên quan bên dưới một cách TỰ NHIÊN, XUÔI CÂU. Dùng thẻ <a href=\"URL\">anchor text</a>.\n- Anchor text phải là từ khóa/cụm từ PHÙ HỢP với ngữ cảnh câu văn, KHÔNG phải tiêu đề nguyên văn.\n- Chèn tối đa 2-3 link, rải đều trong bài, không tập trung 1 chỗ.\n- Viết câu có chứa link sao cho đọc lên hoàn toàn tự nhiên, như thể tác giả đang giới thiệu chủ đề liên quan.\n- KHÔNG dùng các mẫu \"Xem thêm:\", \"Đọc thêm:\" — hãy viết xuôi câu.\n\nDanh sách bài liên quan:\n";
+            foreach ($relatedArticles as $ra) {
+                $linkInstruction .= "- \"{$ra['title']}\" → URL: /bai-viet/{$ra['slug']}" . ($ra['keywords'] ? " (từ khóa: {$ra['keywords']})" : "") . "\n";
+            }
+        }
+
         if ($fullArticle) {
             $systemPrompt = "Bạn là content writer chuyên nghiệp cho ngành thời trang kính mắt. Viết bằng tiếng Việt. Giọng văn {$tone}.
 
@@ -478,6 +508,7 @@ QUY TẮC CẤU TRÚC BÀI VIẾT:
 - Dùng <strong>, <em> để nhấn mạnh từ khóa quan trọng
 - Độ dài: {$lengthGuide}
 {$imgInstruction}
+{$linkInstruction}
 
 Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu trúc:
 {
@@ -490,7 +521,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
   \"tags\": [\"tag1\", \"tag2\", \"tag3\"]
 }";
         } else {
-            $systemPrompt = "Bạn là content writer chuyên nghiệp cho ngành thời trang kính mắt. Viết bài viết chất lượng cao, hấp dẫn, với giọng văn {$tone}. Độ dài: {$lengthGuide}. Viết bằng tiếng Việt. Cấu trúc: dùng <h2> cho phần chính, <h3> cho phần phụ, nội dung trong <p>, danh sách <ul><li>, nhấn mạnh bằng <strong>, <em>. {$imgInstruction}";
+            $systemPrompt = "Bạn là content writer chuyên nghiệp cho ngành thời trang kính mắt. Viết bài viết chất lượng cao, hấp dẫn, với giọng văn {$tone}. Độ dài: {$lengthGuide}. Viết bằng tiếng Việt. Cấu trúc: dùng <h2> cho phần chính, <h3> cho phần phụ, nội dung trong <p>, danh sách <ul><li>, nhấn mạnh bằng <strong>, <em>. {$imgInstruction}{$linkInstruction}";
         }
 
         $userPrompt = $fullArticle
@@ -587,8 +618,6 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
                 }
             }
 
-            // ── Internal linking: insert anchor text to related articles ──
-            $content = $this->insertInternalLinks($content, $categoryId);
 
             $responseData = [
                 'success' => true,
@@ -750,102 +779,36 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
     }
 
     /**
-     * Insert internal links to related articles naturally into HTML content.
-     * Targets ~30% of paragraphs, varies anchor text style.
+     * Get related published articles for internal linking.
+     * Returns array of [title, slug, keywords] for the prompt.
      */
-    private function insertInternalLinks(string $content, ?int $categoryId = null): string
+    private function getRelatedArticlesForLinking(?int $categoryId = null): array
     {
-        // Find related published articles
         $query = Article::where('is_published', true)
             ->whereNotNull('slug')
-            ->orderByDesc('created_at')
-            ->limit(10);
+            ->where('slug', '!=', '')
+            ->orderByDesc('created_at');
 
         if ($categoryId) {
             $query->where('article_category_id', $categoryId);
         }
 
-        $articles = $query->get(['id', 'title', 'slug']);
+        $articles = $query->limit(8)->get(['title', 'slug', 'meta_keywords']);
 
-        if ($articles->isEmpty()) return $content;
-
-        // Find all <p>...</p> blocks
-        if (!preg_match_all('/<p>(.*?)<\/p>/s', $content, $pMatches, PREG_OFFSET_AND_CAPTURE)) {
-            return $content;
+        if ($articles->isEmpty() && $categoryId) {
+            // Fallback: get any published articles if none in this category
+            $articles = Article::where('is_published', true)
+                ->whereNotNull('slug')
+                ->where('slug', '!=', '')
+                ->orderByDesc('created_at')
+                ->limit(5)
+                ->get(['title', 'slug', 'meta_keywords']);
         }
 
-        // Filter: only paragraphs with enough text (> 50 chars) and no existing links
-        $candidates = [];
-        foreach ($pMatches[0] as $i => $match) {
-            $pHtml = $match[0];
-            $innerText = strip_tags($pHtml);
-            if (mb_strlen($innerText) > 50 && !str_contains($pHtml, '<a ')) {
-                $candidates[] = ['index' => $i, 'offset' => $match[1], 'html' => $pHtml, 'inner' => $pMatches[1][$i][0]];
-            }
-        }
-
-        if (empty($candidates)) return $content;
-
-        // Select ~30% of candidates, max = number of articles available
-        $linkCount = max(1, min(count($articles), (int) ceil(count($candidates) * 0.3)));
-        $selectedKeys = (array) array_rand($candidates, min($linkCount, count($candidates)));
-        shuffle($selectedKeys);
-
-        $replacements = [];
-        $usedArticles = [];
-
-        foreach ($selectedKeys as $key) {
-            $candidate = $candidates[$key];
-
-            // Pick an article not yet used
-            $article = null;
-            foreach ($articles as $a) {
-                if (!in_array($a->id, $usedArticles)) {
-                    $article = $a;
-                    $usedArticles[] = $a->id;
-                    break;
-                }
-            }
-            if (!$article) break;
-
-            $url = '/bai-viet/' . $article->slug;
-            $title = $article->title;
-
-            // Vary anchor text style randomly
-            $style = rand(1, 4);
-            switch ($style) {
-                case 1: // Full title link
-                    $anchor = '<a href="' . $url . '" title="' . htmlspecialchars($title) . '">' . htmlspecialchars($title) . '</a>';
-                    $insertion = " Xem thêm: {$anchor}.";
-                    break;
-                case 2: // "Tham khảo" style
-                    $anchor = '<a href="' . $url . '" title="' . htmlspecialchars($title) . '">' . htmlspecialchars($title) . '</a>';
-                    $insertion = " Bạn có thể tham khảo {$anchor}.";
-                    break;
-                case 3: // "Đọc thêm" style
-                    $anchor = '<a href="' . $url . '" title="' . htmlspecialchars($title) . '">' . htmlspecialchars($title) . '</a>';
-                    $insertion = " Đọc thêm: {$anchor}.";
-                    break;
-                default: // Natural mid-sentence
-                    // Extract short keyword from title (first 4-6 words)
-                    $words = explode(' ', $title);
-                    $shortText = implode(' ', array_slice($words, 0, min(6, count($words))));
-                    $anchor = '<a href="' . $url . '" title="' . htmlspecialchars($title) . '">' . htmlspecialchars($shortText) . '</a>';
-                    $insertion = " ({$anchor})";
-                    break;
-            }
-
-            // Append link before closing </p>
-            $original = $candidate['html'];
-            $modified = str_replace('</p>', $insertion . '</p>', $original);
-            $replacements[$original] = $modified;
-        }
-
-        // Apply replacements (in reverse order to preserve offsets)
-        foreach ($replacements as $original => $modified) {
-            $content = preg_replace('/' . preg_quote($original, '/') . '/', $modified, $content, 1);
-        }
-
-        return $content;
+        return $articles->map(fn($a) => [
+            'title' => $a->title,
+            'slug' => $a->slug,
+            'keywords' => $a->meta_keywords ?: '',
+        ])->toArray();
     }
 }
