@@ -26,7 +26,7 @@ import {
   FiGift,
   FiSliders,
   FiDatabase,
-  FiFolder,
+  FiClock,
 } from "react-icons/fi";
 import { Toaster } from "react-hot-toast";
 import { useSettings } from "@/lib/useSettings";
@@ -39,7 +39,6 @@ const adminMenuItems = [
   { name: "Sản Phẩm", icon: <FiPackage />, href: "/admin/products" },
   { name: "Danh Mục", icon: <FiTag />, href: "/admin/categories" },
   { name: "Bài Viết", icon: <FiFileText />, href: "/admin/articles" },
-  { name: "DM Bài Viết", icon: <FiFolder />, href: "/admin/article-categories" },
   { name: "Trang Tĩnh", icon: <FiFile />, href: "/admin/pages" },
   { name: "FAQ", icon: <FiHelpCircle />, href: "/admin/faqs" },
   { section: "Giao Diện" },
@@ -61,6 +60,7 @@ const adminMenuItems = [
   { name: "Thông Báo", icon: <FiBell />, href: "/admin/notifications" },
   { section: "AI & Công Cụ" },
   { name: "AI Content", icon: <FiCpu />, href: "/admin/ai-content" },
+  { name: "Lên Lịch AI", icon: <FiClock />, href: "/admin/ai-queue" },
   { name: "Google Merchant", icon: <FiDatabase />, href: "/admin/merchant" },
   { section: "Hệ Thống" },
   { name: "Cài Đặt", icon: <FiSettings />, href: "/admin/settings" },

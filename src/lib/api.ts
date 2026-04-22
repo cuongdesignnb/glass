@@ -694,6 +694,20 @@ export const adminApi = {
       token,
     }),
 
+  // === AI Content Queue ===
+  getAiQueue: (token: string, params?: Record<string, string>) => {
+    const query = params ? "?" + new URLSearchParams(params).toString() : "";
+    return fetchApi(`/ai/queue${query}`, { token });
+  },
+  addAiQueue: (token: string, data: any) =>
+    fetchApi("/ai/queue", { method: "POST", body: JSON.stringify(data), token }),
+  deleteAiQueue: (token: string, id: number) =>
+    fetchApi(`/ai/queue/${id}`, { method: "DELETE", token }),
+  clearAiQueue: (token: string) =>
+    fetchApi("/ai/queue-clear", { method: "DELETE", token }),
+  processAiQueue: (token: string) =>
+    fetchApi("/ai/queue-process", { method: "POST", token }),
+
   // === Admin: Users ===
   getUsers: (token: string, params?: Record<string, string>) => {
     const query = params ? "?" + new URLSearchParams(params).toString() : "";

@@ -24,6 +24,7 @@ use App\Http\Controllers\Api\ProductAttributeController;
 use App\Http\Controllers\Api\ShippingController;
 use App\Http\Controllers\Api\MerchantController;
 use App\Http\Controllers\Api\ArticleCategoryController;
+use App\Http\Controllers\Api\AiContentQueueController;
 
 /*
 |--------------------------------------------------------------------------
@@ -236,6 +237,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/ai/try-on', [AiController::class, 'tryOn']);
     Route::post('/ai/content', [AiController::class, 'generateContent']);
     Route::post('/ai/content-with-images', [AiController::class, 'generateContentWithImages']);
+
+    // AI Content Queue
+    Route::get('/ai/queue', [AiContentQueueController::class, 'index']);
+    Route::post('/ai/queue', [AiContentQueueController::class, 'store']);
+    Route::delete('/ai/queue/{aiContentQueue}', [AiContentQueueController::class, 'destroy']);
+    Route::delete('/ai/queue-clear', [AiContentQueueController::class, 'clearPending']);
+    Route::post('/ai/queue-process', [AiContentQueueController::class, 'processNext']);
 
     // === ADMIN: Users ===
     Route::get('/admin/users', [AdminUserController::class, 'index']);
