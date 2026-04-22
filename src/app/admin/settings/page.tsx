@@ -107,7 +107,7 @@ export default function AdminSettingsPage() {
 
   const getGroup = (key: string): string => {
     if (key.startsWith("seo_")) return "seo";
-    if (key.startsWith("social_")) return "social";
+    if (key.startsWith("social_") || key.startsWith("zalo_") || key.startsWith("messenger_") || key.startsWith("chat_")) return "social";
     if (key.startsWith("contact_")) return "contact";
     if (
       key.startsWith("hero_") ||
