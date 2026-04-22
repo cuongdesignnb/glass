@@ -120,7 +120,7 @@ export default function ArticleFormPage() {
 
       let data: any;
       if (withImages) {
-        data = await adminApi.aiGenerateContentWithImages(token, { ...basePayload, image_count: 2 });
+        data = await adminApi.aiGenerateContentWithImages(token, { ...basePayload, image_count: 3 });
       } else {
         data = await adminApi.aiGenerateContent(token, basePayload);
       }
@@ -171,9 +171,9 @@ export default function ArticleFormPage() {
             style={{ background: 'rgba(201,169,110,0.1)', borderColor: 'rgba(201,169,110,0.25)' }}>
             <FiImage style={{ color: 'var(--color-gold)' }} /> AI + Ảnh
           </button>
-          <button className="admin-btn admin-btn--secondary admin-btn--sm" onClick={() => handleAiGenerate('full')} disabled={generatingAi}
+          <button className="admin-btn admin-btn--secondary admin-btn--sm" onClick={() => handleAiGenerate('full_images')} disabled={generatingAi}
             style={{ background: 'rgba(201,169,110,0.2)', borderColor: 'rgba(201,169,110,0.4)', color: 'var(--color-gold)' }}>
-            <FiZap /> Viết bài hoàn chỉnh
+            <FiZap /> Viết bài hoàn chỉnh + Ảnh
           </button>
           <button className="admin-btn admin-btn--primary" onClick={handleSave} disabled={saving}>
             <FiSave /> {saving ? 'Đang lưu...' : 'Lưu Bài Viết'}
@@ -207,9 +207,9 @@ export default function ArticleFormPage() {
                         style={{ fontSize: '0.75rem' }}>
                         <FiCpu /> {generatingAi ? 'Đang tạo...' : 'AI nội dung'}
                       </button>
-                      <button className="admin-btn admin-btn--secondary admin-btn--sm" onClick={() => handleAiGenerate('full')} disabled={generatingAi}
+                      <button className="admin-btn admin-btn--secondary admin-btn--sm" onClick={() => handleAiGenerate('full_images')} disabled={generatingAi}
                         style={{ fontSize: '0.75rem', background: 'rgba(201,169,110,0.2)', borderColor: 'rgba(201,169,110,0.4)', color: 'var(--color-gold)' }}>
-                        <FiZap /> Viết bài hoàn chỉnh
+                        <FiZap /> Viết hoàn chỉnh + Ảnh
                       </button>
                     </div>
                   </div>

@@ -664,16 +664,21 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
             try {
                 $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
 
+                \Log::info("AI Image: Trying model {$model} for: " . substr($description, 0, 60));
+
                 $response = Http::timeout(60)->withoutVerifying()
                     ->withHeaders(['Content-Type' => 'application/json'])
                     ->post($url, $payload);
 
                 if (in_array($response->status(), [429, 400, 404])) {
-                    \Log::warning("AI Image: Model {$model} failed HTTP {$response->status()}");
+                    \Log::warning("AI Image: Model {$model} HTTP {$response->status()}: " . substr($response->body(), 0, 300));
                     continue;
                 }
 
-                if ($response->failed()) continue;
+                if ($response->failed()) {
+                    \Log::warning("AI Image: Model {$model} failed: " . substr($response->body(), 0, 300));
+                    continue;
+                }
 
                 $result = $response->json();
                 $imageData = null;
@@ -695,7 +700,10 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
                 }
 
                 if ($imageData) {
+                    \Log::info("AI Image: SUCCESS with model {$model}, mime={$imageMime}, size=" . strlen($imageData));
                     return $this->saveBase64Image($imageData, $imageMime, $description, $topic, $idx);
+                } else {
+                    \Log::warning("AI Image: Model {$model} returned no image data. Response keys: " . implode(',', array_keys($result)));
                 }
             } catch (\Exception $e) {
                 \Log::warning("AI Image: Exception with model {$model}: " . $e->getMessage());
