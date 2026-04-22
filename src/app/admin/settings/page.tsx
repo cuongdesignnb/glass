@@ -417,8 +417,8 @@ export default function AdminSettingsPage() {
       {
         key: "gemini_image_model",
         label: "Gemini Model (Sinh ảnh bài viết)",
-        placeholder: "gemini-2.0-flash-exp",
-        hint: "Model sinh ảnh cho bài viết AI. Gợi ý: gemini-2.0-flash-exp | imagen-3.0-generate-002. Hệ thống tự fallback nếu model bị lỗi.",
+        placeholder: "gemini-2.0-flash-preview-image-generation",
+        hint: "Model sinh ảnh cho bài viết AI. Mặc định: gemini-2.0-flash-preview-image-generation. Hệ thống tự fallback qua nhiều model.",
       },
 
       // OpenAI
