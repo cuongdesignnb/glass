@@ -14,7 +14,7 @@ interface QueueItem {
   image_count: number;
   error_message?: string;
   article_id?: number;
-  article?: { id: number; title: string; slug: string; status: string };
+  article?: { id: number; title: string; slug: string; is_published: boolean; thumbnail?: string };
   scheduled_at: string;
   processed_at?: string;
   created_at: string;
@@ -35,6 +35,11 @@ export default function AdminAiQueuePage() {
   const [keywords, setKeywords] = useState('');
   const [adding, setAdding] = useState(false);
 
+  // Auto-scheduler settings
+  const [autoEnabled, setAutoEnabled] = useState(false);
+  const [batchLimit, setBatchLimit] = useState(5);
+  const [savingSettings, setSavingSettings] = useState(false);
+
   const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
 
   const loadQueue = useCallback(async () => {
@@ -46,7 +51,35 @@ export default function AdminAiQueuePage() {
     finally { setLoading(false); }
   }, [token]);
 
-  useEffect(() => { loadQueue(); }, [loadQueue]);
+  const loadSettings = useCallback(async () => {
+    if (!token) return;
+    try {
+      const data = await adminApi.getAiQueueSettings(token);
+      setAutoEnabled(!!data.auto_enabled);
+      setBatchLimit(Number(data.batch_limit) || 5);
+    } catch { /* ignore */ }
+  }, [token]);
+
+  useEffect(() => { loadQueue(); loadSettings(); }, [loadQueue, loadSettings]);
+
+  const handleSaveSettings = async (next: { auto_enabled?: boolean; batch_limit?: number }) => {
+    if (!token) return;
+    setSavingSettings(true);
+    try {
+      const payload = {
+        auto_enabled: next.auto_enabled ?? autoEnabled,
+        batch_limit: next.batch_limit ?? batchLimit,
+      };
+      const data = await adminApi.updateAiQueueSettings(token, payload);
+      setAutoEnabled(!!data.auto_enabled);
+      setBatchLimit(Number(data.batch_limit) || 5);
+      toast.success(payload.auto_enabled ? 'Đã bật tự động xử lý' : 'Đã tắt tự động xử lý');
+    } catch (err: any) {
+      toast.error(err.message || 'Lỗi lưu cài đặt');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   const handleAdd = async () => {
     if (!token || !topicsText.trim()) return;
@@ -161,6 +194,43 @@ export default function AdminAiQueuePage() {
       </div>
 
       <div className="admin-content">
+        {/* Auto-scheduler settings */}
+        <div className="admin-card" style={{ marginBottom: '24px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '20px' }}>
+          <div style={{ flex: '1 1 280px' }}>
+            <h3 className="admin-card__title" style={{ marginBottom: '4px' }}>
+              <FiClock style={{ marginRight: '6px' }} /> Tự động xử lý theo lịch
+            </h3>
+            <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', margin: 0 }}>
+              Khi bật, hệ thống tự chạy mỗi phút (qua Laravel scheduler) và xử lý các mục đã đến giờ <code>scheduled_at</code>.
+              <br />
+              Cron lệnh: <code>* * * * * cd /path/to/backend && php artisan schedule:run &gt;&gt; /dev/null 2&gt;&amp;1</code>
+            </p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)' }}>
+              <span>Bài / phút:</span>
+              <input type="number" min={1} max={20} value={batchLimit} disabled={savingSettings}
+                onChange={e => setBatchLimit(Number(e.target.value) || 1)}
+                onBlur={() => handleSaveSettings({ batch_limit: batchLimit })}
+                style={{ width: '70px', padding: '6px 8px', background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px', color: '#fff' }} />
+            </label>
+            <button
+              onClick={() => handleSaveSettings({ auto_enabled: !autoEnabled })}
+              disabled={savingSettings}
+              className="admin-btn admin-btn--sm"
+              style={{
+                background: autoEnabled ? 'rgba(76,175,80,0.2)' : 'rgba(255,255,255,0.08)',
+                color: autoEnabled ? '#4caf50' : 'rgba(255,255,255,0.7)',
+                border: `1px solid ${autoEnabled ? 'rgba(76,175,80,0.4)' : 'rgba(255,255,255,0.15)'}`,
+                padding: '8px 16px',
+                fontWeight: 600,
+              }}>
+              {savingSettings ? '...' : autoEnabled ? '● Đang BẬT' : '○ Đang TẮT'}
+            </button>
+          </div>
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
           {/* Add topics form */}
           <div className="admin-card">
@@ -269,7 +339,7 @@ export default function AdminAiQueuePage() {
                             {item.article && (
                               <a href={`/admin/articles/${item.article.id}`}
                                 style={{ fontSize: '0.7rem', color: 'var(--color-gold)' }}>
-                                → {item.article.title} ({item.article.status})
+                                → {item.article.title} ({item.article.is_published ? 'đã xuất bản' : 'nháp'})
                               </a>
                             )}
                             {item.error_message && (

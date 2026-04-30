@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AiContentQueue;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -14,7 +15,7 @@ class AiContentQueueController extends Controller
      */
     public function index(Request $request)
     {
-        $query = AiContentQueue::with('article:id,title,slug,status')
+        $query = AiContentQueue::with('article:id,title,slug,is_published,thumbnail')
             ->orderByDesc('created_at');
 
         if ($request->filled('status')) {
@@ -94,8 +95,7 @@ class AiContentQueueController extends Controller
     }
 
     /**
-     * Process the next pending item in queue.
-     * Called by cron or manually from admin.
+     * Process the next pending item in queue (manual trigger from admin).
      */
     public function processNext()
     {
@@ -112,19 +112,52 @@ class AiContentQueueController extends Controller
             return response()->json(['message' => 'Không có mục nào cần xử lý', 'processed' => false]);
         }
 
+        $result = $this->processItem($item);
+        $status = ($result['processed'] ?? false) ? 200 : 500;
+        return response()->json($result, $status);
+    }
+
+    /**
+     * Get / update auto-scheduler settings
+     */
+    public function settings()
+    {
+        return response()->json([
+            'auto_enabled' => Setting::getValue('ai_queue_auto_enabled', '0') === '1',
+            'batch_limit'  => (int) (Setting::getValue('ai_queue_batch_limit', '5')),
+        ]);
+    }
+
+    public function updateSettings(Request $request)
+    {
+        $request->validate([
+            'auto_enabled' => 'required|boolean',
+            'batch_limit'  => 'nullable|integer|min:1|max:20',
+        ]);
+
+        Setting::setValue('ai_queue_auto_enabled', $request->boolean('auto_enabled') ? '1' : '0', 'ai');
+        if ($request->filled('batch_limit')) {
+            Setting::setValue('ai_queue_batch_limit', (string) $request->integer('batch_limit'), 'ai');
+        }
+
+        return response()->json([
+            'success' => true,
+            'auto_enabled' => $request->boolean('auto_enabled'),
+            'batch_limit'  => (int) (Setting::getValue('ai_queue_batch_limit', '5')),
+        ]);
+    }
+
+    /**
+     * Process a single queue item.
+     * Public so the artisan command can call it directly.
+     * Returns ['processed' => bool, 'title' => string?, 'article_id' => int?, 'error' => string?]
+     */
+    public function processItem(AiContentQueue $item): array
+    {
         $item->update(['status' => 'processing']);
 
         try {
-            // Use AiController logic to generate content
             $aiController = app(AiController::class);
-            $fakeRequest = Request::create('/ai/content', 'POST', [
-                'topic'        => $item->topic,
-                'type'         => $item->type,
-                'keywords'     => $item->keywords,
-                'tone'         => $item->tone,
-                'length'       => $item->length,
-                'full_article' => true,
-            ]);
 
             if ($item->with_images) {
                 $fakeRequest = Request::create('/ai/content-with-images', 'POST', [
@@ -138,6 +171,14 @@ class AiContentQueueController extends Controller
                 ]);
                 $response = $aiController->generateContentWithImages($fakeRequest);
             } else {
+                $fakeRequest = Request::create('/ai/content', 'POST', [
+                    'topic'        => $item->topic,
+                    'type'         => $item->type,
+                    'keywords'     => $item->keywords,
+                    'tone'         => $item->tone,
+                    'length'       => $item->length,
+                    'full_article' => true,
+                ]);
                 $response = $aiController->generateContent($fakeRequest);
             }
 
@@ -147,15 +188,23 @@ class AiContentQueueController extends Controller
                 throw new \Exception($data['error'] ?? 'AI generation failed');
             }
 
-            // Create draft article
-            $slug = \Illuminate\Support\Str::slug($data['title'] ?? $item->topic);
-            $slug = $slug ?: 'ai-' . time();
-
-            // Ensure unique slug
+            // Build a unique slug
+            $slug = \Illuminate\Support\Str::slug($data['title'] ?? $item->topic) ?: ('ai-' . time());
             $baseSlug = $slug;
             $counter = 1;
             while (\App\Models\Article::where('slug', $slug)->exists()) {
                 $slug = $baseSlug . '-' . $counter++;
+            }
+
+            // Pick the first generated image as thumbnail / og_image
+            $thumbnail = null;
+            if (!empty($data['images']) && is_array($data['images'])) {
+                $thumbnail = $data['images'][0]['url'] ?? null;
+            }
+
+            $tags = $data['tags'] ?? [];
+            if (is_string($tags)) {
+                $tags = array_filter(array_map('trim', explode(',', $tags)));
             }
 
             $article = \App\Models\Article::create([
@@ -166,8 +215,10 @@ class AiContentQueueController extends Controller
                 'meta_title'    => $data['meta_title'] ?? '',
                 'meta_desc'     => $data['meta_desc'] ?? '',
                 'meta_keywords' => $data['meta_keywords'] ?? '',
-                'tags'          => isset($data['tags']) ? implode(',', $data['tags']) : '',
-                'status'        => 'draft',
+                'tags'          => $tags,
+                'thumbnail'     => $thumbnail,
+                'og_image'      => $thumbnail,
+                'is_published'  => false,
             ]);
 
             $item->update([
@@ -176,11 +227,11 @@ class AiContentQueueController extends Controller
                 'processed_at' => Carbon::now(),
             ]);
 
-            return response()->json([
-                'processed' => true,
+            return [
+                'processed'  => true,
                 'article_id' => $article->id,
-                'title' => $article->title,
-            ]);
+                'title'      => $article->title,
+            ];
 
         } catch (\Exception $e) {
             \Log::error('AI Queue Error: ' . $e->getMessage());
@@ -189,10 +240,11 @@ class AiContentQueueController extends Controller
                 'error_message' => mb_substr($e->getMessage(), 0, 1000),
                 'processed_at'  => Carbon::now(),
             ]);
-            return response()->json([
+
+            return [
                 'processed' => false,
-                'error' => $e->getMessage(),
-            ], 500);
+                'error'     => $e->getMessage(),
+            ];
         }
     }
 }

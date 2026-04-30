@@ -709,6 +709,17 @@ export const adminApi = {
     fetchApi("/ai/queue-clear", { method: "DELETE", token }),
   processAiQueue: (token: string) =>
     fetchApi("/ai/queue-process", { method: "POST", token }),
+  getAiQueueSettings: (token: string) =>
+    fetchApi("/ai/queue-settings", { token }),
+  updateAiQueueSettings: (
+    token: string,
+    data: { auto_enabled: boolean; batch_limit?: number },
+  ) =>
+    fetchApi("/ai/queue-settings", {
+      method: "PUT",
+      body: JSON.stringify(data),
+      token,
+    }),
 
   // === Admin: Users ===
   getUsers: (token: string, params?: Record<string, string>) => {
