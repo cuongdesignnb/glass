@@ -118,6 +118,50 @@ class AiContentQueueController extends Controller
     }
 
     /**
+     * Process up to N due items in one call (browser-driven auto mode).
+     * Does NOT require auto_enabled flag — caller (UI) controls when to call.
+     */
+    public function processBatch(Request $request)
+    {
+        $limit = max(1, min(20, (int) $request->get('limit', Setting::getValue('ai_queue_batch_limit', '5'))));
+
+        $items = AiContentQueue::where('status', 'pending')
+            ->where(function ($q) {
+                $q->whereNull('scheduled_at')
+                  ->orWhere('scheduled_at', '<=', Carbon::now());
+            })
+            ->orderBy('scheduled_at')
+            ->orderBy('id')
+            ->limit($limit)
+            ->get();
+
+        if ($items->isEmpty()) {
+            return response()->json([
+                'processed_count' => 0,
+                'message' => 'Không có mục nào đến giờ',
+                'results' => [],
+            ]);
+        }
+
+        $results = [];
+        $ok = 0; $fail = 0;
+        foreach ($items as $item) {
+            $r = $this->processItem($item);
+            $r['item_id'] = $item->id;
+            $r['topic']   = $item->topic;
+            $results[] = $r;
+            if (($r['processed'] ?? false) === true) $ok++; else $fail++;
+        }
+
+        return response()->json([
+            'processed_count' => $ok,
+            'failed_count'    => $fail,
+            'message'         => "Xử lý {$items->count()} mục: {$ok} thành công, {$fail} lỗi",
+            'results'         => $results,
+        ]);
+    }
+
+    /**
      * Get / update auto-scheduler settings
      */
     public function settings()

@@ -709,6 +709,12 @@ export const adminApi = {
     fetchApi("/ai/queue-clear", { method: "DELETE", token }),
   processAiQueue: (token: string) =>
     fetchApi("/ai/queue-process", { method: "POST", token }),
+  processAiQueueBatch: (token: string, limit?: number) =>
+    fetchApi("/ai/queue-process-batch", {
+      method: "POST",
+      body: JSON.stringify({ limit: limit ?? 5 }),
+      token,
+    }),
   getAiQueueSettings: (token: string) =>
     fetchApi("/ai/queue-settings", { token }),
   updateAiQueueSettings: (

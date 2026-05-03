@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { adminApi } from '@/lib/api';
-import { FiClock, FiPlus, FiTrash2, FiPlay, FiCheck, FiX, FiAlertCircle, FiLoader, FiRefreshCw, FiUpload } from 'react-icons/fi';
+import { FiClock, FiPlus, FiTrash2, FiPlay, FiCheck, FiX, FiAlertCircle, FiLoader, FiRefreshCw, FiUpload, FiZap } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
 interface QueueItem {
@@ -40,6 +40,18 @@ export default function AdminAiQueuePage() {
   const [batchLimit, setBatchLimit] = useState(5);
   const [savingSettings, setSavingSettings] = useState(false);
 
+  // Browser-driven auto-processing
+  const [autoTickAt, setAutoTickAt] = useState<number | null>(null); // ms timestamp of next tick
+  const [now, setNow] = useState(Date.now());
+  const [autoBusy, setAutoBusy] = useState(false);
+  const [lastRun, setLastRun] = useState<{ at: number; ok: number; fail: number } | null>(null);
+  const tickRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const clockRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const TICK_MS = 60_000;
+  const REFRESH_MS = 15_000;
+
   const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
 
   const loadQueue = useCallback(async () => {
@@ -61,6 +73,60 @@ export default function AdminAiQueuePage() {
   }, [token]);
 
   useEffect(() => { loadQueue(); loadSettings(); }, [loadQueue, loadSettings]);
+
+  // Browser-driven auto-process loop: when autoEnabled is ON, the page itself
+  // pings the batch endpoint every TICK_MS, and refreshes the queue every REFRESH_MS.
+  // No server cron needed — as long as this tab is open.
+  const runAutoTick = useCallback(async () => {
+    if (!token) return;
+    setAutoBusy(true);
+    try {
+      const data = await adminApi.processAiQueueBatch(token, batchLimit);
+      const ok = Number(data?.processed_count) || 0;
+      const fail = Number(data?.failed_count) || 0;
+      setLastRun({ at: Date.now(), ok, fail });
+      if (ok > 0) toast.success(`Tự động: tạo ${ok} bài`, { duration: 3000 });
+      if (fail > 0) toast.error(`Tự động: ${fail} bài lỗi`, { duration: 4000 });
+      loadQueue();
+    } catch (err: any) {
+      toast.error('Auto-tick lỗi: ' + (err?.message || 'unknown'));
+    } finally {
+      setAutoBusy(false);
+    }
+  }, [token, batchLimit, loadQueue]);
+
+  useEffect(() => {
+    if (tickRef.current) { clearTimeout(tickRef.current); tickRef.current = null; }
+    if (refreshRef.current) { clearInterval(refreshRef.current); refreshRef.current = null; }
+    if (clockRef.current) { clearInterval(clockRef.current); clockRef.current = null; }
+
+    if (!autoEnabled) {
+      setAutoTickAt(null);
+      return;
+    }
+
+    // First tick immediately, then every TICK_MS
+    runAutoTick();
+    setAutoTickAt(Date.now() + TICK_MS);
+
+    const schedule = () => {
+      tickRef.current = setTimeout(async () => {
+        await runAutoTick();
+        setAutoTickAt(Date.now() + TICK_MS);
+        schedule();
+      }, TICK_MS);
+    };
+    schedule();
+
+    refreshRef.current = setInterval(() => { loadQueue(); }, REFRESH_MS);
+    clockRef.current = setInterval(() => setNow(Date.now()), 1000);
+
+    return () => {
+      if (tickRef.current) clearTimeout(tickRef.current);
+      if (refreshRef.current) clearInterval(refreshRef.current);
+      if (clockRef.current) clearInterval(clockRef.current);
+    };
+  }, [autoEnabled, runAutoTick, loadQueue]);
 
   const handleSaveSettings = async (next: { auto_enabled?: boolean; batch_limit?: number }) => {
     if (!token) return;
@@ -198,17 +264,36 @@ export default function AdminAiQueuePage() {
         <div className="admin-card" style={{ marginBottom: '24px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '20px' }}>
           <div style={{ flex: '1 1 280px' }}>
             <h3 className="admin-card__title" style={{ marginBottom: '4px' }}>
-              <FiClock style={{ marginRight: '6px' }} /> Tự động xử lý theo lịch
+              <FiZap style={{ marginRight: '6px', color: autoEnabled ? '#4caf50' : 'inherit' }} />
+              Tự động xử lý theo lịch
+              {autoEnabled && autoBusy && (
+                <span style={{ marginLeft: '12px', fontSize: '0.78rem', color: '#2196f3', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <FiLoader className="spin" /> đang chạy...
+                </span>
+              )}
             </h3>
             <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', margin: 0 }}>
-              Khi bật, hệ thống tự chạy mỗi phút (qua Laravel scheduler) và xử lý các mục đã đến giờ <code>scheduled_at</code>.
-              <br />
-              Cron lệnh: <code>* * * * * cd /path/to/backend && php artisan schedule:run &gt;&gt; /dev/null 2&gt;&amp;1</code>
+              {autoEnabled ? (
+                <>
+                  ⚡ <strong style={{ color: '#4caf50' }}>Đang chạy trên trình duyệt này</strong>. Cứ mỗi 60s sẽ tự xử lý các mục đến giờ.
+                  Giữ tab admin mở để duy trì auto-mode. <strong>KHÔNG cần cron server.</strong>
+                  {autoTickAt && (
+                    <> · Tick tiếp theo sau <strong style={{ color: '#fff' }}>{Math.max(0, Math.ceil((autoTickAt - now) / 1000))}s</strong></>
+                  )}
+                  {lastRun && (
+                    <> · Lần cuối: <strong style={{ color: lastRun.fail > 0 ? '#ff9800' : '#4caf50' }}>
+                      {lastRun.ok} thành công{lastRun.fail > 0 ? `, ${lastRun.fail} lỗi` : ''}
+                    </strong></>
+                  )}
+                </>
+              ) : (
+                <>Khi bật, trang admin tự xử lý các mục đến giờ <code>scheduled_at</code> mỗi phút (không cần cron server, chỉ cần giữ tab này mở).</>
+              )}
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)' }}>
-              <span>Bài / phút:</span>
+              <span>Bài / tick:</span>
               <input type="number" min={1} max={20} value={batchLimit} disabled={savingSettings}
                 onChange={e => setBatchLimit(Number(e.target.value) || 1)}
                 onBlur={() => handleSaveSettings({ batch_limit: batchLimit })}
@@ -225,6 +310,7 @@ export default function AdminAiQueuePage() {
                 border: `1px solid ${autoEnabled ? 'rgba(76,175,80,0.4)' : 'rgba(255,255,255,0.15)'}`,
                 padding: '8px 16px',
                 fontWeight: 600,
+                minWidth: '120px',
               }}>
               {savingSettings ? '...' : autoEnabled ? '● Đang BẬT' : '○ Đang TẮT'}
             </button>
