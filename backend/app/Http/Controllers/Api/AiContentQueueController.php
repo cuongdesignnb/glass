@@ -168,26 +168,40 @@ class AiContentQueueController extends Controller
     {
         return response()->json([
             'auto_enabled' => Setting::getValue('ai_queue_auto_enabled', '0') === '1',
-            'batch_limit'  => (int) (Setting::getValue('ai_queue_batch_limit', '5')),
+            'batch_limit'  => (int) (Setting::getValue('ai_queue_batch_limit', '1')),
+            'tick_unit'    => Setting::getValue('ai_queue_tick_unit', 'minute'),
+            'tick_value'   => (int) (Setting::getValue('ai_queue_tick_value', '5')),
         ]);
     }
 
     public function updateSettings(Request $request)
     {
         $request->validate([
-            'auto_enabled' => 'required|boolean',
+            'auto_enabled' => 'nullable|boolean',
             'batch_limit'  => 'nullable|integer|min:1|max:20',
+            'tick_unit'    => 'nullable|string|in:minute,hour,day',
+            'tick_value'   => 'nullable|integer|min:1|max:1000',
         ]);
 
-        Setting::setValue('ai_queue_auto_enabled', $request->boolean('auto_enabled') ? '1' : '0', 'ai');
+        if ($request->has('auto_enabled')) {
+            Setting::setValue('ai_queue_auto_enabled', $request->boolean('auto_enabled') ? '1' : '0', 'ai');
+        }
         if ($request->filled('batch_limit')) {
             Setting::setValue('ai_queue_batch_limit', (string) $request->integer('batch_limit'), 'ai');
         }
+        if ($request->filled('tick_unit')) {
+            Setting::setValue('ai_queue_tick_unit', $request->get('tick_unit'), 'ai');
+        }
+        if ($request->filled('tick_value')) {
+            Setting::setValue('ai_queue_tick_value', (string) $request->integer('tick_value'), 'ai');
+        }
 
         return response()->json([
-            'success' => true,
-            'auto_enabled' => $request->boolean('auto_enabled'),
-            'batch_limit'  => (int) (Setting::getValue('ai_queue_batch_limit', '5')),
+            'success'      => true,
+            'auto_enabled' => Setting::getValue('ai_queue_auto_enabled', '0') === '1',
+            'batch_limit'  => (int) (Setting::getValue('ai_queue_batch_limit', '1')),
+            'tick_unit'    => Setting::getValue('ai_queue_tick_unit', 'minute'),
+            'tick_value'   => (int) (Setting::getValue('ai_queue_tick_value', '5')),
         ]);
     }
 

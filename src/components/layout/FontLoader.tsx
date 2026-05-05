@@ -73,14 +73,12 @@ export default function FontLoader() {
             font-display: swap;
           }
           :root {
-            --font-body: '${safeName}', -apple-system, BlinkMacSystemFont, sans-serif !important;
-            --font-display: '${safeName}', Georgia, serif !important;
+            --font-body: '${safeName}', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+            --font-display: '${safeName}', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
           }
-          html, body, button, input, select, textarea, p, a, span, div, li {
-            font-family: var(--font-body) !important;
-          }
+          html, body, button, input, select, textarea, p, a, span, div, li,
           h1, h2, h3, h4, h5, h6 {
-            font-family: var(--font-display) !important;
+            font-family: '${safeName}', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
           }
         `;
 
