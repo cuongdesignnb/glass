@@ -681,36 +681,29 @@ export default function AdminSettingsPage() {
         hint: "Hiển thị sau © [năm] [tên website] ở cuối chân trang.",
       },
       {
-        key: "footer_privacy_url",
-        label: "URL Chính sách bảo mật",
-        placeholder: "/chinh-sach-bao-mat",
-        section: "Liên kết cuối trang",
-        hint: "Đường dẫn đến trang chính sách bảo mật (có thể dùng đường dẫn tương đối hoặc URL đầy đủ).",
-      },
-      {
-        key: "footer_terms_url",
-        label: "URL Điều khoản sử dụng",
-        placeholder: "/dieu-khoan-su-dung",
-        hint: "Đường dẫn đến trang điều khoản sử dụng.",
+        key: "footer_opening_hours",
+        label: "Giờ mở cửa",
+        placeholder: "T2-T7: 8:00 - 21:00 | CN: 9:00 - 18:00",
+        hint: "Hiển thị cùng thông tin liên hệ ở chân trang. Để trống nếu không muốn hiện.",
       },
       {
         key: "footer_show_social",
         label: "Hiển thị mạng xã hội",
         isToggle: true,
         section: "Hiển thị khối",
-        hint: "Bật để hiện các icon Facebook, Instagram, YouTube ở chân trang.",
+        hint: "Bật để hiện các icon Facebook, Instagram, YouTube, TikTok ở chân trang.",
       },
       {
         key: "footer_show_menus",
         label: "Hiển thị khối menu",
         isToggle: true,
-        hint: "Bật để hiện các cột menu điều hướng ở chân trang.",
+        hint: "Bật để hiện các cột menu điều hướng ở chân trang. Quản lý menu bên dưới ↓",
       },
       {
         key: "footer_show_contact",
         label: "Hiển thị thông tin liên hệ",
         isToggle: true,
-        hint: "Bật để hiện số điện thoại, email và địa chỉ ở chân trang.",
+        hint: "Bật để hiện số điện thoại, email, địa chỉ và giờ mở cửa ở chân trang.",
       },
     ],
   };
@@ -1053,6 +1046,15 @@ export default function AdminSettingsPage() {
             </div>
           </div>
         ))}
+        {/* Footer Menus Editor */}
+        {activeTab === "footer" && (
+          <FooterMenusEditor
+            menusJson={settings["footer_menus"] || ""}
+            bottomLinksJson={settings["footer_bottom_links"] || ""}
+            onMenusChange={(json) => updateSetting("footer_menus", json)}
+            onBottomLinksChange={(json) => updateSetting("footer_bottom_links", json)}
+          />
+        )}
 
         {/* Viettel Post Token & Test Section */}
         {activeTab === "shipping" && (
@@ -1648,6 +1650,383 @@ export default function AdminSettingsPage() {
           updateSetting(mediaTarget, url);
         }}
       />
+    </>
+  );
+}
+
+/* =====================================================
+   Footer Menus Editor — Visual UI for configuring
+   footer menu columns and bottom policy links
+   ===================================================== */
+
+interface FooterLink { label: string; url: string }
+interface FooterColumn { title: string; links: FooterLink[] }
+
+const defaultFooterColumns: FooterColumn[] = [
+  { title: 'Sản Phẩm', links: [
+    { label: 'Kính Cận', url: '/san-pham?type=can' },
+    { label: 'Kính Râm', url: '/san-pham?type=ram' },
+    { label: 'Kính Thời Trang', url: '/san-pham?type=thoi-trang' },
+    { label: 'Gọng Kính', url: '/san-pham?type=gong' },
+    { label: 'Sản Phẩm Nổi Bật', url: '/san-pham?featured=true' },
+  ]},
+  { title: 'Hỗ Trợ', links: [
+    { label: 'Hướng Dẫn Mua Hàng', url: '/huong-dan-mua-hang' },
+    { label: 'Chính Sách Đổi Trả', url: '/chinh-sach-doi-tra' },
+    { label: 'Chính Sách Bảo Hành', url: '/chinh-sach-bao-hanh' },
+    { label: 'Vận Chuyển', url: '/van-chuyen' },
+    { label: 'Thử Kính AI', url: '/thu-kinh-ao' },
+    { label: 'Tra Cứu Đơn Hàng', url: '/tra-cuu-don-hang' },
+  ]},
+  { title: 'Về Chúng Tôi', links: [
+    { label: 'Giới Thiệu', url: '/gioi-thieu' },
+    { label: 'Câu Hỏi Thường Gặp', url: '/faq' },
+    { label: 'Bài Viết', url: '/bai-viet' },
+    { label: 'Liên Hệ', url: '/lien-he' },
+  ]},
+];
+
+const defaultBottomLinks: FooterLink[] = [
+  { label: 'Chính sách bảo mật', url: '/chinh-sach-bao-mat' },
+  { label: 'Điều khoản sử dụng', url: '/dieu-khoan-su-dung' },
+  { label: 'Chính sách đổi trả', url: '/chinh-sach-doi-tra' },
+  { label: 'Chính sách vận chuyển', url: '/van-chuyen' },
+];
+
+const editorStyles = {
+  card: {
+    background: 'rgba(255,255,255,0.03)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '12px',
+    padding: '16px',
+    marginBottom: '12px',
+  } as React.CSSProperties,
+  sectionHeader: {
+    padding: '14px 20px',
+    borderBottom: '1px solid rgba(255,255,255,0.06)',
+    fontSize: '0.8125rem',
+    fontWeight: 700,
+    letterSpacing: '0.06em',
+    textTransform: 'uppercase' as const,
+    color: 'var(--color-gold)',
+  } as React.CSSProperties,
+  columnHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    marginBottom: '12px',
+  } as React.CSSProperties,
+  input: {
+    background: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '8px',
+    color: '#fff',
+    padding: '8px 12px',
+    fontSize: '0.875rem',
+    flex: 1,
+    outline: 'none',
+  } as React.CSSProperties,
+  inputSm: {
+    background: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '6px',
+    color: '#fff',
+    padding: '6px 10px',
+    fontSize: '0.8125rem',
+    outline: 'none',
+    width: '100%',
+  } as React.CSSProperties,
+  linkRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr auto',
+    gap: '8px',
+    alignItems: 'center',
+    marginBottom: '6px',
+  } as React.CSSProperties,
+  btnSm: {
+    background: 'none',
+    border: '1px solid rgba(255,255,255,0.12)',
+    borderRadius: '6px',
+    color: 'rgba(255,255,255,0.5)',
+    cursor: 'pointer',
+    padding: '4px 8px',
+    fontSize: '0.75rem',
+    transition: 'all 0.15s',
+  } as React.CSSProperties,
+  btnDanger: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    color: 'rgba(255,100,100,0.6)',
+    padding: '4px 6px',
+    fontSize: '1rem',
+    transition: 'color 0.15s',
+  } as React.CSSProperties,
+  btnAdd: {
+    background: 'none',
+    border: '1px dashed rgba(255,255,255,0.15)',
+    borderRadius: '8px',
+    color: 'rgba(255,255,255,0.4)',
+    cursor: 'pointer',
+    padding: '8px 16px',
+    fontSize: '0.8125rem',
+    transition: 'all 0.15s',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    justifyContent: 'center',
+    width: '100%',
+  } as React.CSSProperties,
+  hint: {
+    fontSize: '0.75rem',
+    color: 'rgba(255,255,255,0.3)',
+    marginTop: '8px',
+    lineHeight: 1.5,
+  } as React.CSSProperties,
+};
+
+function FooterMenusEditor({
+  menusJson,
+  bottomLinksJson,
+  onMenusChange,
+  onBottomLinksChange,
+}: {
+  menusJson: string;
+  bottomLinksJson: string;
+  onMenusChange: (json: string) => void;
+  onBottomLinksChange: (json: string) => void;
+}) {
+  // Parse columns
+  let columns: FooterColumn[] = defaultFooterColumns;
+  try {
+    if (menusJson) {
+      const p = JSON.parse(menusJson);
+      if (Array.isArray(p) && p.length > 0) columns = p;
+    }
+  } catch { /* keep default */ }
+
+  // Parse bottom links
+  let bLinks: FooterLink[] = defaultBottomLinks;
+  try {
+    if (bottomLinksJson) {
+      const p = JSON.parse(bottomLinksJson);
+      if (Array.isArray(p) && p.length > 0) bLinks = p;
+    }
+  } catch { /* keep default */ }
+
+  const updateColumns = (newCols: FooterColumn[]) => {
+    onMenusChange(JSON.stringify(newCols));
+  };
+
+  const updateBottomLinks = (newLinks: FooterLink[]) => {
+    onBottomLinksChange(JSON.stringify(newLinks));
+  };
+
+  // Column actions
+  const addColumn = () => {
+    updateColumns([...columns, { title: 'Cột Mới', links: [{ label: 'Link mới', url: '/' }] }]);
+  };
+
+  const removeColumn = (ci: number) => {
+    updateColumns(columns.filter((_, i) => i !== ci));
+  };
+
+  const updateColumnTitle = (ci: number, title: string) => {
+    const next = [...columns];
+    next[ci] = { ...next[ci], title };
+    updateColumns(next);
+  };
+
+  const addLink = (ci: number) => {
+    const next = [...columns];
+    next[ci] = { ...next[ci], links: [...next[ci].links, { label: '', url: '' }] };
+    updateColumns(next);
+  };
+
+  const removeLink = (ci: number, li: number) => {
+    const next = [...columns];
+    next[ci] = { ...next[ci], links: next[ci].links.filter((_, i) => i !== li) };
+    updateColumns(next);
+  };
+
+  const updateLink = (ci: number, li: number, field: 'label' | 'url', value: string) => {
+    const next = [...columns];
+    const links = [...next[ci].links];
+    links[li] = { ...links[li], [field]: value };
+    next[ci] = { ...next[ci], links };
+    updateColumns(next);
+  };
+
+  // Bottom links actions
+  const addBottomLink = () => {
+    updateBottomLinks([...bLinks, { label: '', url: '' }]);
+  };
+
+  const removeBottomLink = (i: number) => {
+    updateBottomLinks(bLinks.filter((_, idx) => idx !== i));
+  };
+
+  const updateBottomLink = (i: number, field: 'label' | 'url', value: string) => {
+    const next = [...bLinks];
+    next[i] = { ...next[i], [field]: value };
+    updateBottomLinks(next);
+  };
+
+  return (
+    <>
+      {/* Menu Columns Editor */}
+      <div className="admin-card" style={{ marginBottom: '20px' }}>
+        <div style={editorStyles.sectionHeader}>
+          Quản Lý Cột Menu Chân Trang
+        </div>
+        <div style={{ padding: '20px' }}>
+          <p style={editorStyles.hint}>
+            Cấu hình các cột menu hiển thị ở chân trang. Mỗi cột có tiêu đề và danh sách liên kết. Tối đa 5 cột.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+            {columns.map((col, ci) => (
+              <div key={ci} style={editorStyles.card}>
+                {/* Column header */}
+                <div style={editorStyles.columnHeader}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-gold)', fontWeight: 700 }}>
+                    CỘT {ci + 1}
+                  </span>
+                  <input
+                    style={editorStyles.input}
+                    value={col.title}
+                    onChange={(e) => updateColumnTitle(ci, e.target.value)}
+                    placeholder="Tiêu đề cột"
+                  />
+                  <button
+                    type="button"
+                    style={editorStyles.btnDanger}
+                    onClick={() => removeColumn(ci)}
+                    title="Xoá cột"
+                  >
+                    <FiTrash2 />
+                  </button>
+                </div>
+
+                {/* Links in this column */}
+                <div style={{ paddingLeft: '4px' }}>
+                  {/* Header labels */}
+                  <div style={{ ...editorStyles.linkRow, marginBottom: '4px' }}>
+                    <span style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                      Tên hiển thị
+                    </span>
+                    <span style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                      Đường dẫn (URL)
+                    </span>
+                    <span />
+                  </div>
+
+                  {col.links.map((link, li) => (
+                    <div key={li} style={editorStyles.linkRow}>
+                      <input
+                        style={editorStyles.inputSm}
+                        value={link.label}
+                        onChange={(e) => updateLink(ci, li, 'label', e.target.value)}
+                        placeholder="Tên link"
+                      />
+                      <input
+                        style={editorStyles.inputSm}
+                        value={link.url}
+                        onChange={(e) => updateLink(ci, li, 'url', e.target.value)}
+                        placeholder="/duong-dan"
+                      />
+                      <button
+                        type="button"
+                        style={editorStyles.btnDanger}
+                        onClick={() => removeLink(ci, li)}
+                        title="Xoá link"
+                      >
+                        <FiX />
+                      </button>
+                    </div>
+                  ))}
+
+                  <button
+                    type="button"
+                    style={{ ...editorStyles.btnSm, marginTop: '6px' }}
+                    onClick={() => addLink(ci)}
+                  >
+                    + Thêm link
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {columns.length < 5 && (
+            <button
+              type="button"
+              style={{ ...editorStyles.btnAdd, marginTop: '12px' }}
+              onClick={addColumn}
+            >
+              + Thêm Cột Menu
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom Links Editor */}
+      <div className="admin-card" style={{ marginBottom: '20px' }}>
+        <div style={editorStyles.sectionHeader}>
+          Liên Kết Cuối Chân Trang (Chính Sách)
+        </div>
+        <div style={{ padding: '20px' }}>
+          <p style={editorStyles.hint}>
+            Các liên kết chính sách hiển thị ở dòng cuối cùng của chân trang (cạnh copyright). VD: Chính sách bảo mật, Điều khoản sử dụng, Chính sách đổi trả, Vận chuyển...
+          </p>
+
+          <div style={{ marginTop: '12px' }}>
+            {/* Header labels */}
+            <div style={{ ...editorStyles.linkRow, marginBottom: '4px' }}>
+              <span style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Tên hiển thị
+              </span>
+              <span style={{ fontSize: '0.6875rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Đường dẫn (URL)
+              </span>
+              <span />
+            </div>
+
+            {bLinks.map((link, i) => (
+              <div key={i} style={editorStyles.linkRow}>
+                <input
+                  style={editorStyles.inputSm}
+                  value={link.label}
+                  onChange={(e) => updateBottomLink(i, 'label', e.target.value)}
+                  placeholder="Chính sách bảo mật"
+                />
+                <input
+                  style={editorStyles.inputSm}
+                  value={link.url}
+                  onChange={(e) => updateBottomLink(i, 'url', e.target.value)}
+                  placeholder="/chinh-sach-bao-mat"
+                />
+                <button
+                  type="button"
+                  style={editorStyles.btnDanger}
+                  onClick={() => removeBottomLink(i)}
+                  title="Xoá"
+                >
+                  <FiX />
+                </button>
+              </div>
+            ))}
+
+            <button
+              type="button"
+              style={{ ...editorStyles.btnSm, marginTop: '8px' }}
+              onClick={addBottomLink}
+            >
+              + Thêm liên kết
+            </button>
+          </div>
+        </div>
+      </div>
     </>
   );
 }
