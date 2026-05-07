@@ -7,10 +7,9 @@ import { DynamicCategories, DynamicProducts, DynamicCollections, DynamicVouchers
 import Newsletter from '@/components/layout/Newsletter';
 import './home.css';
 
-export const metadata = {
-  title: 'Glass Eyewear - Kính Mắt Thời Trang Cao Cấp',
-  description: 'Cửa hàng kính mắt thời trang cao cấp - Đa dạng kiểu dáng, chất liệu premium. Thử kính ảo AI tiên tiến.',
-};
+// Trang chủ không cần metadata riêng — layout.tsx đã quản lý title/description
+// qua admin settings (seo_title, seo_description). Nếu set title ở đây sẽ bị 
+// chồng template "%s | siteName" → title dài và trùng lặp.
 
 const faceShapes = [
   { shape: 'Oval', icon: <FiCircle style={{ transform: 'scaleX(0.7)' }} />, desc: 'Hợp với hầu hết mọi kiểu', param: 'oval', recommended: 'Rectangle, Browline' },

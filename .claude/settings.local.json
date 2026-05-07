@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php -l app/Http/Controllers/Api/AiContentQueueController.php)",
+      "Bash(php -l app/Console/Commands/ProcessAiContentQueue.php)",
+      "Bash(php -l routes/console.php)",
+      "Bash(php -l bootstrap/app.php)",
+      "Bash(php artisan *)",
+      "Bash(npx tsc *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
+    ]
+  }
+}
