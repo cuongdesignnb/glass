@@ -53,10 +53,9 @@ export default function Footer({ menus }: { menus?: MenuItem[] }) {
               {siteName}
             </div>
             <p className="footer__brand-desc">
-              Cửa hàng kính mắt thời trang cao cấp. Đa dạng kiểu dáng, chất liệu premium.
-              Thử kính ảo AI tiên tiến, miễn phí vận chuyển toàn quốc.
+              {settings['footer_description'] || 'Cửa hàng kính mắt thời trang cao cấp. Đa dạng kiểu dáng, chất liệu premium. Thử kính ảo AI tiên tiến, miễn phí vận chuyển toàn quốc.'}
             </p>
-            <div className="footer__social">
+            {settings['footer_show_social'] !== '0' && (<div className="footer__social">
               {settings['social_facebook'] && (
                 <a href={settings['social_facebook']} className="footer__social-link" aria-label="Facebook" target="_blank" rel="noopener noreferrer">
                   <FiFacebook />
@@ -84,7 +83,7 @@ export default function Footer({ menus }: { menus?: MenuItem[] }) {
           </div>
 
           {/* Dynamic Menus — Desktop: normal, Mobile: accordion */}
-          {displayMenus.map((block, i) => (
+          {settings['footer_show_menus'] !== '0' && displayMenus.map((block, i) => (
             <div key={block.id || i} className="footer__menu-block">
               <h3
                 className="footer__title"
@@ -115,7 +114,7 @@ export default function Footer({ menus }: { menus?: MenuItem[] }) {
           ))}
 
           {/* Contact */}
-          <div>
+          {settings['footer_show_contact'] !== '0' && <div>
             <h3 className="footer__title">Liên Hệ</h3>
             <nav className="footer__links">
               <a href={`tel:${settings['contact_phone'] || '0123456789'}`} className="footer__link">
@@ -128,14 +127,14 @@ export default function Footer({ menus }: { menus?: MenuItem[] }) {
                 <FiMapPin style={{ flexShrink: 0 }} /> {settings['contact_address'] || '123 Nguyễn Huệ, Q.1, TP.HCM'}
               </span>
             </nav>
-          </div>
+          </div>}
         </div>
 
         <div className="footer__bottom">
-          <p>© {new Date().getFullYear()} {siteName}. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} {siteName}. {settings['footer_copyright'] || 'All rights reserved.'}</p>
           <div style={{ display: 'flex', gap: '24px' }}>
-            <Link href="/chinh-sach-bao-mat" style={{ fontSize: '0.8125rem' }}>Chính sách bảo mật</Link>
-            <Link href="/dieu-khoan-su-dung" style={{ fontSize: '0.8125rem' }}>Điều khoản sử dụng</Link>
+            <Link href={settings['footer_privacy_url'] || '/chinh-sach-bao-mat'} style={{ fontSize: '0.8125rem' }}>Chính sách bảo mật</Link>
+            <Link href={settings['footer_terms_url'] || '/dieu-khoan-su-dung'} style={{ fontSize: '0.8125rem' }}>Điều khoản sử dụng</Link>
           </div>
         </div>
       </div>

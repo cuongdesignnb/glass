@@ -29,6 +29,7 @@ import {
   FiRefreshCw,
   FiCheckCircle,
   FiZap,
+  FiLayout,
 } from "react-icons/fi";
 import toast from "react-hot-toast";
 import { invalidateSettings } from "@/lib/useSettings";
@@ -142,6 +143,7 @@ export default function AdminSettingsPage() {
     )
       return "rewards";
     if (key.startsWith("vtp_")) return "shipping";
+    if (key.startsWith("footer_")) return "footer";
     return "general";
   };
 
@@ -156,6 +158,7 @@ export default function AdminSettingsPage() {
     { id: "rewards", label: "Phần thưởng", icon: <FiGift /> },
     { id: "font", label: "Font chữ", icon: <FiType /> },
     { id: "api", label: "API & Tích hợp", icon: <FiKey /> },
+    { id: "footer", label: "Chân Trang", icon: <FiLayout /> },
   ];
 
   type SettingField = {
@@ -658,6 +661,56 @@ export default function AdminSettingsPage() {
         isToggle: true,
         section: "Tự động hóa",
         hint: "Khi bật, đơn hàng sẽ tự động được gửi sang Viettel Post khi admin xác nhận đơn.",
+      },
+    ],
+
+    // ── Chân Trang ─────────────────────────────────────────────────────────
+    footer: [
+      {
+        key: "footer_description",
+        label: "Mô tả thương hiệu",
+        placeholder: "Cửa hàng kính mắt thời trang cao cấp...",
+        isTextarea: true,
+        section: "Nội dung",
+        hint: "Đoạn mô tả ngắn hiển thị bên dưới tên thương hiệu ở chân trang.",
+      },
+      {
+        key: "footer_copyright",
+        label: "Văn bản bản quyền",
+        placeholder: "All rights reserved.",
+        hint: "Hiển thị sau © [năm] [tên website] ở cuối chân trang.",
+      },
+      {
+        key: "footer_privacy_url",
+        label: "URL Chính sách bảo mật",
+        placeholder: "/chinh-sach-bao-mat",
+        section: "Liên kết cuối trang",
+        hint: "Đường dẫn đến trang chính sách bảo mật (có thể dùng đường dẫn tương đối hoặc URL đầy đủ).",
+      },
+      {
+        key: "footer_terms_url",
+        label: "URL Điều khoản sử dụng",
+        placeholder: "/dieu-khoan-su-dung",
+        hint: "Đường dẫn đến trang điều khoản sử dụng.",
+      },
+      {
+        key: "footer_show_social",
+        label: "Hiển thị mạng xã hội",
+        isToggle: true,
+        section: "Hiển thị khối",
+        hint: "Bật để hiện các icon Facebook, Instagram, YouTube ở chân trang.",
+      },
+      {
+        key: "footer_show_menus",
+        label: "Hiển thị khối menu",
+        isToggle: true,
+        hint: "Bật để hiện các cột menu điều hướng ở chân trang.",
+      },
+      {
+        key: "footer_show_contact",
+        label: "Hiển thị thông tin liên hệ",
+        isToggle: true,
+        hint: "Bật để hiện số điện thoại, email và địa chỉ ở chân trang.",
       },
     ],
   };
