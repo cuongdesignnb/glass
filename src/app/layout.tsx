@@ -1,11 +1,66 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import FontLoader from '@/components/layout/FontLoader';
 
 const INTERNAL_API = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const PUBLIC_API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 const API_HOST = process.env.API_HOST || '';
-const MEDIA_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api').replace('/api', '');
+const MEDIA_BASE = PUBLIC_API.replace('/api', '');
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+const FONT_FORMAT_MAP: Record<string, string> = {
+  ttf: 'truetype',
+  otf: 'opentype',
+  woff: 'woff',
+  woff2: 'woff2',
+};
+
+const FONT_FALLBACK_STACK = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+
+type CustomFontInfo = {
+  name: string;
+  url: string;
+  format: string;
+  cssFormat: string;
+  mime: string;
+};
+
+function resolveCustomFont(s: Record<string, string>): CustomFontInfo | null {
+  if (s['custom_font_enabled'] !== '1') return null;
+  const url = s['custom_font_url'];
+  const name = s['custom_font_name'];
+  if (!url || !name) return null;
+  const format = (s['custom_font_format'] || 'ttf').toLowerCase();
+  return {
+    name: String(name).replace(/['\\]/g, '\\$&'),
+    url: `${PUBLIC_API}/public/font-file?v=${encodeURIComponent(url)}`,
+    format,
+    cssFormat: FONT_FORMAT_MAP[format] || 'truetype',
+    mime: `font/${format}`,
+  };
+}
+
+function buildFontStyle(font: CustomFontInfo): string {
+  const stack = `'${font.name}', ${FONT_FALLBACK_STACK}`;
+  return `
+@font-face {
+  font-family: '${font.name}';
+  src: url('${font.url}') format('${font.cssFormat}');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+:root {
+  --font-body: ${stack};
+  --font-display: ${stack};
+}
+html, body, button, input, select, textarea, optgroup {
+  font-family: var(--font-body);
+}
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+}
+`.trim();
+}
 
 async function fetchPublicSettings(): Promise<Record<string, string>> {
   try {
@@ -92,16 +147,39 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const settings = await fetchPublicSettings();
+  const customFont = resolveCustomFont(settings);
+  const fontStyle = customFont ? buildFontStyle(customFont) : null;
+
   return (
     <html lang="vi">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {customFont ? (
+          <>
+            <link
+              rel="preload"
+              href={customFont.url}
+              as="font"
+              type={customFont.mime}
+              crossOrigin="anonymous"
+            />
+            <style dangerouslySetInnerHTML={{ __html: fontStyle as string }} />
+          </>
+        ) : (
+          <>
+            <link rel="preconnect" href="https://fonts.googleapis.com" />
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+            <link
+              href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+              rel="stylesheet"
+            />
+          </>
+        )}
       </head>
       <body>
         {/* Global Schema: WebSite with SearchAction */}
@@ -144,7 +222,6 @@ export default function RootLayout({
             }),
           }}
         />
-        <FontLoader />
         {children}
         <script
           dangerouslySetInnerHTML={{
