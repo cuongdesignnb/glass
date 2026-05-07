@@ -79,7 +79,7 @@ export default function Footer({ menus }: { menus?: MenuItem[] }) {
                   <a href="#" className="footer__social-link" aria-label="YouTube"><FiYoutube /></a>
                 </>
               )}
-            </div>
+            </div>)}
           </div>
 
           {/* Dynamic Menus — Desktop: normal, Mobile: accordion */}
