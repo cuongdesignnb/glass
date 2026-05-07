@@ -79,8 +79,8 @@ export default async function StaticPage({ params }: { params: Promise<{ slug: s
       />
 
       <div className="container" style={{ paddingTop: '40px', paddingBottom: '60px', minHeight: '60vh' }}>
-        <header style={{ marginBottom: '40px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '20px' }}>
-          <h1 style={{ fontSize: '2.5rem', fontFamily: 'var(--font-display)', color: 'var(--color-gold)' }}>
+        <header style={{ marginBottom: '40px', borderBottom: '1px solid var(--color-gray-200)', paddingBottom: '20px' }}>
+          <h1 style={{ fontSize: '2.5rem', fontFamily: 'var(--font-display)', color: 'var(--color-text-heading)' }}>
             {page.title}
           </h1>
         </header>
@@ -90,7 +90,7 @@ export default async function StaticPage({ params }: { params: Promise<{ slug: s
             className="article-content"
             dangerouslySetInnerHTML={{ __html: page.content }}
             style={{
-              color: 'rgba(255,255,255,0.8)',
+              color: 'var(--color-text)',
               lineHeight: 1.8,
               fontSize: '1.05rem',
             }}

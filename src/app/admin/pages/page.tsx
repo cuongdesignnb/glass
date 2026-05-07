@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { adminApi } from '@/lib/api';
-import { FiPlus, FiTrash2, FiEdit2, FiCheck, FiX, FiFile } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiEdit2, FiEye, FiX, FiFile, FiExternalLink } from 'react-icons/fi';
 import dynamic from 'next/dynamic';
 import MediaPicker from '@/components/admin/MediaPicker';
 import toast from 'react-hot-toast';
@@ -206,8 +206,8 @@ export default function AdminPages() {
                           <button className="admin-table__action" onClick={() => editPage(p)} title="Sửa">
                             <FiEdit2 />
                           </button>
-                          <a href={`/${p.slug}`} target="_blank" rel="noreferrer" className="admin-table__action" title="Xem trước">
-                            <FiCheck />
+                          <a href={`/${p.slug}`} target="_blank" rel="noreferrer" className="admin-table__action" title="Xem trang" style={{ color: '#10b981' }}>
+                            <FiExternalLink />
                           </a>
                           <button className="admin-table__action admin-table__action--danger" onClick={() => handleDelete(p.id)} title="Xóa">
                             <FiTrash2 />
