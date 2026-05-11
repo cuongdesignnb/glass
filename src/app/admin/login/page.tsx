@@ -42,26 +42,26 @@ export default function AdminLoginPage() {
     <div className="admin-login">
       <div className="admin-login__card">
         <div className="admin-login__logo">
-          <h1>
-            {loginLogo ? (
-              <img
-                src={loginLogo}
-                alt={loginTitle}
-                style={{
-                  height: "40px",
-                  width: "auto",
-                  objectFit: "contain",
-                  verticalAlign: "middle",
-                }}
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = "none";
-                }}
-              />
-            ) : (
-              <RiGlassesLine />
-            )}
-            <span>{loginTitle}</span>
-          </h1>
+          {loginLogo ? (
+            <img
+              src={loginLogo}
+              alt={loginTitle}
+              style={{
+                height: "80px",
+                maxWidth: "200px",
+                width: "auto",
+                objectFit: "contain",
+                display: "block",
+                margin: "0 auto 16px",
+              }}
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = "none";
+              }}
+            />
+          ) : (
+            <RiGlassesLine style={{ fontSize: "48px", display: "block", margin: "0 auto 12px" }} />
+          )}
+          <h1>{loginTitle}</h1>
           <p>{loginSubtitle}</p>
         </div>
 
