@@ -144,6 +144,7 @@ export default function AdminSettingsPage() {
       return "rewards";
     if (key.startsWith("vtp_")) return "shipping";
     if (key.startsWith("footer_")) return "footer";
+    if (key.startsWith("login_")) return "general";
     return "general";
   };
 
@@ -192,6 +193,25 @@ export default function AdminSettingsPage() {
         isColor: true,
         section: "Giao Diện",
         hint: "Chọn màu chủ đạo cho website. Màu này sẽ áp dụng cho tất cả nút bấm, link, accent trên toàn bộ trang.",
+      },
+      {
+        key: "login_logo",
+        label: "Logo trang đăng nhập",
+        isImage: true,
+        section: "Trang Đăng Nhập Admin",
+        hint: "Logo hiển thị ở trang đăng nhập admin. Nếu để trống sẽ dùng logo website.",
+      },
+      {
+        key: "login_title",
+        label: "Tiêu đề đăng nhập",
+        placeholder: "Glass Eyewear",
+        hint: "Tiêu đề hiển thị bên dưới logo. Nếu để trống sẽ dùng tên website.",
+      },
+      {
+        key: "login_subtitle",
+        label: "Mô tả đăng nhập",
+        placeholder: "Đăng nhập vào trang quản trị",
+        hint: "Dòng mô tả phụ bên dưới tiêu đề.",
       },
     ],
     homepage: [

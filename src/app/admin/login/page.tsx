@@ -15,8 +15,11 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { settings } = useSettings();
-  const siteLogo = settings["site_logo"];
-  const siteName = settings["site_name"] || "GLASS";
+
+  // Login page settings with fallback to site settings
+  const loginLogo = settings["login_logo"] || settings["site_logo"];
+  const loginTitle = settings["login_title"] || settings["site_name"] || "GLASS";
+  const loginSubtitle = settings["login_subtitle"] || "Đăng nhập vào trang quản trị";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,10 +43,10 @@ export default function AdminLoginPage() {
       <div className="admin-login__card">
         <div className="admin-login__logo">
           <h1>
-            {siteLogo ? (
+            {loginLogo ? (
               <img
-                src={siteLogo}
-                alt={siteName}
+                src={loginLogo}
+                alt={loginTitle}
                 style={{
                   height: "40px",
                   width: "auto",
@@ -57,9 +60,9 @@ export default function AdminLoginPage() {
             ) : (
               <RiGlassesLine />
             )}
-            <span>{siteName}</span>
+            <span>{loginTitle}</span>
           </h1>
-          <p>Đăng nhập vào trang quản trị</p>
+          <p>{loginSubtitle}</p>
         </div>
 
         {error && <div className="admin-login__error">{error}</div>}
@@ -81,7 +84,7 @@ export default function AdminLoginPage() {
                 type="email"
                 className="admin-form__input"
                 style={{ paddingLeft: "40px", width: "100%" }}
-                placeholder="admin@glass.vn"
+                placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -127,18 +130,8 @@ export default function AdminLoginPage() {
             {loading ? "Đang đăng nhập..." : "Đăng Nhập"}
           </button>
         </form>
-
-        <p
-          style={{
-            textAlign: "center",
-            marginTop: "24px",
-            fontSize: "0.8125rem",
-            color: "rgba(255,255,255,0.3)",
-          }}
-        >
-          Mặc định: admin@glass.vn / password
-        </p>
       </div>
     </div>
   );
 }
+
