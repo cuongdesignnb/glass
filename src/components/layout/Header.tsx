@@ -154,7 +154,7 @@ export default function Header({ menus }: HeaderProps) {
                     : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${settings['site_logo']}`
                 }
                 alt={settings['site_name'] || 'GLASS'}
-                style={{ height: '34px', width: 'auto', objectFit: 'contain' }}
+                style={{ height: '56px', width: 'auto', objectFit: 'contain' }}
               />
             ) : (
               <>
