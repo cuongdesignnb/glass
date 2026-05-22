@@ -109,6 +109,9 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description,
     keywords,
+    alternates: {
+      canonical: APP_URL,
+    },
     manifest: '/manifest.json',
     icons: {
       icon: faviconUrl,

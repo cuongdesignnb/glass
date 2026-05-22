@@ -18,10 +18,14 @@ function ssrHeaders(): Record<string, string> {
 
 async function getPage(slug: string) {
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
     const res = await fetch(`${SSR_API}/public/pages/${slug}`, {
       cache: 'no-store',
       headers: ssrHeaders(),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
     if (!res.ok) return null;
     return res.json();
   } catch {

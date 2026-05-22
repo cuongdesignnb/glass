@@ -21,14 +21,20 @@ function ssrHeaders(): Record<string, string> {
 
 async function getProduct(slug: string) {
   const url = `${SSR_API}/public/products/${slug}`;
-  console.log('[SSR getProduct] Fetching:', url, '| INTERNAL_API:', INTERNAL_API || '(empty)', '| API_BASE:', API_BASE, '| Host:', API_HOST || '(none)');
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
     const res = await fetch(url, {
       cache: 'no-store',
       headers: ssrHeaders(),
+      signal: controller.signal,
     });
-    console.log('[SSR getProduct] Response status:', res.status);
-    if (!res.ok) return null;
+    clearTimeout(timeout);
+    if (res.status === 404) return null; // Product genuinely doesn't exist
+    if (!res.ok) {
+      console.error(`[SSR getProduct] API error ${res.status} for ${slug}`);
+      return null; // Other errors — will trigger notFound() which is better than 500
+    }
     return res.json();
   } catch (err: any) {
     console.error('[SSR getProduct] FETCH ERROR:', err.message);
