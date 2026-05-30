@@ -719,12 +719,7 @@ export const adminApi = {
     fetchApi("/ai/queue-settings", { token }),
   updateAiQueueSettings: (
     token: string,
-    data: {
-      auto_enabled?: boolean;
-      batch_limit?: number;
-      tick_unit?: 'minute' | 'hour' | 'day';
-      tick_value?: number;
-    },
+    data: { auto_enabled: boolean; batch_limit?: number },
   ) =>
     fetchApi("/ai/queue-settings", {
       method: "PUT",

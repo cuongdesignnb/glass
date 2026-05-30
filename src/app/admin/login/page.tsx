@@ -15,11 +15,8 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { settings } = useSettings();
-
-  // Login page settings with fallback to site settings
-  const loginLogo = settings["login_logo"] || settings["site_logo"];
-  const loginTitle = settings["login_title"] || settings["site_name"] || "GLASS";
-  const loginSubtitle = settings["login_subtitle"] || "Đăng nhập vào trang quản trị";
+  const siteLogo = settings["site_logo"];
+  const siteName = settings["site_name"] || "GLASS";
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,27 +39,27 @@ export default function AdminLoginPage() {
     <div className="admin-login">
       <div className="admin-login__card">
         <div className="admin-login__logo">
-          {loginLogo ? (
-            <img
-              src={loginLogo}
-              alt={loginTitle}
-              style={{
-                height: "80px",
-                maxWidth: "200px",
-                width: "auto",
-                objectFit: "contain",
-                display: "block",
-                margin: "0 auto 16px",
-              }}
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = "none";
-              }}
-            />
-          ) : (
-            <RiGlassesLine style={{ fontSize: "48px", display: "block", margin: "0 auto 12px" }} />
-          )}
-          <h1>{loginTitle}</h1>
-          <p>{loginSubtitle}</p>
+          <h1>
+            {siteLogo ? (
+              <img
+                src={siteLogo}
+                alt={siteName}
+                style={{
+                  height: "40px",
+                  width: "auto",
+                  objectFit: "contain",
+                  verticalAlign: "middle",
+                }}
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                }}
+              />
+            ) : (
+              <RiGlassesLine />
+            )}
+            <span>{siteName}</span>
+          </h1>
+          <p>Đăng nhập vào trang quản trị</p>
         </div>
 
         {error && <div className="admin-login__error">{error}</div>}
@@ -84,7 +81,7 @@ export default function AdminLoginPage() {
                 type="email"
                 className="admin-form__input"
                 style={{ paddingLeft: "40px", width: "100%" }}
-                placeholder="Email"
+                placeholder="admin@glass.vn"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -130,8 +127,18 @@ export default function AdminLoginPage() {
             {loading ? "Đang đăng nhập..." : "Đăng Nhập"}
           </button>
         </form>
+
+        <p
+          style={{
+            textAlign: "center",
+            marginTop: "24px",
+            fontSize: "0.8125rem",
+            color: "rgba(255,255,255,0.3)",
+          }}
+        >
+          Mặc định: admin@glass.vn / password
+        </p>
       </div>
     </div>
   );
 }
-

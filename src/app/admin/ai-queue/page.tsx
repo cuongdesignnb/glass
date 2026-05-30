@@ -5,20 +5,6 @@ import { adminApi } from '@/lib/api';
 import { FiClock, FiPlus, FiTrash2, FiPlay, FiCheck, FiX, FiAlertCircle, FiLoader, FiRefreshCw, FiUpload, FiZap } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
-function formatRemaining(ms: number): string {
-  const s = Math.ceil(ms / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  const ss = s % 60;
-  if (m < 60) return ss > 0 ? `${m}p ${ss}s` : `${m}p`;
-  const h = Math.floor(m / 60);
-  const mm = m % 60;
-  if (h < 24) return mm > 0 ? `${h}h ${mm}p` : `${h}h`;
-  const d = Math.floor(h / 24);
-  const hh = h % 24;
-  return hh > 0 ? `${d} ngày ${hh}h` : `${d} ngày`;
-}
-
 interface QueueItem {
   id: number;
   topic: string;
@@ -51,9 +37,7 @@ export default function AdminAiQueuePage() {
 
   // Auto-scheduler settings
   const [autoEnabled, setAutoEnabled] = useState(false);
-  const [batchLimit, setBatchLimit] = useState(1);
-  const [tickUnit, setTickUnit] = useState<'minute' | 'hour' | 'day'>('minute');
-  const [tickValue, setTickValue] = useState(5);
+  const [batchLimit, setBatchLimit] = useState(5);
   const [savingSettings, setSavingSettings] = useState(false);
 
   // Browser-driven auto-processing
@@ -65,14 +49,8 @@ export default function AdminAiQueuePage() {
   const refreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const clockRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const TICK_MS = 60_000;
   const REFRESH_MS = 15_000;
-  const tickMs = (() => {
-    const v = Math.max(1, tickValue);
-    if (tickUnit === 'hour') return v * 60 * 60_000;
-    if (tickUnit === 'day') return v * 24 * 60 * 60_000;
-    return v * 60_000;
-  })();
-  const tickLabel = tickUnit === 'hour' ? 'giờ' : tickUnit === 'day' ? 'ngày' : 'phút';
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
 
@@ -90,11 +68,7 @@ export default function AdminAiQueuePage() {
     try {
       const data = await adminApi.getAiQueueSettings(token);
       setAutoEnabled(!!data.auto_enabled);
-      setBatchLimit(Number(data.batch_limit) || 1);
-      if (data.tick_unit === 'minute' || data.tick_unit === 'hour' || data.tick_unit === 'day') {
-        setTickUnit(data.tick_unit);
-      }
-      setTickValue(Number(data.tick_value) || 5);
+      setBatchLimit(Number(data.batch_limit) || 5);
     } catch { /* ignore */ }
   }, [token]);
 
@@ -131,16 +105,16 @@ export default function AdminAiQueuePage() {
       return;
     }
 
-    // First tick immediately, then every tickMs
+    // First tick immediately, then every TICK_MS
     runAutoTick();
-    setAutoTickAt(Date.now() + tickMs);
+    setAutoTickAt(Date.now() + TICK_MS);
 
     const schedule = () => {
       tickRef.current = setTimeout(async () => {
         await runAutoTick();
-        setAutoTickAt(Date.now() + tickMs);
+        setAutoTickAt(Date.now() + TICK_MS);
         schedule();
-      }, tickMs);
+      }, TICK_MS);
     };
     schedule();
 
@@ -152,32 +126,20 @@ export default function AdminAiQueuePage() {
       if (refreshRef.current) clearInterval(refreshRef.current);
       if (clockRef.current) clearInterval(clockRef.current);
     };
-  }, [autoEnabled, runAutoTick, loadQueue, tickMs]);
+  }, [autoEnabled, runAutoTick, loadQueue]);
 
-  const handleSaveSettings = async (next: {
-    auto_enabled?: boolean;
-    batch_limit?: number;
-    tick_unit?: 'minute' | 'hour' | 'day';
-    tick_value?: number;
-  }) => {
+  const handleSaveSettings = async (next: { auto_enabled?: boolean; batch_limit?: number }) => {
     if (!token) return;
     setSavingSettings(true);
     try {
-      const payload: any = {};
-      if (next.auto_enabled !== undefined) payload.auto_enabled = next.auto_enabled;
-      if (next.batch_limit !== undefined) payload.batch_limit = next.batch_limit;
-      if (next.tick_unit !== undefined) payload.tick_unit = next.tick_unit;
-      if (next.tick_value !== undefined) payload.tick_value = next.tick_value;
+      const payload = {
+        auto_enabled: next.auto_enabled ?? autoEnabled,
+        batch_limit: next.batch_limit ?? batchLimit,
+      };
       const data = await adminApi.updateAiQueueSettings(token, payload);
       setAutoEnabled(!!data.auto_enabled);
-      setBatchLimit(Number(data.batch_limit) || 1);
-      if (data.tick_unit) setTickUnit(data.tick_unit);
-      if (data.tick_value) setTickValue(Number(data.tick_value));
-      if (next.auto_enabled !== undefined) {
-        toast.success(payload.auto_enabled ? 'Đã bật tự động xử lý' : 'Đã tắt tự động xử lý');
-      } else {
-        toast.success('Đã lưu', { duration: 1500 });
-      }
+      setBatchLimit(Number(data.batch_limit) || 5);
+      toast.success(payload.auto_enabled ? 'Đã bật tự động xử lý' : 'Đã tắt tự động xử lý');
     } catch (err: any) {
       toast.error(err.message || 'Lỗi lưu cài đặt');
     } finally {
@@ -313,10 +275,10 @@ export default function AdminAiQueuePage() {
             <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.5)', margin: 0 }}>
               {autoEnabled ? (
                 <>
-                  ⚡ <strong style={{ color: '#4caf50' }}>Đang chạy trên trình duyệt này</strong>. Cứ mỗi <strong style={{ color: '#fff' }}>{tickValue} {tickLabel}</strong> sẽ xử lý <strong style={{ color: '#fff' }}>{batchLimit} bài</strong>.
-                  Giữ tab admin mở để duy trì auto-mode.
+                  ⚡ <strong style={{ color: '#4caf50' }}>Đang chạy trên trình duyệt này</strong>. Cứ mỗi 60s sẽ tự xử lý các mục đến giờ.
+                  Giữ tab admin mở để duy trì auto-mode. <strong>KHÔNG cần cron server.</strong>
                   {autoTickAt && (
-                    <> · Tick tiếp theo sau <strong style={{ color: '#fff' }}>{formatRemaining(Math.max(0, autoTickAt - now))}</strong></>
+                    <> · Tick tiếp theo sau <strong style={{ color: '#fff' }}>{Math.max(0, Math.ceil((autoTickAt - now) / 1000))}s</strong></>
                   )}
                   {lastRun && (
                     <> · Lần cuối: <strong style={{ color: lastRun.fail > 0 ? '#ff9800' : '#4caf50' }}>
@@ -325,39 +287,18 @@ export default function AdminAiQueuePage() {
                   )}
                 </>
               ) : (
-                <>Khi bật, trang admin tự xử lý các mục đến giờ <code>scheduled_at</code> theo nhịp bạn cấu hình bên phải. Không cần cron server, chỉ cần giữ tab này mở.</>
+                <>Khi bật, trang admin tự xử lý các mục đến giờ <code>scheduled_at</code> mỗi phút (không cần cron server, chỉ cần giữ tab này mở).</>
               )}
             </p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: 'rgba(255,255,255,0.85)' }}>
-              <span>Mỗi</span>
-              <input type="number" min={1} max={1000} value={tickValue} disabled={savingSettings}
-                onChange={e => setTickValue(Number(e.target.value) || 1)}
-                onBlur={() => handleSaveSettings({ tick_value: tickValue })}
-                style={{ width: '64px', padding: '6px 8px', background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px', color: '#fff', textAlign: 'center' }} />
-              <select value={tickUnit} disabled={savingSettings}
-                onChange={e => {
-                  const u = e.target.value as 'minute' | 'hour' | 'day';
-                  setTickUnit(u);
-                  handleSaveSettings({ tick_unit: u });
-                }}
-                style={{ padding: '6px 8px', background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px', color: '#fff' }}>
-                <option value="minute">phút</option>
-                <option value="hour">giờ</option>
-                <option value="day">ngày</option>
-              </select>
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', color: 'rgba(255,255,255,0.85)' }}>
-              <span>chạy</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', color: 'rgba(255,255,255,0.85)' }}>
+              <span>Bài / tick:</span>
               <input type="number" min={1} max={20} value={batchLimit} disabled={savingSettings}
                 onChange={e => setBatchLimit(Number(e.target.value) || 1)}
                 onBlur={() => handleSaveSettings({ batch_limit: batchLimit })}
-                style={{ width: '60px', padding: '6px 8px', background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px', color: '#fff', textAlign: 'center' }} />
-              <span>bài</span>
+                style={{ width: '70px', padding: '6px 8px', background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.15)', borderRadius: '6px', color: '#fff' }} />
             </label>
             <button
               onClick={() => handleSaveSettings({ auto_enabled: !autoEnabled })}

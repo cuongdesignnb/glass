@@ -32,25 +32,30 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${APP_URL}/bai-viet`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
     { url: `${APP_URL}/faq`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.5 },
     { url: `${APP_URL}/thu-kinh-ao`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${APP_URL}/voucher`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.5 },
   ];
 
   // ─── Products ──────────────────────────────────────────────
   const products = await fetchAll<any>('/public/products?per_page=1000');
-  const productUrls: MetadataRoute.Sitemap = products.map((p) => ({
-    url: `${APP_URL}/san-pham/${p.slug}`,
-    lastModified: p.updated_at ? new Date(p.updated_at) : new Date(),
-    changeFrequency: 'weekly' as const,
-    priority: 0.8,
-  }));
+  const productUrls: MetadataRoute.Sitemap = Array.isArray(products)
+    ? products.map((p) => ({
+        url: `${APP_URL}/san-pham/${p.slug}`,
+        lastModified: p.updated_at ? new Date(p.updated_at) : new Date(),
+        changeFrequency: 'weekly' as const,
+        priority: 0.8,
+      }))
+    : [];
 
   // ─── Articles ──────────────────────────────────────────────
   const articles = await fetchAll<any>('/public/articles?per_page=1000');
-  const articleUrls: MetadataRoute.Sitemap = articles.map((a) => ({
-    url: `${APP_URL}/bai-viet/${a.slug}`,
-    lastModified: a.updated_at ? new Date(a.updated_at) : new Date(),
-    changeFrequency: 'weekly' as const,
-    priority: 0.7,
-  }));
+  const articleUrls: MetadataRoute.Sitemap = Array.isArray(articles)
+    ? articles.map((a) => ({
+        url: `${APP_URL}/bai-viet/${a.slug}`,
+        lastModified: a.updated_at ? new Date(a.updated_at) : new Date(),
+        changeFrequency: 'weekly' as const,
+        priority: 0.7,
+      }))
+    : [];
 
   // ─── CMS Pages (static pages from admin) ──────────────────
   // Pages API doesn't have a list endpoint exposed publicly,

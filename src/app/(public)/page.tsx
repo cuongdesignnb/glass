@@ -1,3 +1,4 @@
+import { Metadata } from 'next';
 import React from 'react';
 import Link from 'next/link';
 import { FiArrowRight, FiTruck, FiShield, FiRefreshCw, FiAward, FiEye, FiCamera, FiPhone, FiCircle, FiSquare, FiHeart, FiMaximize } from 'react-icons/fi';
@@ -7,9 +8,13 @@ import { DynamicCategories, DynamicProducts, DynamicCollections, DynamicVouchers
 import Newsletter from '@/components/layout/Newsletter';
 import './home.css';
 
-// Trang chủ không cần metadata riêng — layout.tsx đã quản lý title/description
-// qua admin settings (seo_title, seo_description). Nếu set title ở đây sẽ bị 
-// chồng template "%s | siteName" → title dài và trùng lặp.
+// Trang chủ không cần title/description riêng vì layout.tsx đã quản lý qua admin settings.
+// Chúng ta chỉ thiết lập thẻ canonical để tránh lỗi lập chỉ mục.
+export const metadata: Metadata = {
+  alternates: {
+    canonical: '/',
+  },
+};
 
 const faceShapes = [
   { shape: 'Oval', icon: <FiCircle style={{ transform: 'scaleX(0.7)' }} />, desc: 'Hợp với hầu hết mọi kiểu', param: 'oval', recommended: 'Rectangle, Browline' },

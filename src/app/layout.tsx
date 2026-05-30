@@ -67,7 +67,7 @@ async function fetchPublicSettings(): Promise<Record<string, string>> {
     const headers: Record<string, string> = { Accept: 'application/json' };
     if (API_HOST) headers['Host'] = API_HOST;
     const res = await fetch(`${INTERNAL_API}/public/settings`, {
-      next: { revalidate: 60 },
+      next: { revalidate: 300 },
       headers,
     });
     if (!res.ok) return {};
@@ -109,9 +109,6 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description,
     keywords,
-    alternates: {
-      canonical: APP_URL,
-    },
     manifest: '/manifest.json',
     icons: {
       icon: faviconUrl,
@@ -156,7 +153,6 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const settings = await fetchPublicSettings();
-  const siteName = settings['site_name'] || 'Glass Eyewear';
   const customFont = resolveCustomFont(settings);
   const fontStyle = customFont ? buildFontStyle(customFont) : null;
 
@@ -193,7 +189,7 @@ export default async function RootLayout({
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'WebSite',
-              name: siteName,
+              name: 'Glass Eyewear',
               url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
               potentialAction: {
                 '@type': 'SearchAction',
@@ -213,7 +209,7 @@ export default async function RootLayout({
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'Organization',
-              name: siteName,
+              name: 'Glass Eyewear',
               url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
               logo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/logo.png`,
               contactPoint: {
