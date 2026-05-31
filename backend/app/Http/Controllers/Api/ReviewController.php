@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Review;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class ReviewController extends Controller
 {
@@ -13,36 +14,44 @@ class ReviewController extends Controller
      */
     public function productReviews(Request $request, $productId)
     {
-        $reviews = Review::where('product_id', $productId)
-            ->approved()
-            ->orderBy('created_at', 'desc')
-            ->paginate($request->get('per_page', 10));
+        $perPage = $request->get('per_page', 10);
+        $page = $request->get('page', 1);
+        $cacheKey = "glass_product_reviews_{$productId}_{$perPage}_{$page}";
 
-        // Calculate aggregate rating
-        $stats = Review::where('product_id', $productId)
-            ->approved()
-            ->selectRaw('COUNT(*) as count, AVG(rating) as average, 
-                SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) as star5,
-                SUM(CASE WHEN rating = 4 THEN 1 ELSE 0 END) as star4,
-                SUM(CASE WHEN rating = 3 THEN 1 ELSE 0 END) as star3,
-                SUM(CASE WHEN rating = 2 THEN 1 ELSE 0 END) as star2,
-                SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END) as star1')
-            ->first();
+        $data = Cache::remember($cacheKey, 3600, function() use ($productId, $perPage) {
+            $reviews = Review::where('product_id', $productId)
+                ->approved()
+                ->orderBy('created_at', 'desc')
+                ->paginate($perPage);
 
-        return response()->json([
-            'reviews' => $reviews,
-            'stats' => [
-                'count' => (int) $stats->count,
-                'average' => round((float) $stats->average, 1),
-                'distribution' => [
-                    5 => (int) $stats->star5,
-                    4 => (int) $stats->star4,
-                    3 => (int) $stats->star3,
-                    2 => (int) $stats->star2,
-                    1 => (int) $stats->star1,
+            // Calculate aggregate rating
+            $stats = Review::where('product_id', $productId)
+                ->approved()
+                ->selectRaw('COUNT(*) as count, AVG(rating) as average, 
+                    SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) as star5,
+                    SUM(CASE WHEN rating = 4 THEN 1 ELSE 0 END) as star4,
+                    SUM(CASE WHEN rating = 3 THEN 1 ELSE 0 END) as star3,
+                    SUM(CASE WHEN rating = 2 THEN 1 ELSE 0 END) as star2,
+                    SUM(CASE WHEN rating = 1 THEN 1 ELSE 0 END) as star1')
+                ->first();
+
+            return [
+                'reviews' => $reviews->toArray(),
+                'stats' => [
+                    'count' => (int) $stats->count,
+                    'average' => round((float) $stats->average, 1),
+                    'distribution' => [
+                        5 => (int) $stats->star5,
+                        4 => (int) $stats->star4,
+                        3 => (int) $stats->star3,
+                        2 => (int) $stats->star2,
+                        1 => (int) $stats->star1,
+                    ],
                 ],
-            ],
-        ]);
+            ];
+        });
+
+        return response()->json($data);
     }
 
     /**
@@ -126,6 +135,7 @@ class ReviewController extends Controller
     public function approve(Review $review)
     {
         $review->update(['is_approved' => true]);
+        Cache::flush();
 
         return response()->json([
             'message' => 'Đánh giá đã được duyệt.',
@@ -143,6 +153,7 @@ class ReviewController extends Controller
         ]);
 
         $review->update($validated);
+        Cache::flush();
 
         return response()->json([
             'message' => 'Đã trả lời đánh giá.',
@@ -156,6 +167,7 @@ class ReviewController extends Controller
     public function destroy(Review $review)
     {
         $review->delete();
+        Cache::flush();
 
         return response()->json(['message' => 'Đã xóa đánh giá.']);
     }

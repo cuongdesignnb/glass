@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import FaqClient from './FaqClient';
 import { generateBreadcrumbSchema } from '@/lib/seo';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 const INTERNAL_API = process.env.INTERNAL_API_URL || '';
@@ -26,7 +26,6 @@ export const metadata: Metadata = {
 async function getFaqs() {
   try {
     const res = await fetch(`${SSR_API}/public/faqs`, {
-      cache: 'no-store',
       headers: ssrHeaders(),
     });
     if (!res.ok) return [];

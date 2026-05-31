@@ -22,7 +22,6 @@ function ssrHeaders(): Record<string, string> {
 async function getArticle(slug: string) {
   try {
     const res = await fetch(`${SSR_API}/public/articles/${slug}`, {
-      cache: 'no-store',
       headers: ssrHeaders(),
     });
     if (!res.ok) return null;
@@ -37,7 +36,6 @@ async function getRelatedArticles(articleId: number, tags: string[]) {
     const params = new URLSearchParams({ per_page: '3', exclude: String(articleId) });
     if (tags[0]) params.set('tag', tags[0]);
     const res = await fetch(`${SSR_API}/public/articles?${params.toString()}`, {
-      cache: 'no-store',
       headers: ssrHeaders(),
     });
     if (!res.ok) return [];

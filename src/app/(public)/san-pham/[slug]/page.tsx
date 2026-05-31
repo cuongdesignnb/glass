@@ -25,7 +25,6 @@ async function getProduct(slug: string) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     const res = await fetch(url, {
-      cache: 'no-store',
       headers: ssrHeaders(),
       signal: controller.signal,
     });
@@ -45,7 +44,6 @@ async function getProduct(slug: string) {
 async function getProductReviews(productId: number) {
   try {
     const res = await fetch(`${SSR_API}/public/products/${productId}/reviews?per_page=5`, {
-      cache: 'no-store',
       headers: ssrHeaders(),
     });
     if (!res.ok) return null;

@@ -21,7 +21,6 @@ async function getPage(slug: string) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     const res = await fetch(`${SSR_API}/public/pages/${slug}`, {
-      cache: 'no-store',
       headers: ssrHeaders(),
       signal: controller.signal,
     });

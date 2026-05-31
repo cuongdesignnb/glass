@@ -120,64 +120,80 @@ class ProductController extends Controller
      */
     public function show(string $slugOrId)
     {
-        // Load product with safe relations (addon tables may not exist yet)
-        $product = Product::with(['category', 'categories', 'faqs' => function($q) {
-            $q->where('is_active', true)->orderBy('order', 'asc');
-        }])
-            ->where('slug', $slugOrId)
-            ->orWhere('id', is_numeric($slugOrId) ? $slugOrId : 0)
-            ->firstOrFail();
+        $cacheKey = "glass_product_show_" . $slugOrId;
 
-        // Try loading addon relations (tables may not be migrated yet)
-        $constraints = [];
-        try {
-            $product->load(['addonGroups.options', 'addonPrices', 'collections']);
+        $productData = Cache::remember($cacheKey, 3600, function() use ($slugOrId) {
+            $product = Product::with(['category', 'categories', 'faqs' => function($q) {
+                $q->where('is_active', true)->orderBy('order', 'asc');
+            }])
+                ->where('slug', $slugOrId)
+                ->orWhere('id', is_numeric($slugOrId) ? $slugOrId : 0)
+                ->first();
 
-            // Load constraints: per-product first, fallback to global
-            $optionIds = $product->addonGroups->pluck('options')->flatten()->pluck('id')->toArray();
-            if (!empty($optionIds)) {
-                // Check if product has its own constraints
-                $perProduct = \App\Models\AddonOptionConstraint::where('product_id', $product->id)
-                    ->where(function ($q) use ($optionIds) {
-                        $q->whereIn('option_id', $optionIds)
-                          ->orWhereIn('blocked_option_id', $optionIds);
-                    })
-                    ->get();
+            if (!$product) {
+                return null;
+            }
 
-                if ($perProduct->isNotEmpty()) {
-                    // Use per-product constraints
-                    $constraints = $perProduct->map(fn($c) => [
-                        'option_id' => $c->option_id,
-                        'blocked_option_id' => $c->blocked_option_id,
-                    ])->values()->toArray();
-                } else {
-                    // Fallback to global constraints
-                    $constraints = \App\Models\AddonOptionConstraint::whereNull('product_id')
+            // Try loading addon relations (tables may not be migrated yet)
+            $constraints = [];
+            try {
+                $product->load(['addonGroups.options', 'addonPrices', 'collections']);
+
+                // Load constraints: per-product first, fallback to global
+                $optionIds = $product->addonGroups->pluck('options')->flatten()->pluck('id')->toArray();
+                if (!empty($optionIds)) {
+                    // Check if product has its own constraints
+                    $perProduct = \App\Models\AddonOptionConstraint::where('product_id', $product->id)
                         ->where(function ($q) use ($optionIds) {
                             $q->whereIn('option_id', $optionIds)
                               ->orWhereIn('blocked_option_id', $optionIds);
                         })
-                        ->get()
-                        ->map(fn($c) => [
+                        ->get();
+
+                    if ($perProduct->isNotEmpty()) {
+                        // Use per-product constraints
+                        $constraints = $perProduct->map(fn($c) => [
                             'option_id' => $c->option_id,
                             'blocked_option_id' => $c->blocked_option_id,
-                        ])
-                        ->values()
-                        ->toArray();
+                        ])->values()->toArray();
+                    } else {
+                        // Fallback to global constraints
+                        $constraints = \App\Models\AddonOptionConstraint::whereNull('product_id')
+                            ->where(function ($q) use ($optionIds) {
+                                $q->whereIn('option_id', $optionIds)
+                                  ->orWhereIn('blocked_option_id', $optionIds);
+                            })
+                            ->get()
+                            ->map(fn($c) => [
+                                'option_id' => $c->option_id,
+                                'blocked_option_id' => $c->blocked_option_id,
+                            ])
+                            ->values()
+                            ->toArray();
+                    }
                 }
+            } catch (\Exception $e) {
+                $product->setRelation('addonGroups', collect([]));
+                $product->setRelation('addonPrices', collect([]));
             }
-        } catch (\Exception $e) {
-            $product->setRelation('addonGroups', collect([]));
-            $product->setRelation('addonPrices', collect([]));
+
+            $data = $product->toArray();
+            $data['addon_constraints'] = $constraints;
+            return $data;
+        });
+
+        if (!$productData) {
+            abort(404);
         }
 
-        // Increment views
-        $product->increment('views');
+        // Increment views safely without blocking
+        try {
+            Product::where('id', $productData['id'])->increment('views');
+        } catch (\Exception $e) {
+            // Ignore view increment errors
+        }
 
-        $data = $product->toArray();
-        $data['addon_constraints'] = $constraints;
-
-        return response()->json($data);
+        return response()->json($productData);
     }
 
     /**
