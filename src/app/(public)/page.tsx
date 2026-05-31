@@ -16,6 +16,8 @@ export const metadata: Metadata = {
   },
 };
 
+export const revalidate = 60;
+
 const faceShapes = [
   { shape: 'Oval', icon: <FiCircle style={{ transform: 'scaleX(0.7)' }} />, desc: 'Hợp với hầu hết mọi kiểu', param: 'oval', recommended: 'Rectangle, Browline' },
   { shape: 'Tròn', icon: <FiCircle />, desc: 'Nên chọn gọng góc cạnh', param: 'tron', recommended: 'Rectangle, Square' },
@@ -37,7 +39,29 @@ const testimonials = [
   { name: 'Lê Phương Linh', avatar: 'LP', rating: 5, text: 'Chất lượng gọng kính rất tốt, đã dùng được 1 năm không hề bị ố màu hay biến dạng. Giá cả hợp lý so với chất lượng.', since: 'Khách hàng thân thiết' },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [categoriesRes, productsRes, collectionsRes, vouchersRes] = await Promise.all([
+    publicApi.getCategories(false).catch(() => []),
+    publicApi.getProducts({ per_page: '8', featured: '1' })
+      .then(async (res) => {
+        let data = res?.data || res || [];
+        if (!Array.isArray(data)) data = [];
+        if (data.length === 0) {
+          const fallback = await publicApi.getProducts({ per_page: '8', sort: 'newest' }).catch(() => []);
+          return fallback?.data || fallback || [];
+        }
+        return data;
+      })
+      .catch(() => []),
+    publicApi.getCollections().catch(() => []),
+    publicApi.getVouchers().catch(() => []),
+  ]);
+
+  const categories = Array.isArray(categoriesRes) ? categoriesRes.filter((c: any) => c.is_active !== false) : [];
+  const products = Array.isArray(productsRes) ? productsRes.slice(0, 8) : [];
+  const collections = Array.isArray(collectionsRes) ? collectionsRes : [];
+  const vouchers = Array.isArray(vouchersRes) ? vouchersRes : [];
+
   return (
     <>
       {/* Hero Section (reads from admin settings) */}
@@ -58,7 +82,7 @@ export default function HomePage() {
       {/* Voucher Slider */}
       <section className="section voucher-home-section" style={{ paddingTop: 'var(--space-lg)', paddingBottom: 'var(--space-lg)' }}>
         <div className="container">
-          <DynamicVouchers />
+          <DynamicVouchers initialData={vouchers} />
         </div>
       </section>
 
@@ -70,7 +94,7 @@ export default function HomePage() {
             <h2 className="section__title">Sản Phẩm Được Yêu Thích</h2>
             <p className="section__subtitle">Những mẫu kính được khách hàng yêu thích và đánh giá cao nhất</p>
           </div>
-          <DynamicProducts />
+          <DynamicProducts initialData={products} />
           <div style={{ textAlign: 'center', marginTop: 'var(--space-3xl)' }}>
             <Link href="/san-pham" className="btn btn-secondary btn-lg">Xem Tất Cả Sản Phẩm <FiArrowRight /></Link>
           </div>
@@ -85,7 +109,7 @@ export default function HomePage() {
             <h2 className="section__title">Sản Phẩm Theo Danh Mục</h2>
             <p className="section__subtitle">Tìm kiếm kiểu kính phù hợp với phong cách và nhu cầu của bạn</p>
           </div>
-          <DynamicCategories />
+          <DynamicCategories initialData={categories} />
         </div>
       </section>
 
@@ -97,7 +121,7 @@ export default function HomePage() {
             <h2 className="section__title">Bộ Sưu Tập Theo Phong Cách</h2>
             <p className="section__subtitle">Chọn bộ sưu tập phù hợp với cá tính và lối sống của bạn</p>
           </div>
-          <DynamicCollections />
+          <DynamicCollections initialData={collections} />
         </div>
       </section>
 

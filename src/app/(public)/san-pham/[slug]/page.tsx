@@ -4,7 +4,7 @@ import { generateMeta, generateProductSchema, generateBreadcrumbSchema } from '@
 import Breadcrumb from '@/components/layout/Breadcrumb';
 import ProductDetailClient from './ProductDetailClient';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 const INTERNAL_API = process.env.INTERNAL_API_URL || '';

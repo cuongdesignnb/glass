@@ -4,7 +4,7 @@ import { generateMeta, generateArticleSchema, generateBreadcrumbSchema } from '@
 import ArticleDetailClient from './ArticleDetailClient';
 import '../articles.css';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 const INTERNAL_API = process.env.INTERNAL_API_URL || '';

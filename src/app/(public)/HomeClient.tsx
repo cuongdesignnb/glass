@@ -152,11 +152,12 @@ function SliderWrap({ children, scrollRef }: { children: ReactNode; scrollRef: R
 const formatPrice = (price: number) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
 
-export function DynamicCategories() {
-  const [categories, setCategories] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+export function DynamicCategories({ initialData }: { initialData?: any[] }) {
+  const [categories, setCategories] = useState<any[]>(initialData || []);
+  const [loading, setLoading] = useState(!initialData);
 
   useEffect(() => {
+    if (initialData) return;
     publicApi.getCategories(false)
       .then((data: any[]) => {
         // Only show active categories (backend may not filter)
@@ -165,7 +166,7 @@ export function DynamicCategories() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [initialData]);
 
   if (loading) {
     return (
@@ -207,12 +208,13 @@ export function DynamicCategories() {
   );
 }
 
-export function DynamicProducts() {
-  const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+export function DynamicProducts({ initialData }: { initialData?: any[] }) {
+  const [products, setProducts] = useState<any[]>(initialData || []);
+  const [loading, setLoading] = useState(!initialData);
   const sliderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (initialData) return;
     publicApi.getProducts({ per_page: '8', featured: '1' })
       .then((res: any) => {
         let data = res?.data || res || [];
@@ -229,7 +231,7 @@ export function DynamicProducts() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [initialData]);
 
   if (loading) {
     return (
@@ -309,12 +311,13 @@ const DEFAULT_COLLECTIONS = [
   { name: 'Sang Trọng', slug: 'sang-trong', description: 'Đẳng cấp cao cấp', tag: 'PREMIUM', size: 'normal', image: '' },
 ];
 
-export function DynamicCollections() {
-  const [collections, setCollections] = useState<any[]>(DEFAULT_COLLECTIONS);
-  const [loaded, setLoaded] = useState(false);
+export function DynamicCollections({ initialData }: { initialData?: any[] }) {
+  const [collections, setCollections] = useState<any[]>(initialData || DEFAULT_COLLECTIONS);
+  const [loaded, setLoaded] = useState(!!initialData);
   const sliderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (initialData) return;
     publicApi.getCollections()
       .then((data: any[]) => {
         if (Array.isArray(data) && data.length > 0) {
@@ -323,7 +326,7 @@ export function DynamicCollections() {
       })
       .catch(() => {})
       .finally(() => setLoaded(true));
-  }, []);
+  }, [initialData]);
 
   return (
     <SliderWrap scrollRef={sliderRef}>
@@ -377,8 +380,8 @@ export function DynamicCollections() {
 const formatVND = (n: number) =>
   new Intl.NumberFormat('vi-VN').format(n) + 'đ';
 
-export function DynamicVouchers() {
-  const [vouchers, setVouchers] = useState<any[]>([]);
+export function DynamicVouchers({ initialData }: { initialData?: any[] }) {
+  const [vouchers, setVouchers] = useState<any[]>(initialData || []);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const sliderRef = useRef<HTMLDivElement>(null);
@@ -387,31 +390,39 @@ export function DynamicVouchers() {
     const token = localStorage.getItem('glass_token');
     setIsLoggedIn(!!token);
 
-    // Always fetch public vouchers
-    publicApi.getVouchers()
-      .then((data: any) => {
-        const publicVouchers = Array.isArray(data) ? data : [];
-        
-        // If logged in, also fetch user-specific vouchers
-        if (token) {
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/vouchers`, {
-            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
-          })
-            .then(r => r.json())
-            .then((userData: any) => {
-              const userVouchers = Array.isArray(userData) ? userData : [];
-              // Merge, avoid duplicates by code
-              const codes = new Set(publicVouchers.map((v: any) => v.code));
-              const merged = [...publicVouchers, ...userVouchers.filter((v: any) => !codes.has(v.code))];
-              setVouchers(merged);
-            })
-            .catch(() => setVouchers(publicVouchers));
-        } else {
-          setVouchers(publicVouchers);
-        }
+    if (token) {
+      const publicVouchers = initialData || [];
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/vouchers`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
       })
-      .catch(() => {});
-  }, []);
+        .then(r => r.json())
+        .then((userData: any) => {
+          const userVouchers = Array.isArray(userData) ? userData : [];
+          const codes = new Set(publicVouchers.map((v: any) => v.code));
+          const merged = [...publicVouchers, ...userVouchers.filter((v: any) => !codes.has(v.code))];
+          setVouchers(merged);
+        })
+        .catch(() => {
+          if (!initialData) {
+            publicApi.getVouchers()
+              .then((data: any) => setVouchers(Array.isArray(data) ? data : []))
+              .catch(() => {});
+          } else {
+            setVouchers(publicVouchers);
+          }
+        });
+    } else {
+      if (!initialData) {
+        publicApi.getVouchers()
+          .then((data: any) => {
+            setVouchers(Array.isArray(data) ? data : []);
+          })
+          .catch(() => {});
+      } else {
+        setVouchers(initialData);
+      }
+    }
+  }, [initialData]);
 
   if (vouchers.length === 0 && isLoggedIn) return null;
 

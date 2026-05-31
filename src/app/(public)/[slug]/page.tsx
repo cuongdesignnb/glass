@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { generateMeta, generateBreadcrumbSchema } from '@/lib/seo';
 import { Metadata } from 'next';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 300;
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 const INTERNAL_API = process.env.INTERNAL_API_URL || '';
