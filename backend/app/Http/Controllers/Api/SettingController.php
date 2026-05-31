@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class SettingController extends Controller
 {
@@ -14,10 +15,15 @@ class SettingController extends Controller
     public function index(Request $request)
     {
         if ($request->filled('group')) {
-            return response()->json(Setting::getByGroup($request->group));
+            $group = $request->group;
+            return response()->json(Cache::remember("glass_settings_group_{$group}", 3600, function() use ($group) {
+                return Setting::getByGroup($group);
+            }));
         }
 
-        return response()->json(Setting::getAllSettings());
+        return response()->json(Cache::remember("glass_settings_all", 3600, function() {
+            return Setting::getAllSettings();
+        }));
     }
 
     /**
@@ -39,6 +45,8 @@ class SettingController extends Controller
                 $setting['group'] ?? 'general'
             );
         }
+
+        Cache::flush();
 
         return response()->json([
             'message' => 'Cập nhật cài đặt thành công',
@@ -76,6 +84,8 @@ class SettingController extends Controller
         Setting::setValue('custom_font_format', $extension, 'font');
         Setting::setValue('custom_font_enabled', '1', 'font');
 
+        Cache::flush();
+
         return response()->json([
             'message' => 'Upload font thành công',
             'font_name' => pathinfo($originalName, PATHINFO_FILENAME),
@@ -101,6 +111,8 @@ class SettingController extends Controller
         Setting::setValue('custom_font_url', '', 'font');
         Setting::setValue('custom_font_format', '', 'font');
         Setting::setValue('custom_font_enabled', '0', 'font');
+
+        Cache::flush();
 
         return response()->json(['message' => 'Đã xóa font tùy chỉnh']);
     }

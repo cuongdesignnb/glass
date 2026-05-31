@@ -1,4 +1,7 @@
+'use client';
+
 import { useState, useEffect } from 'react';
+import { flattenSettings } from './settingsUtils';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -12,16 +15,7 @@ async function fetchSettings(): Promise<Record<string, string>> {
   fetchPromise = fetch(`${API}/public/settings`)
     .then(res => res.json())
     .then(data => {
-      const flat: Record<string, string> = {};
-      if (data && typeof data === 'object') {
-        Object.values(data).forEach((group: any) => {
-          if (typeof group === 'object') {
-            Object.entries(group).forEach(([key, value]) => {
-              flat[key] = value as string;
-            });
-          }
-        });
-      }
+      const flat = flattenSettings(data);
       cachedSettings = flat;
       fetchPromise = null;
       return flat;
@@ -32,6 +26,32 @@ async function fetchSettings(): Promise<Record<string, string>> {
     });
 
   return fetchPromise;
+}
+
+import React, { createContext, useContext } from 'react';
+
+export const SettingsContext = createContext<{
+  settings: Record<string, string>;
+  menus: any[];
+} | null>(null);
+
+export function SettingsProvider({
+  children,
+  initialSettings,
+  initialMenus,
+}: {
+  children: React.ReactNode;
+  initialSettings: Record<string, string>;
+  initialMenus: any[];
+}) {
+  const [settings] = useState(initialSettings);
+  const [menus] = useState(initialMenus);
+
+  return (
+    <SettingsContext.Provider value={{ settings, menus }}>
+      {children}
+    </SettingsContext.Provider>
+  );
 }
 
 export function invalidateSettings() {
@@ -48,6 +68,12 @@ export function invalidateSettings() {
  * const logo = settings['site_logo'];
  */
 export function useSettings() {
+  const context = useContext(SettingsContext);
+
+  if (context) {
+    return { settings: context.settings, loading: false };
+  }
+
   const [settings, setSettings] = useState<Record<string, string>>(cachedSettings || {});
   const [loading, setLoading] = useState(!cachedSettings);
 

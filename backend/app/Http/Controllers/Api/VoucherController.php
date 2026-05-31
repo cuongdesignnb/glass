@@ -7,6 +7,7 @@ use App\Models\Voucher;
 use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cache;
 
 class VoucherController extends Controller
 {
@@ -15,18 +16,20 @@ class VoucherController extends Controller
      */
     public function publicIndex()
     {
-        $vouchers = Voucher::where('is_active', true)
-            ->where('scope', 'all')
-            ->where(function ($q) {
-                $q->whereNull('expires_at')
-                  ->orWhere('expires_at', '>', now());
-            })
-            ->where(function ($q) {
-                $q->where('max_uses', 0)
-                  ->orWhereColumn('used_count', '<', 'max_uses');
-            })
-            ->orderBy('value', 'desc')
-            ->get();
+        $vouchers = Cache::remember('glass_vouchers_public', 3600, function() {
+            return Voucher::where('is_active', true)
+                ->where('scope', 'all')
+                ->where(function ($q) {
+                    $q->whereNull('expires_at')
+                      ->orWhere('expires_at', '>', now());
+                })
+                ->where(function ($q) {
+                    $q->where('max_uses', 0)
+                      ->orWhereColumn('used_count', '<', 'max_uses');
+                })
+                ->orderBy('value', 'desc')
+                ->get();
+        });
 
         return response()->json($vouchers);
     }
@@ -99,6 +102,8 @@ class VoucherController extends Controller
             $this->notifyUser($voucher);
         }
 
+        Cache::flush();
+
         return response()->json($voucher->load('products'), 201);
     }
 
@@ -139,6 +144,8 @@ class VoucherController extends Controller
             $this->notifyUser($voucher);
         }
 
+        Cache::flush();
+
         return response()->json($voucher->load('products'));
     }
 
@@ -149,6 +156,7 @@ class VoucherController extends Controller
     {
         $voucher->products()->detach();
         $voucher->delete();
+        Cache::flush();
         return response()->json(['message' => 'Xóa voucher thành công']);
     }
 

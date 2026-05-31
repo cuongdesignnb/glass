@@ -4,21 +4,34 @@ import Newsletter from '@/components/layout/Newsletter';
 import ChatWidget from '@/components/layout/ChatWidget';
 import { CartProvider } from '@/lib/useCart';
 import { AuthProvider } from '@/lib/useAuth';
+import { publicApi } from '@/lib/api';
+import { SettingsProvider } from '@/lib/useSettings';
+import { flattenSettings } from '@/lib/settingsUtils';
 
-export default function PublicLayout({
+export default async function PublicLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [settingsRes, menusRes] = await Promise.all([
+    publicApi.getSettings().catch(() => ({})),
+    publicApi.getMenus('header').catch(() => []),
+  ]);
+
+  const settings = flattenSettings(settingsRes);
+  const menus = Array.isArray(menusRes) ? menusRes : [];
+
   return (
-    <AuthProvider>
-      <CartProvider>
-        <Header />
-        <main>{children}</main>
-        <Newsletter />
-        <Footer />
-        <ChatWidget />
-      </CartProvider>
-    </AuthProvider>
+    <SettingsProvider initialSettings={settings} initialMenus={menus}>
+      <AuthProvider>
+        <CartProvider>
+          <Header menus={menus} />
+          <main>{children}</main>
+          <Newsletter />
+          <Footer />
+          <ChatWidget />
+        </CartProvider>
+      </AuthProvider>
+    </SettingsProvider>
   );
 }

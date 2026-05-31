@@ -8,6 +8,7 @@ use App\Models\ProductAddonGroup;
 use App\Models\ProductAddonPrice;
 use App\Helpers\VietnameseSlug;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class ProductController extends Controller
 {
@@ -15,6 +16,22 @@ class ProductController extends Controller
      * List products with filters
      */
     public function index(Request $request)
+    {
+        // Don't cache admin queries
+        if ($request->filled('show_all') || $request->filled('search')) {
+            return response()->json($this->getProductsData($request));
+        }
+
+        $cacheKey = 'glass_products_index_' . md5(json_encode($request->all()));
+
+        $products = Cache::remember($cacheKey, 3600, function() use ($request) {
+            return $this->getProductsData($request);
+        });
+
+        return response()->json($products);
+    }
+
+    private function getProductsData(Request $request)
     {
         $query = Product::with('category');
 
@@ -95,9 +112,7 @@ class ProductController extends Controller
         }
 
         $perPage = $request->get('per_page', 12);
-        $products = $query->paginate($perPage);
-
-        return response()->json($products);
+        return $query->paginate($perPage)->toArray();
     }
 
     /**
@@ -255,6 +270,8 @@ class ProductController extends Controller
             }
         }
 
+        Cache::flush();
+
         return response()->json($product->load(['faqs', 'addonGroups.options', 'addonPrices', 'collections', 'categories']), 201);
     }
 
@@ -348,6 +365,8 @@ class ProductController extends Controller
             }
         }
 
+        Cache::flush();
+
         return response()->json($product->load(['faqs', 'addonGroups.options', 'addonPrices', 'collections', 'categories']));
     }
 
@@ -357,6 +376,7 @@ class ProductController extends Controller
     public function destroy(Product $product)
     {
         $product->delete();
+        Cache::flush();
         return response()->json(['message' => 'Xóa sản phẩm thành công']);
     }
 
@@ -387,6 +407,7 @@ class ProductController extends Controller
                 ]);
             }
 
+            Cache::flush();
             return response()->json(['message' => 'Đã lưu ràng buộc cho sản phẩm']);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -800,6 +821,8 @@ class ProductController extends Controller
         } catch (\Exception $e) {
             // Addon tables may not exist, skip silently
         }
+
+        Cache::flush();
 
         return response()->json([
             'message' => 'Đã nhân bản sản phẩm thành công',

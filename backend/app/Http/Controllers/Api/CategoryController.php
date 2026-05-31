@@ -6,37 +6,39 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Helpers\VietnameseSlug;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class CategoryController extends Controller
 {
     public function index(Request $request)
     {
-        // products_count = distinct products attached either via primary category_id
-        // OR via pivot `category_product` (many-to-many). Must match the filter
-        // behaviour in ProductController@index to keep "Kính Thời Trang (2)"
-        // and the listing result in sync.
-        $countSubquery = "(
-            SELECT COUNT(DISTINCT p.id)
-              FROM products p
-         LEFT JOIN category_product cp ON cp.product_id = p.id
-             WHERE p.category_id = categories.id OR cp.category_id = categories.id
-        ) AS products_count";
+        $tree = $request->boolean('tree', false);
+        $cacheKey = "glass_categories_index_" . ($tree ? 'tree' : 'flat');
 
-        $query = Category::select('categories.*')
-            ->selectRaw($countSubquery);
+        $categories = Cache::remember($cacheKey, 3600, function() use ($request) {
+            $countSubquery = "(
+                SELECT COUNT(DISTINCT p.id)
+                  FROM products p
+             LEFT JOIN category_product cp ON cp.product_id = p.id
+                 WHERE p.category_id = categories.id OR cp.category_id = categories.id
+            ) AS products_count";
 
-        if ($request->boolean('tree', false)) {
-            $categories = $query->whereNull('parent_id')
-                ->with(['children' => function ($q) use ($countSubquery) {
-                    $q->select('categories.*')
-                      ->selectRaw($countSubquery)
-                      ->orderBy('order');
-                }])
-                ->orderBy('order')
-                ->get();
-        } else {
-            $categories = $query->orderBy('order')->get();
-        }
+            $query = Category::select('categories.*')
+                ->selectRaw($countSubquery);
+
+            if ($request->boolean('tree', false)) {
+                return $query->whereNull('parent_id')
+                    ->with(['children' => function ($q) use ($countSubquery) {
+                        $q->select('categories.*')
+                          ->selectRaw($countSubquery)
+                          ->orderBy('order');
+                    }])
+                    ->orderBy('order')
+                    ->get();
+            } else {
+                return $query->orderBy('order')->get();
+            }
+        });
 
         return response()->json($categories);
     }
@@ -74,6 +76,7 @@ class CategoryController extends Controller
         }
 
         $category = Category::create($data);
+        Cache::flush();
 
         return response()->json($category, 201);
     }
@@ -101,6 +104,7 @@ class CategoryController extends Controller
         }
 
         $category->update($data);
+        Cache::flush();
 
         return response()->json($category);
     }
@@ -108,6 +112,7 @@ class CategoryController extends Controller
     public function destroy(Category $category)
     {
         $category->delete();
+        Cache::flush();
         return response()->json(['message' => 'Xóa danh mục thành công']);
     }
 }
