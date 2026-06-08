@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, ReactNode } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { publicApi } from '@/lib/api';
 import { useSettings } from '@/lib/useSettings';
 import { RiGlassesLine, RiSunLine, RiVipCrownLine, RiPriceTag3Line } from 'react-icons/ri';
@@ -57,15 +58,23 @@ export function DynamicHero() {
         {hasImage && (
           <>
             {/* Desktop image */}
-            <img
+            <Image
               src={heroImage!}
-              alt="Hero"
+              alt="Hero Background"
+              fill
+              priority
+              sizes="100vw"
+              style={{ objectFit: 'cover', objectPosition: 'center' }}
               className="hero__bg-img hero__bg-img--desktop"
             />
             {/* Mobile image: use separate mobile image if set, else fallback to desktop */}
-            <img
+            <Image
               src={heroMobileImage || heroImage!}
-              alt="Hero"
+              alt="Hero Background Mobile"
+              fill
+              priority
+              sizes="100vw"
+              style={{ objectFit: 'cover', objectPosition: 'center' }}
               className="hero__bg-img hero__bg-img--mobile"
             />
             <div className="hero__overlay" style={{ position: 'absolute', inset: 0, background: overlayBg, zIndex: 1 }} />
@@ -189,11 +198,11 @@ export function DynamicCategories({ initialData }: { initialData?: any[] }) {
         <Link key={cat.slug || cat.id} href={`/san-pham?category=${cat.slug}`} className="category-card">
           <div className="category-card__emoji">
             {cat.icon ? (
-              <img src={cat.icon.startsWith('http') ? cat.icon : `${API_BASE}${cat.icon}`}
-                alt="" style={{ width: '48px', height: '48px', objectFit: 'contain' }} />
+              <Image src={cat.icon.startsWith('http') ? cat.icon : `${API_BASE}${cat.icon}`}
+                alt="" width={48} height={48} style={{ objectFit: 'contain' }} />
             ) : cat.image ? (
-              <img src={cat.image.startsWith('http') ? cat.image : `${API_BASE}${cat.image}`}
-                alt="" style={{ width: '48px', height: '48px', objectFit: 'contain', borderRadius: '8px' }} />
+              <Image src={cat.image.startsWith('http') ? cat.image : `${API_BASE}${cat.image}`}
+                alt="" width={48} height={48} style={{ objectFit: 'contain', borderRadius: '8px' }} />
             ) : (
               <RiGlassesLine style={{ fontSize: '2.5rem', color: 'var(--color-brand)' }} />
             )}
@@ -265,7 +274,13 @@ export function DynamicProducts({ initialData }: { initialData?: any[] }) {
           <Link key={p.id} href={`/san-pham/${p.slug}`} className="product-card">
             <div className="product-card__image">
               {p.thumbnail ? (
-                <img src={getImageUrl(p.thumbnail)!} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <Image
+                  src={getImageUrl(p.thumbnail)!}
+                  alt={p.name}
+                  fill
+                  sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 250px"
+                  style={{ objectFit: 'cover' }}
+                />
               ) : (
                 <div className="product-card__placeholder">
                   <div className="product-card__placeholder-glasses">
@@ -340,11 +355,13 @@ export function DynamicCollections({ initialData }: { initialData?: any[] }) {
           >
             {/* Background image */}
             {col.image ? (
-              <img
+              <Image
                 src={col.image.startsWith('http') ? col.image : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${col.image}`}
                 alt={col.name}
+                fill
+                sizes="(max-width: 768px) 100vw, 33vw"
+                style={{ objectFit: 'cover' }}
                 className="style-card__img"
-                loading="lazy"
               />
             ) : (
               <div

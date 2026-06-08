@@ -53,10 +53,6 @@
   --color-error: #ef4444;
   --color-info: #3b82f6;
 
-  /* Typography */
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-display: 'Playfair Display', Georgia, serif;
-
   /* Spacing */
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;

@@ -1,5 +1,20 @@
 import type { Metadata, Viewport } from 'next';
+import { Inter, Playfair_Display } from 'next/font/google';
 import './globals.css';
+
+const inter = Inter({
+  subsets: ['latin', 'vietnamese'],
+  display: 'swap',
+  variable: '--font-body',
+});
+
+const playfair = Playfair_Display({
+  subsets: ['latin', 'vietnamese'],
+  display: 'swap',
+  variable: '--font-display',
+  weight: ['400', '500', '600', '700'],
+  style: ['normal', 'italic'],
+});
 
 const INTERNAL_API = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 const PUBLIC_API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -157,9 +172,9 @@ export default async function RootLayout({
   const fontStyle = customFont ? buildFontStyle(customFont) : null;
 
   return (
-    <html lang="vi">
+    <html lang="vi" className={customFont ? undefined : `${inter.variable} ${playfair.variable}`}>
       <head>
-        {customFont ? (
+        {customFont && (
           <>
             <link
               rel="preload"
@@ -169,15 +184,6 @@ export default async function RootLayout({
               crossOrigin="anonymous"
             />
             <style dangerouslySetInnerHTML={{ __html: fontStyle as string }} />
-          </>
-        ) : (
-          <>
-            <link rel="preconnect" href="https://fonts.googleapis.com" />
-            <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-            <link
-              href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
-              rel="stylesheet"
-            />
           </>
         )}
       </head>

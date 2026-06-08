@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { publicApi } from '@/lib/api';
 import { FiSearch, FiArrowRight, FiEye, FiCalendar, FiChevronLeft, FiChevronRight, FiBookOpen, FiFileText, FiMessageSquare, FiTrendingUp, FiTool, FiBook, FiBell, FiStar, FiFile } from 'react-icons/fi';
 
@@ -193,7 +194,14 @@ export default function ArticleListingClient() {
               <Link href={`/bai-viet/${featuredArticle.slug}`} className="article-featured">
                 <div className="article-featured__image">
                   {featuredArticle.thumbnail ? (
-                    <img src={buildImageUrl(featuredArticle.thumbnail)} alt={featuredArticle.title} />
+                    <Image
+                      src={buildImageUrl(featuredArticle.thumbnail)}
+                      alt={featuredArticle.title}
+                      fill
+                      priority
+                      sizes="(max-width: 768px) 100vw, 600px"
+                      style={{ objectFit: 'cover' }}
+                    />
                   ) : (
                     <div className="article-featured__placeholder"><FiFileText /></div>
                   )}
@@ -240,7 +248,13 @@ export default function ArticleListingClient() {
                   <Link key={article.id} href={`/bai-viet/${article.slug}`} className="article-card">
                     <div className="article-card__image">
                       {article.thumbnail ? (
-                        <img src={buildImageUrl(article.thumbnail)} alt={article.title} />
+                        <Image
+                          src={buildImageUrl(article.thumbnail)}
+                          alt={article.title}
+                          fill
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 360px"
+                          style={{ objectFit: 'cover' }}
+                        />
                       ) : (
                         <div className="article-card__image-placeholder"><FiFileText /></div>
                       )}

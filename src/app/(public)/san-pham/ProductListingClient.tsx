@@ -11,6 +11,7 @@ import {
   formatPrice,
 } from "@/lib/constants";
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   FiFilter,
@@ -546,9 +547,12 @@ export default function ProductListingClient() {
                     >
                       <div className="product-card__image">
                         {product.thumbnail ? (
-                          <img
+                          <Image
                             src={`${process.env.NEXT_PUBLIC_API_URL?.replace("/api", "")}${product.thumbnail}`}
                             alt={product.name}
+                            fill
+                            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 250px"
+                            style={{ objectFit: 'cover' }}
                           />
                         ) : (
                           <div className="product-card__placeholder">

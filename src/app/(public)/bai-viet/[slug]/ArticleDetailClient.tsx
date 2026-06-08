@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   FiArrowLeft, FiCalendar, FiEye, FiShare2, FiFacebook,
   FiTwitter, FiLink, FiArrowRight, FiBookOpen,
@@ -143,7 +144,14 @@ export default function ArticleDetailClient({ article, related, processedContent
       {/* Thumbnail */}
       {article.thumbnail && (
         <div className="article-thumbnail">
-          <img src={buildImageUrl(article.thumbnail)} alt={article.title} />
+          <Image
+            src={buildImageUrl(article.thumbnail)}
+            alt={article.title}
+            width={1200}
+            height={675}
+            priority
+            style={{ width: '100%', height: 'auto', borderRadius: 'var(--radius-xl)' }}
+          />
         </div>
       )}
 
@@ -275,10 +283,17 @@ export default function ArticleDetailClient({ article, related, processedContent
                 {related.map((rel: any) => (
                   <Link key={rel.id} href={`/bai-viet/${rel.slug}`} className="article-related-card">
                     <div className="article-related-card__img">
-                      {rel.thumbnail
-                        ? <img src={buildImageUrl(rel.thumbnail)} alt={rel.title} />
-                        : <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(212,86,122,0.1), rgba(10,10,26,0.08))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}><FiFileText /></div>
-                      }
+                      {rel.thumbnail ? (
+                        <Image
+                          src={buildImageUrl(rel.thumbnail)}
+                          alt={rel.title}
+                          width={68}
+                          height={52}
+                          style={{ objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, rgba(212,86,122,0.1), rgba(10,10,26,0.08))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}><FiFileText /></div>
+                      )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="article-related-card__title">{rel.title}</div>
@@ -300,10 +315,17 @@ export default function ArticleDetailClient({ article, related, processedContent
             {related.map((rel: any) => (
               <Link key={rel.id} href={`/bai-viet/${rel.slug}`} className="article-card">
                 <div className="article-card__image">
-                  {rel.thumbnail
-                    ? <img src={buildImageUrl(rel.thumbnail)} alt={rel.title} />
-                    : <div className="article-card__image-placeholder"><FiFileText /></div>
-                  }
+                  {rel.thumbnail ? (
+                    <Image
+                      src={buildImageUrl(rel.thumbnail)}
+                      alt={rel.title}
+                      fill
+                      sizes="(max-width: 768px) 100vw, 360px"
+                      style={{ objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <div className="article-card__image-placeholder"><FiFileText /></div>
+                  )}
                   {rel.tags?.[0] && (
                     <span className="article-card__tag">
                       {CATEGORY_MAP[rel.tags[0]]?.label || rel.tags[0]}

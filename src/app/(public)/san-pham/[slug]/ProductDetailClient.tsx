@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { publicApi } from "@/lib/api";
 import { formatPrice, COLORS } from "@/lib/constants";
 import Link from "next/link";
+import Image from "next/image";
 import {
   FiStar,
   FiShoppingBag,
@@ -314,7 +315,14 @@ export default function ProductDetailClient({
         <div className="product-gallery">
           <div className="product-gallery__main">
             {allImages.length > 0 ? (
-              <img src={allImages[mainImageIndex]} alt={product.name} />
+              <Image
+                src={allImages[mainImageIndex]}
+                alt={product.name}
+                fill
+                priority
+                sizes="(max-width: 768px) 100vw, 600px"
+                style={{ objectFit: "contain" }}
+              />
             ) : (
               <div className="product-gallery__placeholder">
                 <RiGlassesLine />
@@ -360,7 +368,7 @@ export default function ProductDetailClient({
                   className={`product-gallery__thumb ${i === mainImageIndex ? "product-gallery__thumb--active" : ""}`}
                   onClick={() => setMainImageIndex(i)}
                 >
-                  <img src={img} alt={`${product.name} ${i + 1}`} />
+                  <Image src={img} alt={`${product.name} ${i + 1}`} width={72} height={72} style={{ objectFit: 'cover' }} />
                 </button>
               ))}
             </div>
@@ -967,7 +975,7 @@ export default function ProductDetailClient({
                       {review.images && review.images.length > 0 && (
                         <div className="review-item__images">
                           {review.images.map((img: string, i: number) => (
-                            <img
+                            <Image
                               key={i}
                               src={
                                 img.startsWith("http")
@@ -975,6 +983,9 @@ export default function ProductDetailClient({
                                   : `${apiMediaUrl}${img}`
                               }
                               alt={`Review ${i + 1}`}
+                              width={80}
+                              height={80}
+                              style={{ objectFit: 'cover', borderRadius: '4px' }}
                               className="review-item__image"
                             />
                           ))}
@@ -1153,7 +1164,17 @@ function RelatedProducts({
                 className="related-products__card"
               >
                 <div className="related-products__img">
-                  {img ? <img src={img} alt={p.name} /> : <RiGlassesLine />}
+                  {img ? (
+                    <Image
+                      src={img}
+                      alt={p.name}
+                      fill
+                      sizes="(max-width: 768px) 50vw, 220px"
+                      style={{ objectFit: "cover" }}
+                    />
+                  ) : (
+                    <RiGlassesLine />
+                  )}
                   {discount > 0 && (
                     <span className="related-products__badge">
                       -{discount}%
