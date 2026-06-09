@@ -57,26 +57,37 @@ export function DynamicHero() {
       <div className="hero__bg">
         {hasImage && (
           <>
-            {/* Desktop image */}
-            <Image
-              src={heroImage!}
-              alt="Hero Background"
-              fill
-              priority
-              sizes="100vw"
-              style={{ objectFit: 'cover', objectPosition: 'center' }}
-              className="hero__bg-img hero__bg-img--desktop"
-            />
-            {/* Mobile image: use separate mobile image if set, else fallback to desktop */}
-            <Image
-              src={heroMobileImage || heroImage!}
-              alt="Hero Background Mobile"
-              fill
-              priority
-              sizes="100vw"
-              style={{ objectFit: 'cover', objectPosition: 'center' }}
-              className="hero__bg-img hero__bg-img--mobile"
-            />
+            {!heroMobileImage ? (
+              <Image
+                src={heroImage!}
+                alt="Hero Background"
+                fill
+                priority
+                sizes="100vw"
+                style={{ objectFit: 'cover', objectPosition: 'center' }}
+                className="hero__bg-img"
+              />
+            ) : (
+              <picture>
+                <source media="(max-width: 768px)" srcSet={heroMobileImage} />
+                <source media="(min-width: 769px)" srcSet={heroImage!} />
+                <img
+                  src={heroImage!}
+                  alt="Hero Background"
+                  loading="eager"
+                  fetchPriority="high"
+                  className="hero__bg-img"
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    objectPosition: 'center',
+                  }}
+                />
+              </picture>
+            )}
             <div className="hero__overlay" style={{ position: 'absolute', inset: 0, background: overlayBg, zIndex: 1 }} />
           </>
         )}

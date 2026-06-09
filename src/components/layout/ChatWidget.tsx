@@ -19,18 +19,45 @@ export default function ChatWidget() {
   const hasZalo = !!(zaloOaId || zaloPhone);
   const hasMessenger = !!messengerPageId;
 
-  // Load Zalo SDK for embedded live chat widget
+  // Load Zalo SDK for embedded live chat widget dynamically (deferred)
   useEffect(() => {
-    if (!zaloOaId || zaloLoaded.current) return;
-    if (document.getElementById('zalo-sdk-script')) return;
+    if (!zaloOaId) return;
 
-    const script = document.createElement('script');
-    script.id = 'zalo-sdk-script';
-    script.src = 'https://sp.zalo.me/plugins/sdk.js';
-    script.async = true;
-    script.defer = true;
-    document.body.appendChild(script);
-    zaloLoaded.current = true;
+    let timer: NodeJS.Timeout;
+
+    const loadScript = () => {
+      if (zaloLoaded.current) return;
+      if (document.getElementById('zalo-sdk-script')) {
+        zaloLoaded.current = true;
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.id = 'zalo-sdk-script';
+      script.src = 'https://sp.zalo.me/plugins/sdk.js';
+      script.async = true;
+      script.defer = true;
+      document.body.appendChild(script);
+      zaloLoaded.current = true;
+      cleanup();
+    };
+
+    const cleanup = () => {
+      window.removeEventListener('scroll', loadScript);
+      window.removeEventListener('mousemove', loadScript);
+      window.removeEventListener('touchstart', loadScript);
+      if (timer) clearTimeout(timer);
+    };
+
+    // Load after 4 seconds of page load (idle fallback)
+    timer = setTimeout(loadScript, 4000);
+
+    // Or load immediately on first user interaction
+    window.addEventListener('scroll', loadScript, { passive: true });
+    window.addEventListener('mousemove', loadScript, { passive: true });
+    window.addEventListener('touchstart', loadScript, { passive: true });
+
+    return cleanup;
   }, [zaloOaId]);
 
   // Inject global CSS for messenger pulse + zalo z-index

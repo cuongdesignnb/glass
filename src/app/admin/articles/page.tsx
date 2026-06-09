@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 export default function AdminArticlesPage() {
   const { token } = useToken();
   const [search, setSearch] = useState('');
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   const params: Record<string, string> = { per_page: '15' };
   if (search) params.search = search;
@@ -35,6 +36,20 @@ export default function AdminArticlesPage() {
   };
   const catMap = flattenCats(Array.isArray(articleCategories) ? articleCategories : []);
 
+  const handleSelectRow = (id: number) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.length === articles.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(articles.map((a: any) => a.id));
+    }
+  };
+
   const handleDelete = async (id: number) => {
     if (!confirm('Xác nhận xóa bài viết này?')) return;
     if (!token) return;
@@ -42,10 +57,28 @@ export default function AdminArticlesPage() {
       await adminApi.deleteArticle(token, id);
       invalidateAdmin('/admin/articles');
       refresh();
+      setSelectedIds(prev => prev.filter(item => item !== id));
       toast.success('Đã xóa bài viết');
     } catch (err: any) { 
       console.error(err);
       toast.error('Lỗi khi xóa bài viết');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (!selectedIds.length) return;
+    if (!confirm(`Xác nhận xóa ${selectedIds.length} bài viết đã chọn?`)) return;
+    if (!token) return;
+    const loadingToast = toast.loading(`Đang xóa ${selectedIds.length} bài viết...`);
+    try {
+      await Promise.all(selectedIds.map(id => adminApi.deleteArticle(token, id)));
+      invalidateAdmin('/admin/articles');
+      refresh();
+      setSelectedIds([]);
+      toast.success('Đã xóa các bài viết thành công', { id: loadingToast });
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Lỗi khi xóa bài viết', { id: loadingToast });
     }
   };
 
@@ -63,18 +96,35 @@ export default function AdminArticlesPage() {
         </div>
       </div>
       <div className="admin-content">
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', alignItems: 'center' }}>
           <div style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center', padding: '8px 14px', gap: '8px' }}>
             <FiSearch style={{ color: 'rgba(255,255,255,0.3)' }} />
             <input type="text" placeholder="Tìm bài viết..." value={search} onChange={e => setSearch(e.target.value)}
               style={{ background: 'none', border: 'none', outline: 'none', color: '#fff', fontSize: '0.875rem', width: '100%' }} />
           </div>
+          {selectedIds.length > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              className="admin-btn admin-btn--danger"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '8px', fontSize: '0.875rem' }}
+            >
+              <FiTrash2 /> Xóa đã chọn ({selectedIds.length})
+            </button>
+          )}
         </div>
 
         <div className="admin-card">
           <table className="admin-table">
             <thead>
               <tr>
+                <th style={{ width: '40px', paddingLeft: '16px' }}>
+                  <input
+                    type="checkbox"
+                    checked={articles.length > 0 && selectedIds.length === articles.length}
+                    onChange={handleSelectAll}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                  />
+                </th>
                 <th>Ảnh</th>
                 <th>Tiêu đề</th>
                 <th>Danh mục</th>
@@ -87,13 +137,21 @@ export default function AdminArticlesPage() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={8} style={{ textAlign: 'center', padding: '48px' }}>Đang tải...</td></tr>
+                <tr><td colSpan={9} style={{ textAlign: 'center', padding: '48px' }}>Đang tải...</td></tr>
               ) : articles.length === 0 ? (
-                <tr><td colSpan={8} style={{ textAlign: 'center', padding: '48px', color: 'rgba(255,255,255,0.4)' }}>
+                <tr><td colSpan={9} style={{ textAlign: 'center', padding: '48px', color: 'rgba(255,255,255,0.4)' }}>
                   Chưa có bài viết. <Link href="/admin/articles/new" style={{ color: 'var(--color-gold)' }}>Thêm bài mới</Link> hoặc <Link href="/admin/ai-content" style={{ color: 'var(--color-gold)' }}>tạo bằng AI</Link>
                 </td></tr>
               ) : articles.map((article: any) => (
                 <tr key={article.id}>
+                  <td style={{ paddingLeft: '16px' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(article.id)}
+                      onChange={() => handleSelectRow(article.id)}
+                      style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                    />
+                  </td>
                   <td>
                     <div style={{ width: '60px', height: '40px', borderRadius: '6px', overflow: 'hidden', background: 'rgba(255,255,255,0.06)' }}>
                       {article.thumbnail && <img src={article.thumbnail.startsWith('http') ? article.thumbnail : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${article.thumbnail}`}
