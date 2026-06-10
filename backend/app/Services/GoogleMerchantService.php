@@ -96,10 +96,38 @@ class GoogleMerchantService
         return $token;
     }
 
+    private function getSafeSuffix(string $str): string
+    {
+        $unicode = [
+            'a'=>'á|à|ả|ã|ạ|ă|ắ|ằ|ẳ|ẵ|ặ|â|ấ|ầ|ẩ|ẫ|ậ',
+            'd'=>'đ',
+            'e'=>'é|è|ẻ|ẽ|ẹ|ê|ế|ề|ể|ễ|ệ',
+            'i'=>'í|ì|ỉ|ĩ|ị',
+            'o'=>'ó|ò|ỏ|õ|ọ|ô|ố|ồ|ổ|ỗ|ộ|ơ|ớ|ờ|ở|ỡ|ợ',
+            'u'=>'ú|ù|ủ|ũ|ụ|ư|ứ|ừ|ử|ữ|ự',
+            'y'=>'ý|ỳ|ỷ|ỹ|ỵ',
+            'A'=>'Á|À|Ả|Ã|Ạ|Ă|Ắ|Ằ|Ẳ|Ẵ|Ặ|Â|Ấ|Ầ|Ẩ|Ẫ|Ậ',
+            'D'=>'Đ',
+            'E'=>'É|È|Ẻ|Ẽ|Ẹ|Ê|Ế|Ề|Ể|Ễ|Ệ',
+            'I'=>'Í|Ì|Ỉ|Ĩ|Ị',
+            'O'=>'Ó|Ò|Ỏ|Õ|Ọ|Ô|Ố|Ồ|Ổ|Ỗ|Ộ|Ơ|Ớ|Ờ|Ở|Ỡ|Ợ',
+            'U'=>'Ú|Ù|Ủ|Ũ|Ụ|Ư|Ứ|Ừ|Ử|Ữ|Ự',
+            'Y'=>'Ý|Ỳ|Ỷ|Ỹ|Ỵ'
+        ];
+        foreach ($unicode as $nonUnicode => $uni) {
+            $str = preg_replace("/($uni)/i", $nonUnicode, $str);
+        }
+        $str = strtolower(trim($str));
+        $str = preg_replace('/[^a-z0-9\-]/', '-', $str);
+        $str = preg_replace('/-+/', '-', $str);
+        return trim($str, '-');
+    }
+
     /**
-     * Build Google Merchant product payload from a Product model.
+     * Build Google Merchant product payloads (plural) from a Product model.
+     * Returns an array of payloads (one for each variant, or one for standalone).
      */
-    public function buildProductPayload(Product $product, ?string $siteUrl = null): array
+    public function buildProductPayloads(Product $product, ?string $siteUrl = null): array
     {
         $siteUrl = rtrim($siteUrl ?: (string) (Setting::getValue('site_url') ?: config('app.url')), '/');
         $apiBase = rtrim((string) config('app.url'), '/');
@@ -132,55 +160,136 @@ class GoogleMerchantService
         $availability = ($product->stock > 0 || $product->stock === null) ? 'in_stock' : 'out_of_stock';
         if (!$product->is_active) $availability = 'out_of_stock';
 
-        $color = null;
-        if (is_array($product->color_names) && count($product->color_names) > 0) {
-            $color = implode('/', array_slice(array_filter($product->color_names), 0, 3));
-        }
-
         $materialsArr = is_array($product->materials) ? $product->materials : [];
         $material = $materialsArr ? (string) $materialsArr[0] : null;
 
-        $payload = [
-            'offerId' => (string) ($product->sku ?: 'sku-' . $product->id),
-            'title' => mb_substr($product->name, 0, 150),
-            'description' => $description ?: $product->name,
-            'link' => $siteUrl . '/san-pham/' . $product->slug,
-            'imageLink' => $thumb,
-            'contentLanguage' => $this->language,
-            'targetCountry' => $this->country,
-            'channel' => 'online',
-            'availability' => $availability,
-            'condition' => 'new',
-            'price' => [
-                'value' => (string) (int) $priceValue,
-                'currency' => $this->currency,
-            ],
-            'brand' => $product->brand ?: $this->brandDefault,
-            'identifierExists' => false,
-            'productTypes' => $product->category ? [$product->category->name] : [],
-        ];
+        $baseId = (string) ($product->sku ?: 'sku-' . $product->id);
+        $colorNames = is_array($product->color_names) ? array_filter($product->color_names) : [];
 
-        if ($product->sale_price && $product->sale_price < $originalPrice) {
-            $payload['salePrice'] = [
-                'value' => (string) (int) $product->sale_price,
-                'currency' => $this->currency,
+        $payloads = [];
+
+        if (count($colorNames) > 1) {
+            // Generate multiple variant payloads
+            foreach ($colorNames as $index => $colorName) {
+                $colorSlug = $this->getSafeSuffix($colorName);
+                $variantId = $baseId . '-' . $colorSlug;
+
+                // Try to find a variant-specific image if available
+                $variantImage = $thumb;
+                if (is_array($product->images) && isset($product->images[$index])) {
+                    $img = $product->images[$index];
+                    $variantImage = str_starts_with((string) $img, 'http') ? $img : ($apiBase . '/' . ltrim((string) $img, '/'));
+                }
+
+                $payload = [
+                    'offerId' => $variantId,
+                    'title' => mb_substr($product->name . ' - ' . $colorName, 0, 150),
+                    'description' => $description ?: $product->name,
+                    'link' => $siteUrl . '/san-pham/' . $product->slug . '?color=' . urlencode($colorName),
+                    'imageLink' => $variantImage,
+                    'contentLanguage' => $this->language,
+                    'targetCountry' => $this->country,
+                    'channel' => 'online',
+                    'availability' => $availability,
+                    'condition' => 'new',
+                    'price' => [
+                        'value' => (string) (int) $priceValue,
+                        'currency' => $this->currency,
+                    ],
+                    'brand' => $product->brand ?: $this->brandDefault,
+                    'color' => $colorName,
+                    'itemGroupId' => $baseId,
+                    'identifierExists' => false,
+                    'productTypes' => $product->category ? [$product->category->name] : [],
+                ];
+
+                if ($product->sale_price && $product->sale_price < $originalPrice) {
+                    $payload['salePrice'] = [
+                        'value' => (string) (int) $product->sale_price,
+                        'currency' => $this->currency,
+                    ];
+                    $payload['price'] = [
+                        'value' => (string) (int) $originalPrice,
+                        'currency' => $this->currency,
+                    ];
+                }
+
+                // Add other images as additional
+                $varAdditional = [];
+                if ($variantImage !== $thumb) {
+                    $varAdditional[] = $thumb;
+                }
+                foreach ($additional as $addUrl) {
+                    if ($addUrl !== $variantImage && $addUrl !== $thumb) {
+                        $varAdditional[] = $addUrl;
+                    }
+                }
+                if ($varAdditional) {
+                    $payload['additionalImageLinks'] = array_slice($varAdditional, 0, 10);
+                }
+
+                if ($gender) $payload['gender'] = $gender;
+                if ($material) $payload['material'] = $material;
+                if ($product->sku) $payload['mpn'] = $variantId;
+
+                $payloads[] = $payload;
+            }
+        } else {
+            // Standalone product payload
+            $color = count($colorNames) === 1 ? $colorNames[0] : null;
+
+            $payload = [
+                'offerId' => $baseId,
+                'title' => mb_substr($product->name, 0, 150),
+                'description' => $description ?: $product->name,
+                'link' => $siteUrl . '/san-pham/' . $product->slug,
+                'imageLink' => $thumb,
+                'contentLanguage' => $this->language,
+                'targetCountry' => $this->country,
+                'channel' => 'online',
+                'availability' => $availability,
+                'condition' => 'new',
+                'price' => [
+                    'value' => (string) (int) $priceValue,
+                    'currency' => $this->currency,
+                ],
+                'brand' => $product->brand ?: $this->brandDefault,
+                'identifierExists' => false,
+                'productTypes' => $product->category ? [$product->category->name] : [],
             ];
-            // Reset base price as MSRP
-            $payload['price'] = [
-                'value' => (string) (int) $originalPrice,
-                'currency' => $this->currency,
-            ];
+
+            if ($product->sale_price && $product->sale_price < $originalPrice) {
+                $payload['salePrice'] = [
+                    'value' => (string) (int) $product->sale_price,
+                    'currency' => $this->currency,
+                ];
+                $payload['price'] = [
+                    'value' => (string) (int) $originalPrice,
+                    'currency' => $this->currency,
+                ];
+            }
+
+            if ($additional) {
+                $payload['additionalImageLinks'] = $additional;
+            }
+            if ($gender) $payload['gender'] = $gender;
+            if ($color) $payload['color'] = $color;
+            if ($material) $payload['material'] = $material;
+            if ($product->sku) $payload['mpn'] = $product->sku;
+
+            $payloads[] = $payload;
         }
 
-        if ($additional) {
-            $payload['additionalImageLinks'] = $additional;
-        }
-        if ($gender) $payload['gender'] = $gender;
-        if ($color) $payload['color'] = $color;
-        if ($material) $payload['material'] = $material;
-        if ($product->sku) $payload['mpn'] = $product->sku;
+        return $payloads;
+    }
 
-        return $payload;
+    /**
+     * Legacy helper method for single product payload.
+     */
+    public function buildProductPayload(Product $product, ?string $siteUrl = null): array
+    {
+        $payloads = $this->buildProductPayloads($product, $siteUrl);
+        return $payloads[0];
     }
 
     /**
@@ -189,25 +298,60 @@ class GoogleMerchantService
     public function insertProduct(Product $product, ?string $siteUrl = null): array
     {
         $token = $this->getAccessToken();
-        $payload = $this->buildProductPayload($product, $siteUrl);
+        $colorNames = is_array($product->color_names) ? array_filter($product->color_names) : [];
 
-        $resp = Http::withToken($token)
-            ->acceptJson()
-            ->post(self::API_BASE . '/' . $this->merchantId . '/products', $payload);
+        if (count($colorNames) > 1) {
+            $success = true;
+            $errors = [];
+            $merchantIds = [];
+            $payloads = $this->buildProductPayloads($product, $siteUrl);
 
-        if (!$resp->successful()) {
+            foreach ($payloads as $payload) {
+                $resp = Http::withToken($token)
+                    ->acceptJson()
+                    ->post(self::API_BASE . '/' . $this->merchantId . '/products', $payload);
+
+                if (!$resp->successful()) {
+                    $success = false;
+                    $errors[] = $payload['color'] . ': ' . ($resp->json('error.message') ?: $resp->body());
+                } else {
+                    $merchantIds[] = $resp->json('id');
+                }
+            }
+
+            // If the product used to be a standalone item, delete it to prevent duplicate orphans
+            $baseId = (string) ($product->sku ?: 'sku-' . $product->id);
+            $gmcIdStandalone = sprintf('online:%s:%s:%s', $this->language, $this->country, $baseId);
+            Http::withToken($token)->delete(self::API_BASE . '/' . $this->merchantId . '/products/' . rawurlencode($gmcIdStandalone));
+
             return [
-                'success' => false,
+                'success' => $success,
                 'product_id' => $product->id,
-                'error' => $resp->json('error.message') ?: $resp->body(),
+                'merchant_id' => $merchantIds ? implode(', ', $merchantIds) : null,
+                'error' => $errors ? implode('; ', $errors) : null,
+            ];
+        } else {
+            $payloads = $this->buildProductPayloads($product, $siteUrl);
+            $payload = $payloads[0];
+
+            $resp = Http::withToken($token)
+                ->acceptJson()
+                ->post(self::API_BASE . '/' . $this->merchantId . '/products', $payload);
+
+            if (!$resp->successful()) {
+                return [
+                    'success' => false,
+                    'product_id' => $product->id,
+                    'error' => $resp->json('error.message') ?: $resp->body(),
+                ];
+            }
+
+            return [
+                'success' => true,
+                'product_id' => $product->id,
+                'merchant_id' => $resp->json('id'),
             ];
         }
-
-        return [
-            'success' => true,
-            'product_id' => $product->id,
-            'merchant_id' => $resp->json('id'),
-        ];
     }
 
     /**
@@ -217,21 +361,46 @@ class GoogleMerchantService
     public function deleteProduct(Product $product): array
     {
         $token = $this->getAccessToken();
-        $offerId = (string) ($product->sku ?: 'sku-' . $product->id);
-        $gmcId = sprintf('online:%s:%s:%s', $this->language, $this->country, $offerId);
+        $baseId = (string) ($product->sku ?: 'sku-' . $product->id);
+        $colorNames = is_array($product->color_names) ? array_filter($product->color_names) : [];
 
-        $resp = Http::withToken($token)
-            ->delete(self::API_BASE . '/' . $this->merchantId . '/products/' . rawurlencode($gmcId));
+        if (count($colorNames) > 1) {
+            $success = true;
+            $errors = [];
+            foreach ($colorNames as $colorName) {
+                $colorSlug = $this->getSafeSuffix($colorName);
+                $offerId = $baseId . '-' . $colorSlug;
+                $gmcId = sprintf('online:%s:%s:%s', $this->language, $this->country, $offerId);
 
-        if (!$resp->successful() && $resp->status() !== 404) {
+                $resp = Http::withToken($token)
+                    ->delete(self::API_BASE . '/' . $this->merchantId . '/products/' . rawurlencode($gmcId));
+
+                if (!$resp->successful() && $resp->status() !== 404) {
+                    $success = false;
+                    $errors[] = $resp->json('error.message') ?: $resp->body();
+                }
+            }
             return [
-                'success' => false,
+                'success' => $success,
                 'product_id' => $product->id,
-                'error' => $resp->json('error.message') ?: $resp->body(),
+                'error' => $errors ? implode('; ', $errors) : null
             ];
-        }
+        } else {
+            $gmcId = sprintf('online:%s:%s:%s', $this->language, $this->country, $baseId);
 
-        return ['success' => true, 'product_id' => $product->id];
+            $resp = Http::withToken($token)
+                ->delete(self::API_BASE . '/' . $this->merchantId . '/products/' . rawurlencode($gmcId));
+
+            if (!$resp->successful() && $resp->status() !== 404) {
+                return [
+                    'success' => false,
+                    'product_id' => $product->id,
+                    'error' => $resp->json('error.message') ?: $resp->body(),
+                ];
+            }
+
+            return ['success' => true, 'product_id' => $product->id];
+        }
     }
 
     /**
