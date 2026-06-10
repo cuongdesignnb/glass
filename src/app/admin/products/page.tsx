@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import Link from 'next/link';
 import { useToken } from '@/lib/useToken';
 import { adminApi } from '@/lib/api';
@@ -27,6 +27,220 @@ export default function AdminProductsPage() {
   const { data, isLoading, mutate: refresh } = useAdminProducts(token, params);
   const products = data?.data || [];
   const pagination = { currentPage: data?.current_page || 1, lastPage: data?.last_page || 1, total: data?.total || 0 };
+
+  // Inline Price Editing States
+  const [editStates, setEditStates] = useState<Record<number, {
+    price: string;
+    sale_price: string;
+    addon_prices: Record<number, string>; // option_id -> additional_price
+    saving?: boolean;
+  }>>({});
+  const [expandedProducts, setExpandedProducts] = useState<number[]>([]);
+  const [loadedDetails, setLoadedDetails] = useState<Record<number, any>>({});
+  const [loadingDetails, setLoadingDetails] = useState<Record<number, boolean>>({});
+
+  const handleLoadVariants = async (productId: number) => {
+    if (expandedProducts.includes(productId)) {
+      setExpandedProducts(prev => prev.filter(id => id !== productId));
+      return;
+    }
+
+    setExpandedProducts(prev => [...prev, productId]);
+
+    if (loadedDetails[productId] || loadingDetails[productId]) return;
+
+    setLoadingDetails(prev => ({ ...prev, [productId]: true }));
+    try {
+      if (!token) return;
+      const detail = await adminApi.getProduct(token, productId);
+      setLoadedDetails(prev => ({ ...prev, [productId]: detail }));
+      
+      // Initialize variant prices in editState if they exist
+      const productAddonPrices: Record<number, string> = {};
+      if (detail.addon_prices) {
+        detail.addon_prices.forEach((ap: any) => {
+          productAddonPrices[ap.option_id] = String(ap.additional_price || '0');
+        });
+      }
+
+      setEditStates(prev => {
+        const existing = prev[productId] || {
+          price: String(detail.price),
+          sale_price: String(detail.sale_price || ''),
+          addon_prices: {},
+        };
+        return {
+          ...prev,
+          [productId]: {
+            ...existing,
+            addon_prices: {
+              ...productAddonPrices,
+              ...existing.addon_prices,
+            }
+          }
+        };
+      });
+    } catch (err) {
+      console.error(err);
+      toast.error('Lỗi khi tải thông tin biến thể');
+    } finally {
+      setLoadingDetails(prev => ({ ...prev, [productId]: false }));
+    }
+  };
+
+  const handlePriceChange = (productId: number, field: 'price' | 'sale_price', value: string) => {
+    setEditStates(prev => {
+      const existing = prev[productId] || {
+        price: '',
+        sale_price: '',
+        addon_prices: {},
+      };
+      
+      const productObj = products.find((p: any) => p.id === productId);
+      const initialPrice = existing.price || (productObj ? String(productObj.price) : '');
+      const initialSalePrice = existing.sale_price !== '' ? existing.sale_price : (productObj && productObj.sale_price ? String(productObj.sale_price) : '');
+
+      return {
+        ...prev,
+        [productId]: {
+          ...existing,
+          price: initialPrice,
+          sale_price: initialSalePrice,
+          [field]: value,
+        }
+      };
+    });
+  };
+
+  const handleVariantPriceChange = (productId: number, optionId: number, value: string) => {
+    setEditStates(prev => {
+      const existing = prev[productId] || {
+        price: '',
+        sale_price: '',
+        addon_prices: {},
+      };
+      return {
+        ...prev,
+        [productId]: {
+          ...existing,
+          addon_prices: {
+            ...existing.addon_prices,
+            [optionId]: value,
+          }
+        }
+      };
+    });
+  };
+
+  const isRowDirty = (product: any) => {
+    const editState = editStates[product.id];
+    if (!editState) return false;
+
+    if (editState.price !== '' && parseFloat(editState.price) !== parseFloat(product.price)) return true;
+    
+    const origSale = product.sale_price ? String(product.sale_price) : '';
+    if (editState.sale_price !== origSale) return true;
+
+    const detail = loadedDetails[product.id];
+    if (detail && detail.addon_prices) {
+      for (const ap of detail.addon_prices) {
+        const editedVal = editState.addon_prices[ap.option_id];
+        if (editedVal !== undefined && parseFloat(editedVal) !== parseFloat(ap.additional_price || '0')) {
+          return true;
+        }
+      }
+    }
+    
+    if (detail && detail.addonGroups) {
+      for (const group of detail.addonGroups) {
+        for (const opt of (group.options || [])) {
+          const editedVal = editState.addon_prices[opt.id];
+          const originalAp = (detail.addon_prices || []).find((p: any) => p.option_id === opt.id);
+          const originalVal = originalAp ? parseFloat(originalAp.additional_price || '0') : 0;
+          if (editedVal !== undefined && parseFloat(editedVal) !== originalVal) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  };
+
+  const handleRowSave = async (productId: number) => {
+    const editState = editStates[productId];
+    if (!editState || !token) return;
+
+    setEditStates(prev => ({
+      ...prev,
+      [productId]: { ...prev[productId], saving: true }
+    }));
+
+    try {
+      const productObj = products.find((p: any) => p.id === productId);
+      const finalPrice = editState.price !== '' ? parseFloat(editState.price) : (productObj ? parseFloat(productObj.price) : 0);
+      const finalSalePrice = editState.sale_price !== '' ? (editState.sale_price ? parseFloat(editState.sale_price) : null) : (productObj && productObj.sale_price ? parseFloat(productObj.sale_price) : null);
+
+      const addonPricesPayload: any[] = [];
+      const detail = loadedDetails[productId];
+      if (detail && detail.addonGroups) {
+        detail.addonGroups.forEach((group: any) => {
+          (group.options || []).forEach((opt: any) => {
+            const editedVal = editState.addon_prices[opt.id];
+            const originalAp = (detail.addon_prices || []).find((p: any) => p.option_id === opt.id);
+            
+            if (editedVal !== undefined) {
+              addonPricesPayload.push({
+                option_id: opt.id,
+                additional_price: parseFloat(editedVal || '0'),
+                is_available: originalAp ? originalAp.is_available : true,
+              });
+            } else if (originalAp) {
+              addonPricesPayload.push({
+                option_id: opt.id,
+                additional_price: parseFloat(originalAp.additional_price || '0'),
+                is_available: originalAp.is_available,
+              });
+            }
+          });
+        });
+      }
+
+      const payload: any = {
+        price: finalPrice,
+        sale_price: finalSalePrice,
+      };
+
+      if (addonPricesPayload.length > 0 || (detail && detail.addonGroups?.length > 0)) {
+        payload.addon_prices = addonPricesPayload;
+      }
+
+      await adminApi.updateProduct(token, productId, payload);
+      toast.success('Đã lưu thay đổi thành công');
+
+      setEditStates(prev => {
+        const next = { ...prev };
+        delete next[productId];
+        return next;
+      });
+
+      setLoadedDetails(prev => {
+        const next = { ...prev };
+        delete next[productId];
+        return next;
+      });
+
+      invalidateAdmin('/admin/products');
+      refresh();
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Lỗi khi cập nhật giá: ' + (err.message || ''));
+      setEditStates(prev => ({
+        ...prev,
+        [productId]: { ...prev[productId], saving: false }
+      }));
+    }
+  };
 
   const handleDelete = async (id: number) => {
     if (!confirm('Xác nhận xóa sản phẩm này?')) return;
@@ -172,59 +386,211 @@ export default function AdminProductsPage() {
                     <Link href="/admin/products/new" className="admin-btn admin-btn--primary admin-btn--sm"><FiPlus /> Thêm sản phẩm đầu tiên</Link>
                   </td></tr>
                 ) : products.map((product: any) => (
-                  <tr key={product.id}>
-                    <td>
-                      <div style={{ width: '50px', height: '50px', borderRadius: '10px', overflow: 'hidden', background: 'linear-gradient(135deg, rgba(201,169,110,0.15), rgba(15,52,96,0.1))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {product.thumbnail ? (
-                          <img src={product.thumbnail.startsWith('http') ? product.thumbnail : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${product.thumbnail}`}
-                            alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                          <RiGlassesLine style={{ color: 'rgba(201,169,110,0.3)', fontSize: '1.5rem' }} />
-                        )}
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ fontWeight: 600, color: 'var(--color-white)' }}>{product.name}</span>
-                        {product.is_featured && <FiStar style={{ color: 'var(--color-gold)', fontSize: '0.75rem' }} />}
-                        {product.is_new && <FiZap style={{ color: '#10b981', fontSize: '0.75rem' }} />}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', marginTop: '2px' }}>
-                        {product.sku ? `SKU: ${product.sku}` : product.brand || '—'}
-                      </div>
-                    </td>
-                    <td>
-                      <span style={{ fontSize: '0.8125rem', padding: '3px 8px', background: 'rgba(255,255,255,0.04)', borderRadius: '6px' }}>
-                        {product.category?.name || '—'}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 700, color: 'var(--color-gold)' }}>{formatPrice(product.sale_price || product.price)}</div>
-                      {product.sale_price && (
-                        <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', textDecoration: 'line-through' }}>{formatPrice(product.price)}</div>
-                      )}
-                    </td>
-                    <td>
-                      <span style={{
-                        fontWeight: 600,
-                        color: product.stock <= 5 ? '#ef4444' : product.stock <= 20 ? '#f59e0b' : '#10b981',
-                      }}>{product.stock}</span>
-                    </td>
-                    <td style={{ fontSize: '0.8125rem' }}>{(product.views || 0).toLocaleString()}</td>
-                    <td>
-                      <span className={`admin-badge ${product.is_active ? 'admin-badge--success' : 'admin-badge--danger'}`}>
-                        {product.is_active ? 'Hoạt động' : 'Ẩn'}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="admin-table__actions">
-                        <Link href={`/san-pham/${product.slug}`} className="admin-table__action" target="_blank" title="Xem"><FiEye /></Link>
-                        <Link href={`/admin/products/${product.id}`} className="admin-table__action" title="Sửa"><FiEdit2 /></Link>
-                        <button className="admin-table__action" onClick={() => handleClone(product.id)} title="Nhân bản" style={{ color: '#3b82f6' }}><FiCopy /></button>
-                        <button className="admin-table__action admin-table__action--danger" onClick={() => handleDelete(product.id)} title="Xóa"><FiTrash2 /></button>
-                      </div>
-                    </td>
-                  </tr>
+                  <React.Fragment key={product.id}>
+                    <tr>
+                      <td>
+                        <div style={{ width: '50px', height: '50px', borderRadius: '10px', overflow: 'hidden', background: 'linear-gradient(135deg, rgba(201,169,110,0.15), rgba(15,52,96,0.1))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {product.thumbnail ? (
+                            <img src={product.thumbnail.startsWith('http') ? product.thumbnail : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${product.thumbnail}`}
+                              alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <RiGlassesLine style={{ color: 'rgba(201,169,110,0.3)', fontSize: '1.5rem' }} />
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontWeight: 600, color: 'var(--color-white)' }}>{product.name}</span>
+                          {product.is_featured && <FiStar style={{ color: 'var(--color-gold)', fontSize: '0.75rem' }} />}
+                          {product.is_new && <FiZap style={{ color: '#10b981', fontSize: '0.75rem' }} />}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', marginTop: '2px' }}>
+                          {product.sku ? `SKU: ${product.sku}` : product.brand || '—'}
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{ fontSize: '0.8125rem', padding: '3px 8px', background: 'rgba(255,255,255,0.04)', borderRadius: '6px' }}>
+                          {product.category?.name || '—'}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxWidth: '140px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', width: '28px' }}>Gốc:</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1000"
+                              value={editStates[product.id]?.price !== undefined ? editStates[product.id].price : product.price}
+                              onChange={e => handlePriceChange(product.id, 'price', e.target.value)}
+                              style={{
+                                background: 'rgba(255,255,255,0.04)',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '6px',
+                                color: '#fff',
+                                fontSize: '0.8125rem',
+                                padding: '4px 6px',
+                                width: '90px',
+                                textAlign: 'right',
+                                outline: 'none',
+                              }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', width: '28px' }}>KM:</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1000"
+                              value={editStates[product.id]?.sale_price !== undefined ? editStates[product.id].sale_price : (product.sale_price || '')}
+                              onChange={e => handlePriceChange(product.id, 'sale_price', e.target.value)}
+                              placeholder="Không có"
+                              style={{
+                                background: 'rgba(255,255,255,0.04)',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                borderRadius: '6px',
+                                color: 'var(--color-gold)',
+                                fontSize: '0.8125rem',
+                                padding: '4px 6px',
+                                width: '90px',
+                                textAlign: 'right',
+                                outline: 'none',
+                              }}
+                            />
+                          </div>
+                          <button
+                            onClick={() => handleLoadVariants(product.id)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: 'var(--color-gold)',
+                              fontSize: '0.75rem',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                              padding: '2px 0 0',
+                              textDecoration: 'underline',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '2px',
+                            }}
+                          >
+                            {expandedProducts.includes(product.id) ? '[-] Ẩn biến thể' : '[+] Hiện biến thể'}
+                            {loadingDetails[product.id] && <span className="spinner" style={{ width: '8px', height: '8px', border: '1px solid var(--color-gold)', borderTopColor: 'transparent', display: 'inline-block' }} />}
+                          </button>
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{
+                          fontWeight: 600,
+                          color: product.stock <= 5 ? '#ef4444' : product.stock <= 20 ? '#f59e0b' : '#10b981',
+                        }}>{product.stock}</span>
+                      </td>
+                      <td style={{ fontSize: '0.8125rem' }}>{(product.views || 0).toLocaleString()}</td>
+                      <td>
+                        <span className={`admin-badge ${product.is_active ? 'admin-badge--success' : 'admin-badge--danger'}`}>
+                          {product.is_active ? 'Hoạt động' : 'Ẩn'}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="admin-table__actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {isRowDirty(product) && (
+                            <button
+                              onClick={() => handleRowSave(product.id)}
+                              disabled={editStates[product.id]?.saving}
+                              className="admin-btn admin-btn--primary"
+                              style={{
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                fontSize: '0.75rem',
+                                background: '#10b981',
+                                borderColor: '#10b981',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                              }}
+                              title="Lưu thay đổi giá"
+                            >
+                              {editStates[product.id]?.saving ? (
+                                <span className="spinner" style={{ width: '10px', height: '10px', border: '1px solid #fff', borderTopColor: 'transparent', display: 'inline-block' }} />
+                              ) : (
+                                'Lưu'
+                              )}
+                            </button>
+                          )}
+                          <Link href={`/san-pham/${product.slug}`} className="admin-table__action" target="_blank" title="Xem"><FiEye /></Link>
+                          <Link href={`/admin/products/${product.id}`} className="admin-table__action" title="Sửa"><FiEdit2 /></Link>
+                          <button className="admin-table__action" onClick={() => handleClone(product.id)} title="Nhân bản" style={{ color: '#3b82f6' }}><FiCopy /></button>
+                          <button className="admin-table__action admin-table__action--danger" onClick={() => handleDelete(product.id)} title="Xóa"><FiTrash2 /></button>
+                        </div>
+                      </td>
+                    </tr>
+                    {expandedProducts.includes(product.id) && (
+                      <tr>
+                        <td colSpan={8} style={{ background: 'rgba(255,255,255,0.01)', borderTop: 'none', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '12px 20px' }}>
+                          {loadingDetails[product.id] ? (
+                            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span className="spinner" style={{ width: '12px', height: '12px', display: 'inline-block' }} /> Đang tải cấu trúc biến thể...
+                            </div>
+                          ) : !loadedDetails[product.id] ? (
+                            <div style={{ color: '#ef4444', fontSize: '0.8125rem' }}>Lỗi khi tải biến thể</div>
+                          ) : (!loadedDetails[product.id].addonGroups || loadedDetails[product.id].addonGroups.length === 0) ? (
+                            <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.8125rem', fontStyle: 'italic' }}>
+                              Sản phẩm này không có biến thể/tùy chọn phụ được kích hoạt. Bạn có thể kích hoạt trong mục sửa chi tiết.
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                              <div style={{ fontWeight: 600, color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                Giá cộng thêm cho các tùy chọn biến thể (VNĐ):
+                              </div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px 24px' }}>
+                                {loadedDetails[product.id].addonGroups.map((group: any) => (
+                                  <div key={group.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: 'rgba(255,255,255,0.02)', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)', minWidth: '220px' }}>
+                                    <div style={{ fontWeight: 600, color: 'var(--color-gold)', fontSize: '0.8125rem', marginBottom: '2px' }}>{group.name}</div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                      {(group.options || []).map((opt: any) => {
+                                        const originalAp = (loadedDetails[product.id].addon_prices || []).find((p: any) => p.option_id === opt.id);
+                                        const origPrice = originalAp ? String(originalAp.additional_price || '0') : '0';
+                                        const currentVal = editStates[product.id]?.addon_prices?.[opt.id] !== undefined
+                                          ? editStates[product.id].addon_prices[opt.id]
+                                          : origPrice;
+
+                                        return (
+                                          <div key={opt.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                                            <span style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.6)' }}>{opt.name}:</span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                              <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)' }}>+</span>
+                                              <input
+                                                type="number"
+                                                min="0"
+                                                step="1000"
+                                                value={currentVal}
+                                                onChange={e => handleVariantPriceChange(product.id, opt.id, e.target.value)}
+                                                style={{
+                                                  background: 'rgba(255,255,255,0.04)',
+                                                  border: '1px solid rgba(255,255,255,0.1)',
+                                                  borderRadius: '6px',
+                                                  color: '#fff',
+                                                  fontSize: '0.8125rem',
+                                                  padding: '3px 6px',
+                                                  width: '80px',
+                                                  textAlign: 'right',
+                                                  outline: 'none',
+                                                }}
+                                              />
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
