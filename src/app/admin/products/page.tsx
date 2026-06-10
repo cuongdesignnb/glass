@@ -151,8 +151,8 @@ export default function AdminProductsPage() {
       }
     }
     
-    if (detail && detail.addonGroups) {
-      for (const group of detail.addonGroups) {
+    if (detail && detail.addon_groups) {
+      for (const group of detail.addon_groups) {
         for (const opt of (group.options || [])) {
           const editedVal = editState.addon_prices[opt.id];
           const originalAp = (detail.addon_prices || []).find((p: any) => p.option_id === opt.id);
@@ -183,8 +183,8 @@ export default function AdminProductsPage() {
 
       const addonPricesPayload: any[] = [];
       const detail = loadedDetails[productId];
-      if (detail && detail.addonGroups) {
-        detail.addonGroups.forEach((group: any) => {
+      if (detail && detail.addon_groups) {
+        detail.addon_groups.forEach((group: any) => {
           (group.options || []).forEach((opt: any) => {
             const editedVal = editState.addon_prices[opt.id];
             const originalAp = (detail.addon_prices || []).find((p: any) => p.option_id === opt.id);
@@ -211,7 +211,7 @@ export default function AdminProductsPage() {
         sale_price: finalSalePrice,
       };
 
-      if (addonPricesPayload.length > 0 || (detail && detail.addonGroups?.length > 0)) {
+      if (addonPricesPayload.length > 0 || (detail && detail.addon_groups?.length > 0)) {
         payload.addon_prices = addonPricesPayload;
       }
 
@@ -533,7 +533,7 @@ export default function AdminProductsPage() {
                             </div>
                           ) : !loadedDetails[product.id] ? (
                             <div style={{ color: '#ef4444', fontSize: '0.8125rem' }}>Lỗi khi tải biến thể</div>
-                          ) : (!loadedDetails[product.id].addonGroups || loadedDetails[product.id].addonGroups.length === 0) ? (
+                          ) : (!loadedDetails[product.id].addon_groups || loadedDetails[product.id].addon_groups.length === 0) ? (
                             <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.8125rem', fontStyle: 'italic' }}>
                               Sản phẩm này không có biến thể/tùy chọn phụ được kích hoạt. Bạn có thể kích hoạt trong mục sửa chi tiết.
                             </div>
@@ -543,7 +543,7 @@ export default function AdminProductsPage() {
                                 Giá cộng thêm cho các tùy chọn biến thể (VNĐ):
                               </div>
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px 24px' }}>
-                                {loadedDetails[product.id].addonGroups.map((group: any) => (
+                                {loadedDetails[product.id].addon_groups.map((group: any) => (
                                   <div key={group.id} style={{ display: 'flex', flexDirection: 'column', gap: '6px', background: 'rgba(255,255,255,0.02)', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)', minWidth: '220px' }}>
                                     <div style={{ fontWeight: 600, color: 'var(--color-gold)', fontSize: '0.8125rem', marginBottom: '2px' }}>{group.name}</div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

@@ -8,15 +8,19 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            $table->integer('featured_order')->default(0)->after('is_featured');
-        });
+        if (!Schema::hasColumn('products', 'featured_order')) {
+            Schema::table('products', function (Blueprint $table) {
+                $table->integer('featured_order')->default(0)->after('is_featured');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            $table->dropColumn('featured_order');
-        });
+        if (Schema::hasColumn('products', 'featured_order')) {
+            Schema::table('products', function (Blueprint $table) {
+                $table->dropColumn('featured_order');
+            });
+        }
     }
 };
