@@ -10,27 +10,25 @@ echo "🚀 Bắt đầu deploy Glass Eyewear..."
 
 # 1. Pull code mới
 echo "📥 Pull code từ Git..."
-git fetch origin && git reset --hard origin/main
+git pull origin main
 
-# 2. Backend: migrate + clear ALL cache
-echo "🔧 Backend: migrate + clear cache..."
-cd backend
-php artisan migrate --force
-php artisan route:clear
-php artisan config:clear
-php artisan cache:clear 2>/dev/null || true
-php artisan view:clear
-cd ..
+# 2. Backend: migrate
+echo "🔧 Backend: chạy migrate..."
+php backend/artisan migrate --force
 
 # 3. Frontend: rebuild
-echo "🏗️ Frontend: rebuild Next.js..."
-rm -rf .next
+echo "🏗️ Frontend: build Next.js..."
 npm run build
 
 # 4. Restart PM2
 echo "♻️ Restart PM2..."
 pm2 restart glass
 
+# 5. Xóa Nginx proxy cache và reload Nginx
+echo "🧹 Xóa Nginx cache & reload..."
+rm -rf /www/server/nginx/proxy_cache_dir/*
+nginx -s reload
+
 echo ""
 echo "✅ Deploy hoàn tất!"
-echo "🌐 Website: https://kinhmathongnhung.vn"
+echo "🌐 Website: https://mitoo.vn"
