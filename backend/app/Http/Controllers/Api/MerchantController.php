@@ -43,6 +43,8 @@ class MerchantController extends Controller
      */
     public function syncAll(Request $request, GoogleMerchantService $svc)
     {
+        @set_time_limit(600);
+
         if (!$svc->isConfigured()) {
             return response()->json(['message' => 'Google Merchant chưa được cấu hình.'], 422);
         }
@@ -69,6 +71,8 @@ class MerchantController extends Controller
      */
     public function syncOne(Request $request, int $productId, GoogleMerchantService $svc)
     {
+        @set_time_limit(600);
+
         if (!$svc->isConfigured()) {
             return response()->json(['message' => 'Google Merchant chưa được cấu hình.'], 422);
         }

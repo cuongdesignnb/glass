@@ -358,68 +358,91 @@ class GoogleMerchantService
     }
 
     /**
-     * Insert (create/update) a product on Merchant Center.
+     * Insert (create/update) a product on Merchant Center using Batch API.
      */
     public function insertProduct(Product $product, ?string $siteUrl = null): array
     {
         $token = $this->getAccessToken();
         $payloads = $this->buildProductPayloads($product, $siteUrl);
 
+        $entries = [];
+        $batchId = 1;
+        $batchMap = [];
+
+        foreach ($payloads as $payload) {
+            $id = $batchId++;
+            $entries[] = [
+                'batchId' => $id,
+                'merchantId' => $this->merchantId,
+                'method' => 'insert',
+                'product' => $payload,
+            ];
+            $batchMap[$id] = $payload['offerId'];
+        }
+
+        // If it has variants, also delete the standalone product
         if (count($payloads) > 1) {
-            $success = true;
-            $errors = [];
-            $merchantIds = [];
-
-            foreach ($payloads as $payload) {
-                $resp = Http::withToken($token)
-                    ->acceptJson()
-                    ->post(self::API_BASE . '/' . $this->merchantId . '/products', $payload);
-
-                if (!$resp->successful()) {
-                    $success = false;
-                    $variantLabel = ($payload['color'] ?? '') . ' ' . ($payload['material'] ?? '') . ' ' . ($payload['size'] ?? '') . ' ' . ($payload['pattern'] ?? '');
-                    $errors[] = trim($variantLabel) . ': ' . ($resp->json('error.message') ?: $resp->body());
-                } else {
-                    $merchantIds[] = $resp->json('id');
-                }
-            }
-
-            // Delete standalone item if it was converted to variants
             $baseId = (string) ($product->sku ?: 'sku-' . $product->id);
             $gmcIdStandalone = sprintf('online:%s:%s:%s', $this->language, $this->country, $baseId);
-            Http::withToken($token)->delete(self::API_BASE . '/' . $this->merchantId . '/products/' . rawurlencode($gmcIdStandalone));
-
-            return [
-                'success' => $success,
-                'product_id' => $product->id,
-                'merchant_id' => $merchantIds ? implode(', ', $merchantIds) : null,
-                'error' => $errors ? implode('; ', $errors) : null,
+            $id = $batchId++;
+            $entries[] = [
+                'batchId' => $id,
+                'merchantId' => $this->merchantId,
+                'method' => 'delete',
+                'productId' => $gmcIdStandalone,
             ];
-        } else {
-            $payload = $payloads[0];
+            $batchMap[$id] = 'delete_standalone';
+        }
 
-            $resp = Http::withToken($token)
-                ->acceptJson()
-                ->post(self::API_BASE . '/' . $this->merchantId . '/products', $payload);
+        $resp = Http::withToken($token)
+            ->acceptJson()
+            ->post(self::API_BASE . '/products/batch', [
+                'entries' => $entries
+            ]);
 
-            if (!$resp->successful()) {
-                return [
-                    'success' => false,
-                    'product_id' => $product->id,
-                    'error' => $resp->json('error.message') ?: $resp->body(),
-                ];
-            }
-
+        if (!$resp->successful()) {
             return [
-                'success' => true,
+                'success' => false,
                 'product_id' => $product->id,
-                'merchant_id' => $resp->json('id'),
+                'error' => $resp->json('error.message') ?: $resp->body(),
             ];
         }
+
+        $success = true;
+        $errors = [];
+        $merchantIds = [];
+
+        $respEntries = $resp->json('entries') ?: [];
+        foreach ($respEntries as $respEntry) {
+            $bId = $respEntry['batchId'] ?? null;
+            if (!$bId || !isset($batchMap[$bId])) continue;
+
+            $meta = $batchMap[$bId];
+            if ($meta === 'delete_standalone') continue;
+
+            $errorsList = $respEntry['errors']['errors'] ?? null;
+            if ($errorsList) {
+                $success = false;
+                $errMsgs = [];
+                foreach ($errorsList as $e) {
+                    $errMsgs[] = $e['message'] ?? 'Unknown error';
+                }
+                $errors[] = $meta . ': ' . implode(', ', $errMsgs);
+            } else {
+                $merchantIds[] = $respEntry['product']['id'] ?? $respEntry['batchId'];
+            }
+        }
+
+        return [
+            'success' => $success,
+            'product_id' => $product->id,
+            'merchant_id' => $merchantIds ? implode(', ', $merchantIds) : null,
+            'error' => $errors ? implode('; ', $errors) : null,
+        ];
     }
 
     /**
-     * Delete a product from Merchant Center by its product id there.
+     * Delete a product from Merchant Center by its product id there using Batch API.
      * The id format is: {channel}:{contentLanguage}:{targetCountry}:{offerId}
      */
     public function deleteProduct(Product $product): array
@@ -427,42 +450,76 @@ class GoogleMerchantService
         $token = $this->getAccessToken();
         $payloads = $this->buildProductPayloads($product);
 
+        $entries = [];
+        $batchId = 1;
+        $batchMap = [];
+
         if (count($payloads) > 1) {
-            $success = true;
-            $errors = [];
             foreach ($payloads as $payload) {
                 $gmcId = sprintf('online:%s:%s:%s', $this->language, $this->country, $payload['offerId']);
-
-                $resp = Http::withToken($token)
-                    ->delete(self::API_BASE . '/' . $this->merchantId . '/products/' . rawurlencode($gmcId));
-
-                if (!$resp->successful() && $resp->status() !== 404) {
-                    $success = false;
-                    $errors[] = $resp->json('error.message') ?: $resp->body();
-                }
+                $id = $batchId++;
+                $entries[] = [
+                    'batchId' => $id,
+                    'merchantId' => $this->merchantId,
+                    'method' => 'delete',
+                    'productId' => $gmcId,
+                ];
+                $batchMap[$id] = $payload['offerId'];
             }
-            return [
-                'success' => $success,
-                'product_id' => $product->id,
-                'error' => $errors ? implode('; ', $errors) : null
-            ];
         } else {
             $baseId = (string) ($product->sku ?: 'sku-' . $product->id);
             $gmcId = sprintf('online:%s:%s:%s', $this->language, $this->country, $baseId);
-
-            $resp = Http::withToken($token)
-                ->delete(self::API_BASE . '/' . $this->merchantId . '/products/' . rawurlencode($gmcId));
-
-            if (!$resp->successful() && $resp->status() !== 404) {
-                return [
-                    'success' => false,
-                    'product_id' => $product->id,
-                    'error' => $resp->json('error.message') ?: $resp->body(),
-                ];
-            }
-
-            return ['success' => true, 'product_id' => $product->id];
+            $id = $batchId++;
+            $entries[] = [
+                'batchId' => $id,
+                'merchantId' => $this->merchantId,
+                'method' => 'delete',
+                'productId' => $gmcId,
+            ];
+            $batchMap[$id] = $baseId;
         }
+
+        $resp = Http::withToken($token)
+            ->acceptJson()
+            ->post(self::API_BASE . '/products/batch', [
+                'entries' => $entries
+            ]);
+
+        if (!$resp->successful()) {
+            return [
+                'success' => false,
+                'product_id' => $product->id,
+                'error' => $resp->json('error.message') ?: $resp->body(),
+            ];
+        }
+
+        $success = true;
+        $errors = [];
+
+        $respEntries = $resp->json('entries') ?: [];
+        foreach ($respEntries as $respEntry) {
+            $bId = $respEntry['batchId'] ?? null;
+            if (!$bId || !isset($batchMap[$bId])) continue;
+
+            $meta = $batchMap[$bId];
+            $errorsList = $respEntry['errors']['errors'] ?? null;
+            $code = $respEntry['errors']['code'] ?? 200;
+            // 404 means the product is already deleted, which is a success for us
+            if ($errorsList && $code !== 404) {
+                $success = false;
+                $errMsgs = [];
+                foreach ($errorsList as $e) {
+                    $errMsgs[] = $e['message'] ?? 'Unknown error';
+                }
+                $errors[] = $meta . ': ' . implode(', ', $errMsgs);
+            }
+        }
+
+        return [
+            'success' => $success,
+            'product_id' => $product->id,
+            'error' => $errors ? implode('; ', $errors) : null
+        ];
     }
 
     /**
@@ -584,24 +641,187 @@ class GoogleMerchantService
     }
 
     /**
-     * Sync many products. Returns summary.
+     * Sync many products using Batch API. Returns summary.
      */
     public function syncProducts($products, ?string $siteUrl = null): array
     {
-        $ok = 0; $fail = 0; $errors = [];
-        foreach ($products as $p) {
-            $r = $this->insertProduct($p, $siteUrl);
-            if ($r['success']) {
-                $ok++;
-            } else {
-                $fail++;
+        @set_time_limit(600);
+
+        $entries = [];
+        $batchId = 1;
+        $batchMap = [];
+        $failCount = 0;
+        $errors = [];
+
+        foreach ($products as $product) {
+            try {
+                $payloads = $this->buildProductPayloads($product, $siteUrl);
+            } catch (\Throwable $e) {
+                $failCount++;
                 $errors[] = [
-                    'product_id' => $p->id,
-                    'name' => $p->name,
-                    'error' => $r['error'] ?? 'Unknown error',
+                    'product_id' => $product->id,
+                    'name' => $product->name,
+                    'error' => 'Payload error: ' . $e->getMessage(),
+                ];
+                continue;
+            }
+
+            if (count($payloads) > 1) {
+                foreach ($payloads as $payload) {
+                    $id = $batchId++;
+                    $entries[] = [
+                        'batchId' => $id,
+                        'merchantId' => $this->merchantId,
+                        'method' => 'insert',
+                        'product' => $payload,
+                    ];
+                    $batchMap[$id] = [
+                        'product_id' => $product->id,
+                        'name' => $product->name,
+                        'offer_id' => $payload['offerId'],
+                        'type' => 'insert_variant',
+                    ];
+                }
+
+                // Delete standalone version
+                $baseId = (string) ($product->sku ?: 'sku-' . $product->id);
+                $gmcIdStandalone = sprintf('online:%s:%s:%s', $this->language, $this->country, $baseId);
+                $id = $batchId++;
+                $entries[] = [
+                    'batchId' => $id,
+                    'merchantId' => $this->merchantId,
+                    'method' => 'delete',
+                    'productId' => $gmcIdStandalone,
+                ];
+                $batchMap[$id] = [
+                    'product_id' => $product->id,
+                    'name' => $product->name,
+                    'offer_id' => $baseId,
+                    'type' => 'delete_standalone',
+                ];
+            } else {
+                $payload = $payloads[0];
+                $id = $batchId++;
+                $entries[] = [
+                    'batchId' => $id,
+                    'merchantId' => $this->merchantId,
+                    'method' => 'insert',
+                    'product' => $payload,
+                ];
+                $batchMap[$id] = [
+                    'product_id' => $product->id,
+                    'name' => $product->name,
+                    'offer_id' => $payload['offerId'],
+                    'type' => 'insert_standalone',
                 ];
             }
         }
-        return ['total' => $ok + $fail, 'success' => $ok, 'failed' => $fail, 'errors' => $errors];
+
+        if (empty($entries)) {
+            return [
+                'total' => $failCount,
+                'success' => 0,
+                'failed' => $failCount,
+                'errors' => $errors
+            ];
+        }
+
+        $chunks = array_chunk($entries, 200);
+        $token = $this->getAccessToken();
+        $productStatus = [];
+
+        foreach ($chunks as $chunk) {
+            try {
+                $resp = Http::withToken($token)
+                    ->acceptJson()
+                    ->post(self::API_BASE . '/products/batch', [
+                        'entries' => $chunk
+                    ]);
+
+                if (!$resp->successful()) {
+                    $errMsg = $resp->json('error.message') ?: $resp->body();
+                    foreach ($chunk as $entry) {
+                        $meta = $batchMap[$entry['batchId']];
+                        if ($meta['type'] !== 'delete_standalone') {
+                            if (!isset($productStatus[$meta['product_id']])) {
+                                $productStatus[$meta['product_id']] = [
+                                    'name' => $meta['name'],
+                                    'success' => false,
+                                    'errors' => [],
+                                ];
+                            }
+                            $productStatus[$meta['product_id']]['success'] = false;
+                            $productStatus[$meta['product_id']]['errors'][] = $meta['offer_id'] . ': Batch request failed: ' . $errMsg;
+                        }
+                    }
+                    continue;
+                }
+
+                $respEntries = $resp->json('entries') ?: [];
+                foreach ($respEntries as $respEntry) {
+                    $bId = $respEntry['batchId'] ?? null;
+                    if (!$bId || !isset($batchMap[$bId])) continue;
+
+                    $meta = $batchMap[$bId];
+                    if ($meta['type'] === 'delete_standalone') {
+                        continue;
+                    }
+
+                    $errorsList = $respEntry['errors']['errors'] ?? null;
+                    if (!isset($productStatus[$meta['product_id']])) {
+                        $productStatus[$meta['product_id']] = [
+                            'name' => $meta['name'],
+                            'success' => true,
+                            'errors' => [],
+                        ];
+                    }
+
+                    if ($errorsList) {
+                        $productStatus[$meta['product_id']]['success'] = false;
+                        $errMsgs = [];
+                        foreach ($errorsList as $e) {
+                            $errMsgs[] = $e['message'] ?? 'Unknown error';
+                        }
+                        $productStatus[$meta['product_id']]['errors'][] = $meta['offer_id'] . ': ' . implode(', ', $errMsgs);
+                    }
+                }
+            } catch (\Throwable $e) {
+                foreach ($chunk as $entry) {
+                    $meta = $batchMap[$entry['batchId']];
+                    if ($meta['type'] !== 'delete_standalone') {
+                        if (!isset($productStatus[$meta['product_id']])) {
+                            $productStatus[$meta['product_id']] = [
+                                'name' => $meta['name'],
+                                'success' => false,
+                                'errors' => [],
+                            ];
+                        }
+                        $productStatus[$meta['product_id']]['success'] = false;
+                        $productStatus[$meta['product_id']]['errors'][] = $meta['offer_id'] . ': Request exception: ' . $e->getMessage();
+                    }
+                }
+            }
+        }
+
+        $okCount = 0;
+        foreach ($productStatus as $pId => $status) {
+            if ($status['success']) {
+                $okCount++;
+            } else {
+                $failCount++;
+                $errors[] = [
+                    'product_id' => $pId,
+                    'name' => $status['name'],
+                    'error' => implode('; ', $status['errors']),
+                ];
+            }
+        }
+
+        return [
+            'total' => $okCount + $failCount,
+            'success' => $okCount,
+            'failed' => $failCount,
+            'errors' => $errors
+        ];
     }
 }
