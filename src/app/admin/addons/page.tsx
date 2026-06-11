@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { adminApi } from '@/lib/api';
 import { useToken } from '@/lib/useToken';
-import { FiPlus, FiTrash2, FiEdit3, FiX, FiSave, FiLink } from 'react-icons/fi';
+import { FiPlus, FiTrash2, FiEdit3, FiX, FiSave, FiLink, FiRefreshCw, FiClock } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
 interface AddonOption {
@@ -37,6 +37,88 @@ export default function AddonGroupsPage() {
 
   // Constraint editor state
   const [selectedSourceOption, setSelectedSourceOption] = useState<number | null>(null);
+
+  // Bulk Price Sync & Revert States
+  const [showBulkSyncModal, setShowBulkSyncModal] = useState(false);
+  const [activeModalTab, setActiveModalTab] = useState<'sync' | 'history'>('sync');
+  const [selectedSyncGroupId, setSelectedSyncGroupId] = useState<number | ''>('');
+  const [selectedSyncOptionId, setSelectedSyncOptionId] = useState<number | ''>('');
+  const [newSyncPrice, setNewSyncPrice] = useState('');
+  const [isSyncAvailable, setIsSyncAvailable] = useState(true);
+  const [filterByOldPrice, setFilterByOldPrice] = useState(false);
+  const [oldSyncPrice, setOldSyncPrice] = useState('');
+  const [syncLogs, setSyncLogs] = useState<any[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [syncingBulk, setSyncingBulk] = useState(false);
+  const [revertingLogId, setRevertingLogId] = useState<number | null>(null);
+
+  const handleOpenBulkSync = () => {
+    setShowBulkSyncModal(true);
+    setActiveModalTab('sync');
+    loadSyncLogs();
+  };
+
+  const loadSyncLogs = async () => {
+    if (!token) return;
+    setLoadingLogs(true);
+    try {
+      const logs = await adminApi.getAddonSyncLogs(token);
+      setSyncLogs(logs || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingLogs(false);
+    }
+  };
+
+  const handleBulkSyncSubmit = async () => {
+    if (!selectedSyncOptionId) {
+      return toast.error('Vui lòng chọn một tùy chọn (Option)');
+    }
+    if (newSyncPrice === '' || isNaN(Number(newSyncPrice))) {
+      return toast.error('Vui lòng nhập giá cộng thêm mới hợp lệ');
+    }
+    if (filterByOldPrice && (oldSyncPrice === '' || isNaN(Number(oldSyncPrice)))) {
+      return toast.error('Vui lòng nhập giá cũ hợp lệ để lọc');
+    }
+
+    setSyncingBulk(true);
+    const loadingToast = toast.loading('Đang đồng bộ giá...');
+    try {
+      const response = await adminApi.bulkSyncAddonPrice(token!, {
+        option_id: Number(selectedSyncOptionId),
+        additional_price: Number(newSyncPrice),
+        is_available: isSyncAvailable,
+        filter_by_old_price: filterByOldPrice,
+        old_price: filterByOldPrice ? Number(oldSyncPrice) : null,
+      });
+
+      toast.success(response.message || 'Đồng bộ thành công!', { id: loadingToast });
+      setNewSyncPrice('');
+      setOldSyncPrice('');
+      setFilterByOldPrice(false);
+      loadSyncLogs();
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể đồng bộ giá', { id: loadingToast });
+    } finally {
+      setSyncingBulk(false);
+    }
+  };
+
+  const handleRevertSync = async (logId: number) => {
+    if (!confirm('Bạn có chắc chắn muốn hoàn tác lần đồng bộ giá này? Toàn bộ giá của sản phẩm liên quan sẽ được khôi phục về trạng thái trước đó.')) return;
+    setRevertingLogId(logId);
+    const loadingToast = toast.loading('Đang hoàn tác đồng bộ...');
+    try {
+      const response = await adminApi.revertAddonSync(token!, logId);
+      toast.success(response.message || 'Hoàn tác thành công!', { id: loadingToast });
+      loadSyncLogs();
+    } catch (err: any) {
+      toast.error(err.message || 'Không thể hoàn tác', { id: loadingToast });
+    } finally {
+      setRevertingLogId(null);
+    }
+  };
 
   const emptyGroup: AddonGroup = {
     name: '', is_required: false, sort_order: 0,
@@ -157,6 +239,9 @@ export default function AddonGroupsPage() {
       <div className="admin-topbar">
         <h1 className="admin-topbar__title">Quản Lý Biến Thể</h1>
         <div className="admin-topbar__actions" style={{ display: 'flex', gap: '8px' }}>
+          <button className="admin-btn admin-btn--secondary" onClick={handleOpenBulkSync}>
+            <FiRefreshCw /> Đồng bộ giá hàng loạt
+          </button>
           <button className="admin-btn admin-btn--secondary" onClick={() => setShowConstraints(!showConstraints)}>
             <FiLink /> Ràng buộc
           </button>
@@ -407,6 +492,239 @@ export default function AddonGroupsPage() {
           </div>
         )}
       </div>
+
+      {/* ========== BULK PRICE SYNC MODAL ========== */}
+      {showBulkSyncModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }} onClick={() => !syncingBulk && !revertingLogId && setShowBulkSyncModal(false)}>
+          <div style={{
+            background: 'linear-gradient(145deg, #1a1a2e, #16213e)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '640px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+          }} onClick={e => e.stopPropagation()}>
+            
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ color: '#fff', fontSize: '1.125rem', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                <FiRefreshCw style={{ color: 'var(--color-gold)' }} /> Đồng bộ giá Option hàng loạt
+              </h3>
+              <button onClick={() => !syncingBulk && !revertingLogId && setShowBulkSyncModal(false)}
+                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '1.25rem' }}>
+                <FiX />
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div style={{ display: 'flex', gap: '10px', borderBottom: '1px solid rgba(255,255,255,0.1)', marginBottom: '20px', paddingBottom: '8px' }}>
+              <button 
+                onClick={() => setActiveModalTab('sync')}
+                style={{
+                  background: 'none', border: 'none', padding: '8px 16px',
+                  color: activeModalTab === 'sync' ? 'var(--color-gold)' : 'rgba(255,255,255,0.5)',
+                  fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer',
+                  borderBottom: activeModalTab === 'sync' ? '2px solid var(--color-gold)' : 'none',
+                  borderRadius: 0, transition: 'all 0.2s'
+                }}
+              >
+                Đồng bộ giá mới
+              </button>
+              <button 
+                onClick={() => setActiveModalTab('history')}
+                style={{
+                  background: 'none', border: 'none', padding: '8px 16px',
+                  color: activeModalTab === 'history' ? 'var(--color-gold)' : 'rgba(255,255,255,0.5)',
+                  fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer',
+                  borderBottom: activeModalTab === 'history' ? '2px solid var(--color-gold)' : 'none',
+                  borderRadius: 0, transition: 'all 0.2s'
+                }}
+              >
+                Lịch sử & Hoàn tác
+              </button>
+            </div>
+
+            {activeModalTab === 'sync' ? (
+              <div>
+                {/* Step 1: Select Addon Group */}
+                <div className="admin-form__group" style={{ marginBottom: '16px' }}>
+                  <label className="admin-form__label">Bước 1: Chọn nhóm tùy chọn</label>
+                  <select 
+                    className="admin-form__input"
+                    value={selectedSyncGroupId}
+                    onChange={e => {
+                      setSelectedSyncGroupId(e.target.value ? Number(e.target.value) : '');
+                      setSelectedSyncOptionId('');
+                    }}
+                    style={{ background: '#16213e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}
+                  >
+                    <option value="">-- Chọn nhóm (VD: Chất liệu tròng) --</option>
+                    {groups.map(g => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Step 2: Select Option */}
+                <div className="admin-form__group" style={{ marginBottom: '16px' }}>
+                  <label className="admin-form__label">Bước 2: Chọn tùy chọn cụ thể</label>
+                  <select 
+                    className="admin-form__input"
+                    value={selectedSyncOptionId}
+                    onChange={e => setSelectedSyncOptionId(e.target.value ? Number(e.target.value) : '')}
+                    disabled={!selectedSyncGroupId}
+                    style={{ background: '#16213e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}
+                  >
+                    <option value="">-- Chọn tùy chọn (VD: Tròng chống xước) --</option>
+                    {selectedSyncGroupId && (groups.find(g => g.id === selectedSyncGroupId)?.options || []).map(opt => (
+                      <option key={opt.id} value={opt.id}>{opt.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Step 3 & 4: New Price & Availability */}
+                <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+                  <div className="admin-form__group" style={{ flex: 1, marginBottom: 0 }}>
+                    <label className="admin-form__label">Bước 3: Giá cộng thêm mới (VNĐ)</label>
+                    <input 
+                      type="number" 
+                      className="admin-form__input" 
+                      placeholder="VD: 30000"
+                      value={newSyncPrice}
+                      onChange={e => setNewSyncPrice(e.target.value)}
+                    />
+                  </div>
+                  <div className="admin-form__group" style={{ flex: 1, marginBottom: 0 }}>
+                    <label className="admin-form__label">Bước 4: Trạng thái</label>
+                    <select 
+                      className="admin-form__input"
+                      value={isSyncAvailable ? '1' : '0'}
+                      onChange={e => setIsSyncAvailable(e.target.value === '1')}
+                      style={{ background: '#16213e', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }}
+                    >
+                      <option value="1">Còn hàng</option>
+                      <option value="0">Hết hàng / Tạm khóa</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Step 5: Filter by old price */}
+                <div style={{
+                  padding: '14px', background: 'rgba(255,255,255,0.02)', 
+                  border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', 
+                  marginBottom: '24px'
+                }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#fff', fontSize: '0.875rem' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={filterByOldPrice} 
+                      onChange={e => setFilterByOldPrice(e.target.checked)}
+                      style={{ accentColor: 'var(--color-gold)' }}
+                    />
+                    <strong>Chỉ đồng bộ cho sản phẩm đang có mức giá cũ nhất định</strong>
+                  </label>
+                  {filterByOldPrice && (
+                    <div className="admin-form__group" style={{ marginTop: '12px', marginBottom: 0 }}>
+                      <label className="admin-form__label">Giá cộng thêm cũ cần lọc (VNĐ)</label>
+                      <input 
+                        type="number" 
+                        className="admin-form__input" 
+                        placeholder="Nhập giá cũ, VD: 20000"
+                        value={oldSyncPrice}
+                        onChange={e => setOldSyncPrice(e.target.value)}
+                        style={{ maxWidth: '240px' }}
+                      />
+                      <span style={{ display: 'block', fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
+                        Chỉ các sản phẩm có tùy chọn này với mức giá đúng bằng số tiền trên mới bị cập nhật.
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                  <button 
+                    className="admin-btn admin-btn--ghost" 
+                    onClick={() => setShowBulkSyncModal(false)}
+                    disabled={syncingBulk}
+                  >
+                    Hủy
+                  </button>
+                  <button 
+                    className="admin-btn admin-btn--primary" 
+                    onClick={handleBulkSyncSubmit}
+                    disabled={syncingBulk}
+                  >
+                    {syncingBulk ? 'Đang xử lý...' : 'Xác nhận đồng bộ'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                {/* History list */}
+                <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '12px' }}>
+                  Hiển thị tối đa 10 lần đồng bộ gần đây. Bạn có thể khôi phục (hoàn tác) giá gốc trước khi đồng bộ.
+                </p>
+                {loadingLogs ? (
+                  <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center', padding: '20px' }}>Đang tải lịch sử...</div>
+                ) : syncLogs.length === 0 ? (
+                  <div style={{ color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '20px' }}>Chưa có lịch sử đồng bộ nào.</div>
+                ) : (
+                  <div style={{ maxHeight: '320px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {syncLogs.map((log: any) => {
+                      const isReverted = !!log.reverted_at;
+                      return (
+                        <div 
+                          key={log.id} 
+                          style={{
+                            padding: '12px 16px', background: 'rgba(255,255,255,0.03)', 
+                            border: isReverted ? '1px dashed rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.06)', 
+                            borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            opacity: isReverted ? 0.6 : 1
+                          }}
+                        >
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                              <strong style={{ color: '#fff', fontSize: '0.875rem' }}>{log.option?.name || `Tùy chọn #${log.option_id}`}</strong>
+                              <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>({log.option?.group?.name || 'Nhóm'})</span>
+                            </div>
+                            <div style={{ fontSize: '0.8125rem', color: 'rgba(255,255,255,0.7)', display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                              <span>Đồng bộ: <strong>{Intl.NumberFormat('vi-VN').format(log.new_price)} ₫</strong></span>
+                              {log.old_price !== null && (
+                                <span>Chỉ lọc từ giá cũ: <strong>{Intl.NumberFormat('vi-VN').format(log.old_price)} ₫</strong></span>
+                              )}
+                              <span>Ảnh hưởng: <strong style={{ color: 'var(--color-gold)' }}>{log.affected_count} SP</strong></span>
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginTop: '6px' }}>
+                              Ngày tạo: {new Date(log.created_at).toLocaleString('vi-VN')}
+                              {isReverted && (
+                                <span style={{ color: '#ef4444', marginLeft: '10px', fontWeight: 600 }}>
+                                  [Đã hoàn tác lúc: {new Date(log.reverted_at).toLocaleTimeString('vi-VN')}]
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <button
+                              className={`admin-btn ${isReverted ? 'admin-btn--ghost' : 'admin-btn--secondary'} admin-btn--sm`}
+                              disabled={isReverted || revertingLogId === log.id}
+                              onClick={() => handleRevertSync(log.id)}
+                            >
+                              {revertingLogId === log.id ? '...' : isReverted ? 'Đã hoàn tác' : 'Hoàn tác'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -877,4 +877,211 @@ class ProductController extends Controller
             'product' => $newProduct->load('category'),
         ]);
     }
+
+    /**
+     * Bulk synchronize addon option prices globally or with filter by old price.
+     * Snapshot the state before update for rollback.
+     */
+    public function bulkSyncOptionPrice(\Illuminate\Http\Request $request)
+    {
+        $data = $request->validate([
+            'option_id' => 'required|integer|exists:product_addon_options,id',
+            'additional_price' => 'required|numeric|min:0',
+            'is_available' => 'required|boolean',
+            'filter_by_old_price' => 'required|boolean',
+            'old_price' => 'nullable|numeric|min:0',
+        ]);
+
+        $optionId = $data['option_id'];
+        $newPrice = $data['additional_price'];
+        $isAvailable = $data['is_available'];
+        $filterByOldPrice = $data['filter_by_old_price'];
+        $oldPrice = $data['old_price'] !== null ? floatval($data['old_price']) : null;
+
+        try {
+            $option = \App\Models\ProductAddonOption::findOrFail($optionId);
+            $groupId = $option->group_id;
+
+            // 1. Get all products associated with this option's group
+            $productIds = \DB::table('product_addon_group_product')
+                ->where('group_id', $groupId)
+                ->pluck('product_id')
+                ->toArray();
+
+            if (empty($productIds)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Không có sản phẩm nào liên kết với nhóm addon của tùy chọn này.'
+                ], 422);
+            }
+
+            $result = \DB::transaction(function () use ($productIds, $optionId, $newPrice, $isAvailable, $filterByOldPrice, $oldPrice) {
+                // 2. Query all existing prices for this option across target products
+                $existingPricesQuery = \App\Models\ProductAddonPrice::whereIn('product_id', $productIds)
+                    ->where('option_id', $optionId);
+
+                if ($filterByOldPrice && $oldPrice !== null) {
+                    $existingPricesQuery->where('additional_price', $oldPrice);
+                }
+
+                $existingPrices = $existingPricesQuery->get();
+
+                // 3. Create a snapshot of the current states of these products
+                $snapshot = [];
+                $affectedProductIds = [];
+
+                // Record existing prices
+                foreach ($existingPrices as $priceRecord) {
+                    $snapshot[] = [
+                        'product_id' => $priceRecord->product_id,
+                        'additional_price' => $priceRecord->additional_price,
+                        'is_available' => $priceRecord->is_available,
+                        'existed' => true,
+                    ];
+                    $affectedProductIds[] = $priceRecord->product_id;
+                }
+
+                // If not filtering by old price, we also check if there are products that don't have a record yet
+                // Or if filtering by old price = 0, we can also check products without records
+                if (!$filterByOldPrice || ($filterByOldPrice && $oldPrice == 0)) {
+                    $missingProductIds = array_diff($productIds, $affectedProductIds);
+                    foreach ($missingProductIds as $missingId) {
+                        $snapshot[] = [
+                            'product_id' => $missingId,
+                            'additional_price' => 0.0,
+                            'is_available' => true,
+                            'existed' => false,
+                        ];
+                    }
+                }
+
+                if (empty($snapshot)) {
+                    return [
+                        'success' => false,
+                        'message' => 'Không tìm thấy sản phẩm nào khớp với điều kiện giá cũ để đồng bộ.'
+                    ];
+                }
+
+                // 4. Perform the update / create
+                foreach ($snapshot as $snap) {
+                    \App\Models\ProductAddonPrice::updateOrCreate(
+                        [
+                            'product_id' => $snap['product_id'],
+                            'option_id' => $optionId,
+                        ],
+                        [
+                            'additional_price' => $newPrice,
+                            'is_available' => $isAvailable,
+                        ]
+                    );
+                }
+
+                // 5. Create a sync log record
+                $log = \App\Models\AddonPriceSyncLog::create([
+                    'option_id' => $optionId,
+                    'old_price' => $filterByOldPrice ? $oldPrice : null,
+                    'new_price' => $newPrice,
+                    'is_available' => $isAvailable,
+                    'affected_count' => count($snapshot),
+                    'snapshot' => $snapshot,
+                ]);
+
+                return [
+                    'success' => true,
+                    'message' => 'Đồng bộ thành công cho ' . count($snapshot) . ' sản phẩm.',
+                    'log_id' => $log->id,
+                ];
+            });
+
+            if (!$result['success']) {
+                return response()->json($result, 422);
+            }
+
+            \Illuminate\Support\Facades\Cache::flush();
+
+            return response()->json($result);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get recent addon price sync logs.
+     */
+    public function getSyncLogs()
+    {
+        try {
+            $logs = \App\Models\AddonPriceSyncLog::with('option.group')
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get();
+            return response()->json($logs);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Revert a specific bulk option price sync action using its snapshot.
+     */
+    public function revertSyncOptionPrice($logId)
+    {
+        try {
+            $log = \App\Models\AddonPriceSyncLog::findOrFail($logId);
+
+            if ($log->reverted_at !== null) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Lịch sử đồng bộ này đã được hoàn tác trước đó.'
+                ], 422);
+            }
+
+            \DB::transaction(function () use ($log) {
+                $snapshot = $log->snapshot;
+                $optionId = $log->option_id;
+
+                foreach ($snapshot as $snap) {
+                    if ($snap['existed']) {
+                        // Restore previous values
+                        \App\Models\ProductAddonPrice::updateOrCreate(
+                            [
+                                'product_id' => $snap['product_id'],
+                                'option_id' => $optionId,
+                            ],
+                            [
+                                'additional_price' => $snap['additional_price'],
+                                'is_available' => $snap['is_available'],
+                            ]
+                        );
+                    } else {
+                        // Delete if it didn't exist before this sync
+                        \App\Models\ProductAddonPrice::where('product_id', $snap['product_id'])
+                            ->where('option_id', $optionId)
+                            ->delete();
+                    }
+                }
+
+                $log->update([
+                    'reverted_at' => now(),
+                ]);
+            });
+
+            \Illuminate\Support\Facades\Cache::flush();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Hoàn tác đồng bộ giá thành công. Đã khôi phục giá gốc của ' . $log->affected_count . ' sản phẩm.'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

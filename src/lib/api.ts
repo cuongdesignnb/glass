@@ -786,6 +786,15 @@ export const adminApi = {
       body: JSON.stringify({ constraints }),
       token,
     }),
+  bulkSyncAddonPrice: (token: string, data: any) =>
+    fetchApi("/addons/bulk-sync-price", {
+      method: "POST",
+      body: JSON.stringify(data),
+      token,
+    }),
+  getAddonSyncLogs: (token: string) => fetchApi("/addons/sync-logs", { token }),
+  revertAddonSync: (token: string, logId: number) =>
+    fetchApi(`/addons/sync-logs/${logId}/revert`, { method: "POST", token }),
 
   // === Admin: Product Attributes (Filters) ===
   getProductAttributes: (token: string, type?: string) =>

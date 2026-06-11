@@ -170,6 +170,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/products-import-template', [ProductController::class, 'importTemplate']);
     Route::put('/products/{product}/constraints', [ProductController::class, 'saveConstraints']);
     Route::post('/products/{product}/clone', [ProductController::class, 'clone']);
+    Route::post('/addons/bulk-sync-price', [ProductController::class, 'bulkSyncOptionPrice']);
+    Route::get('/addons/sync-logs', [ProductController::class, 'getSyncLogs']);
+    Route::post('/addons/sync-logs/{log}/revert', [ProductController::class, 'revertSyncOptionPrice']);
 
     // Categories CRUD
     Route::apiResource('categories', CategoryController::class);
