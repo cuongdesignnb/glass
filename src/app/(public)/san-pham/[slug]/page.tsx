@@ -53,31 +53,94 @@ async function getProductReviews(productId: number) {
   }
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ color?: string; option_ids?: string }> | { color?: string; option_ids?: string };
+}): Promise<Metadata> {
   const { slug } = await params;
   const product = await getProduct(slug);
   if (!product) {
     return { title: 'Sản phẩm không tìm thấy' };
   }
 
+  const resolvedSearchParams = searchParams instanceof Promise ? await searchParams : (searchParams || {});
+  const color = resolvedSearchParams.color;
+  const optionIdsStr = resolvedSearchParams.option_ids;
+  const optionIds = optionIdsStr ? optionIdsStr.split(',').map(id => parseInt(id, 10)).filter(Boolean) : [];
+
+  const optionNames: string[] = [];
+  if (product.addon_groups && optionIds.length > 0) {
+    product.addon_groups.forEach((group: any) => {
+      (group.options || []).forEach((opt: any) => {
+        if (optionIds.includes(opt.id)) {
+          optionNames.push(opt.name);
+        }
+      });
+    });
+  }
+
+  const suffixParts = [];
+  if (color) suffixParts.push(color);
+  suffixParts.push(...optionNames);
+  const variantTitle = suffixParts.length > 0 ? `${product.name} - ${suffixParts.join(' - ')}` : product.name;
+
   const images = product.images?.map((img: string) =>
     img.startsWith('http') ? img : `${API_MEDIA_URL}${img}`
   ) || [];
 
+  const queryParams: string[] = [];
+  if (color) queryParams.push(`color=${encodeURIComponent(color)}`);
+  if (optionIdsStr) queryParams.push(`option_ids=${encodeURIComponent(optionIdsStr)}`);
+  const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
+
   return generateMeta({
-    title: product.meta_title || product.name,
-    description: product.meta_desc || product.description || `Mua ${product.name} chính hãng tại Glass Eyewear. Giá tốt, bảo hành 12 tháng.`,
+    title: product.meta_title || variantTitle,
+    description: product.meta_desc || product.description || `Mua ${variantTitle} chính hãng tại Glass Eyewear. Giá tốt, bảo hành 12 tháng.`,
     keywords: product.meta_keywords || `${product.name}, kính mắt, glass eyewear`,
     ogImage: product.og_image || images[0],
-    url: `/san-pham/${product.slug}`,
+    url: `/san-pham/${product.slug}${queryString}`,
     type: 'product',
   });
 }
 
-export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function ProductDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ color?: string; option_ids?: string }> | { color?: string; option_ids?: string };
+}) {
   const { slug } = await params;
   const product = await getProduct(slug);
   if (!product) notFound();
+
+  const resolvedSearchParams = searchParams instanceof Promise ? await searchParams : (searchParams || {});
+  const color = resolvedSearchParams.color;
+  const optionIdsStr = resolvedSearchParams.option_ids;
+  const optionIds = optionIdsStr ? optionIdsStr.split(',').map(id => parseInt(id, 10)).filter(Boolean) : [];
+
+  let addonTotal = 0;
+  if (product.addon_prices && optionIds.length > 0) {
+    const priceMap: Record<number, number> = {};
+    (product.addon_prices || []).forEach((p: any) => {
+      priceMap[p.option_id] = Number(p.additional_price) || 0;
+    });
+    optionIds.forEach((id) => {
+      addonTotal += priceMap[id] || 0;
+    });
+  }
+
+  const basePrice = Number(product.price) + addonTotal;
+  const salePrice = product.sale_price ? Number(product.sale_price) + addonTotal : undefined;
+
+  const queryParams: string[] = [];
+  if (color) queryParams.push(`color=${encodeURIComponent(color)}`);
+  if (optionIdsStr) queryParams.push(`option_ids=${encodeURIComponent(optionIdsStr)}`);
+  const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
+  const schemaUrl = `/san-pham/${product.slug}${queryString}`;
 
   const reviewData = await getProductReviews(product.id);
 
@@ -105,9 +168,9 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     image: images,
     sku: product.sku,
     brand: product.brand,
-    price: Number(product.price),
-    salePrice: product.sale_price ? Number(product.sale_price) : undefined,
-    url: `/san-pham/${product.slug}`,
+    price: basePrice,
+    salePrice: salePrice,
+    url: schemaUrl,
     inStock: product.stock > 0,
   });
 

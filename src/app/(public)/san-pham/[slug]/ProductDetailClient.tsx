@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { publicApi } from "@/lib/api";
 import { formatPrice, COLORS } from "@/lib/constants";
 import Link from "next/link";
@@ -106,6 +106,112 @@ export default function ProductDetailClient({
   const [selectedAddons, setSelectedAddons] = useState<
     Record<number, number | null>
   >({});
+
+  // A ref to prevent the URL-updating effect from running before the initial URL params have been parsed and loaded.
+  const isInitializedRef = useRef(false);
+
+  // Parse URL parameters on mount
+  useEffect(() => {
+    if (typeof window !== "undefined" && !isInitializedRef.current) {
+      const params = new URLSearchParams(window.location.search);
+      const colorParam = params.get("color");
+      const optionIdsParam = params.get("option_ids");
+
+      let index = -1;
+      if (colorParam) {
+        if (product.color_names) {
+          index = product.color_names.findIndex(
+            (c: string) => c && c.toLowerCase() === colorParam.toLowerCase()
+          );
+        }
+        if (index === -1 && product.colors) {
+          index = product.colors.findIndex(
+            (c: string) => c && c.toLowerCase() === colorParam.toLowerCase()
+          );
+        }
+        if (index !== -1) {
+          setSelectedColor(product.colors?.[index] || "");
+          setSelectedColorName(product.color_names?.[index] || "");
+          if (product.images && product.images[index]) {
+            setMainImageIndex(index);
+          }
+        }
+      }
+
+      if (optionIdsParam) {
+        const optionIds = optionIdsParam.split(",").map((id) => parseInt(id, 10)).filter(Boolean);
+        const newAddons: Record<number, number> = {};
+        if (product.addon_groups) {
+          product.addon_groups.forEach((group: any) => {
+            const foundOpt = (group.options || []).find((opt: any) =>
+              optionIds.includes(opt.id)
+            );
+            if (foundOpt) {
+              newAddons[group.id] = foundOpt.id;
+            }
+          });
+          setSelectedAddons(newAddons);
+        }
+      }
+      isInitializedRef.current = true;
+    }
+  }, [product]);
+
+  // Synchronize state back to the URL search params, but ONLY after initialization is complete
+  useEffect(() => {
+    if (typeof window !== "undefined" && isInitializedRef.current) {
+      const params = new URLSearchParams(window.location.search);
+      if (selectedColorName) {
+        params.set("color", selectedColorName);
+      } else if (selectedColor) {
+        params.set("color", selectedColor);
+      } else {
+        params.delete("color");
+      }
+
+      const activeOptionIds: number[] = [];
+      Object.values(selectedAddons).forEach((val) => {
+        if (val) activeOptionIds.push(val);
+      });
+
+      if (activeOptionIds.length > 0) {
+        params.set("option_ids", activeOptionIds.join(","));
+      } else {
+        params.delete("option_ids");
+      }
+
+      const newSearch = params.toString();
+      const newUrl = window.location.pathname + (newSearch ? `?${newSearch}` : "");
+      window.history.replaceState(null, "", newUrl);
+    }
+  }, [selectedColor, selectedColorName, selectedAddons]);
+
+  // Calculate total additional price for selected addons
+  const addonTotal = useMemo(() => {
+    let total = 0;
+    if (product.addon_groups && product.addon_prices) {
+      const priceMap: Record<number, number> = {};
+      (product.addon_prices || []).forEach((p: any) => {
+        priceMap[p.option_id] = Number(p.additional_price) || 0;
+      });
+
+      product.addon_groups.forEach((group: any) => {
+        const selectedOptionId = selectedAddons[group.id];
+        if (selectedOptionId) {
+          const opt = (group.options || []).find(
+            (o: any) => o.id === selectedOptionId,
+          );
+          if (opt) {
+            total += priceMap[opt.id] || 0;
+          }
+        }
+      });
+    }
+    return total;
+  }, [selectedAddons, product]);
+
+  const currentBasePrice = Number(product.price) + addonTotal;
+  const currentSalePrice = product.sale_price ? Number(product.sale_price) + addonTotal : null;
 
   // Reviews pagination (client-side load more)
   const [reviews, setReviews] = useState(reviewData?.reviews?.data || []);
@@ -403,17 +509,17 @@ export default function ProductDetailClient({
           {/* Price */}
           <div className="product-info__price">
             <span className="product-info__price-current">
-              {formatPrice(product.sale_price || product.price)}
+              {formatPrice(currentSalePrice || currentBasePrice)}
             </span>
-            {product.sale_price && (
+            {currentSalePrice && (
               <>
                 <span className="product-info__price-original">
-                  {formatPrice(product.price)}
+                  {formatPrice(currentBasePrice)}
                 </span>
                 <span className="product-info__discount">
                   -
                   {Math.round(
-                    ((product.price - product.sale_price) / product.price) *
+                    ((currentBasePrice - currentSalePrice) / currentBasePrice) *
                       100,
                   )}
                   %

@@ -147,9 +147,6 @@ class GoogleMerchantService
             if (count($additional) >= 10) break;
         }
 
-        $priceValue = $product->sale_price ?: $product->price;
-        $originalPrice = $product->price;
-
         $description = strip_tags((string) ($product->description ?: $product->content ?: $product->name));
         $description = mb_substr(trim($description), 0, 5000);
 
@@ -161,31 +158,88 @@ class GoogleMerchantService
         if (!$product->is_active) $availability = 'out_of_stock';
 
         $materialsArr = is_array($product->materials) ? $product->materials : [];
-        $material = $materialsArr ? (string) $materialsArr[0] : null;
+        $materialBase = $materialsArr ? (string) $materialsArr[0] : null;
 
         $baseId = (string) ($product->sku ?: 'sku-' . $product->id);
-        $colorNames = is_array($product->color_names) ? array_filter($product->color_names) : [];
 
+        // Generate combinations (Colors + Addon Options)
+        $combinations = $this->generateVariantCombinations($product);
         $payloads = [];
 
-        if (count($colorNames) > 1) {
-            // Generate multiple variant payloads
-            foreach ($colorNames as $index => $colorName) {
-                $colorSlug = $this->getSafeSuffix($colorName);
-                $variantId = $baseId . '-' . $colorSlug;
+        if (count($combinations) > 1) {
+            foreach ($combinations as $comb) {
+                // Parse combination elements
+                $color = null;
+                $optionIds = [];
+                $optionTitles = [];
+                $addedPrice = 0;
+                $gmcAttributes = [];
 
-                // Try to find a variant-specific image if available
+                foreach ($comb as $item) {
+                    if ($item['type'] === 'color') {
+                        $color = $item['value'];
+                    } elseif ($item['type'] === 'option') {
+                        $optionIds[] = $item['id'];
+                        $optionTitles[] = $item['value'];
+                        $addedPrice += $item['price'];
+
+                        // Map to Google Merchant attribute
+                        $attrName = $this->getGoogleAttributeName($item['group_name']);
+                        $gmcAttributes[$attrName] = $item['value'];
+                    }
+                }
+
+                // Determine variant suffix
+                $suffixParts = [];
+                if ($color) {
+                    $suffixParts[] = $this->getSafeSuffix($color);
+                }
+                foreach ($optionTitles as $title) {
+                    $suffixParts[] = $this->getSafeSuffix($title);
+                }
+                $variantId = $baseId . '-' . implode('-', $suffixParts);
+
+                // Price calculation
+                $originalPrice = (float) $product->price + $addedPrice;
+                $salePrice = $product->sale_price ? ((float) $product->sale_price + $addedPrice) : null;
+                $priceValue = $salePrice ?: $originalPrice;
+
+                // Title and Link
+                $titleParts = [$product->name];
+                if ($color) {
+                    $titleParts[] = $color;
+                }
+                foreach ($optionTitles as $title) {
+                    $titleParts[] = $title;
+                }
+                $variantTitle = implode(' - ', $titleParts);
+
+                // Link query params
+                $linkParams = [];
+                if ($color) {
+                    $linkParams['color'] = $color;
+                }
+                if (!empty($optionIds)) {
+                    $linkParams['option_ids'] = implode(',', $optionIds);
+                }
+                $linkQuery = !empty($linkParams) ? '?' . http_build_query($linkParams) : '';
+                $linkUrl = $siteUrl . '/san-pham/' . $product->slug . $linkQuery;
+
+                // Image: try color-matching if colors exist
                 $variantImage = $thumb;
-                if (is_array($product->images) && isset($product->images[$index])) {
-                    $img = $product->images[$index];
-                    $variantImage = str_starts_with((string) $img, 'http') ? $img : ($apiBase . '/' . ltrim((string) $img, '/'));
+                if ($color && is_array($product->color_names) && is_array($product->images)) {
+                    $colorIndex = array_search($color, array_filter($product->color_names));
+                    if ($colorIndex !== false && isset($product->images[$colorIndex])) {
+                        $img = $product->images[$colorIndex];
+                        $variantImage = str_starts_with((string) $img, 'http') ? $img : ($apiBase . '/' . ltrim((string) $img, '/'));
+                    }
                 }
 
                 $payload = [
                     'offerId' => $variantId,
-                    'title' => mb_substr($product->name . ' - ' . $colorName, 0, 150),
+                    'title' => mb_substr($variantTitle, 0, 150),
                     'description' => $description ?: $product->name,
-                    'link' => $siteUrl . '/san-pham/' . $product->slug . '?color=' . urlencode($colorName),
+                    'link' => $linkUrl,
                     'imageLink' => $variantImage,
                     'contentLanguage' => $this->language,
                     'targetCountry' => $this->country,
@@ -197,15 +251,14 @@ class GoogleMerchantService
                         'currency' => $this->currency,
                     ],
                     'brand' => $product->brand ?: $this->brandDefault,
-                    'color' => $colorName,
                     'itemGroupId' => $baseId,
                     'identifierExists' => false,
                     'productTypes' => $product->category ? [$product->category->name] : [],
                 ];
 
-                if ($product->sale_price && $product->sale_price < $originalPrice) {
+                if ($salePrice && $salePrice < $originalPrice) {
                     $payload['salePrice'] = [
-                        'value' => (string) (int) $product->sale_price,
+                        'value' => (string) (int) $salePrice,
                         'currency' => $this->currency,
                     ];
                     $payload['price'] = [
@@ -214,7 +267,20 @@ class GoogleMerchantService
                     ];
                 }
 
-                // Add other images as additional
+                // Add distinguishing attributes
+                if ($color) {
+                    $payload['color'] = $color;
+                }
+                foreach ($gmcAttributes as $attrKey => $attrVal) {
+                    $payload[$attrKey] = $attrVal;
+                }
+
+                // Fallback for material/size if not defined by options
+                if (!isset($payload['material']) && $materialBase) {
+                    $payload['material'] = $materialBase;
+                }
+
+                // Additional images
                 $varAdditional = [];
                 if ($variantImage !== $thumb) {
                     $varAdditional[] = $thumb;
@@ -229,14 +295,13 @@ class GoogleMerchantService
                 }
 
                 if ($gender) $payload['gender'] = $gender;
-                if ($material) $payload['material'] = $material;
                 if ($product->sku) $payload['mpn'] = $variantId;
 
                 $payloads[] = $payload;
             }
         } else {
             // Standalone product payload
-            $color = count($colorNames) === 1 ? $colorNames[0] : null;
+            $color = is_array($product->color_names) && count($product->color_names) === 1 ? $product->color_names[0] : null;
 
             $payload = [
                 'offerId' => $baseId,
@@ -250,7 +315,7 @@ class GoogleMerchantService
                 'availability' => $availability,
                 'condition' => 'new',
                 'price' => [
-                    'value' => (string) (int) $priceValue,
+                    'value' => (string) (int) ($product->sale_price ?: $product->price),
                     'currency' => $this->currency,
                 ],
                 'brand' => $product->brand ?: $this->brandDefault,
@@ -258,13 +323,13 @@ class GoogleMerchantService
                 'productTypes' => $product->category ? [$product->category->name] : [],
             ];
 
-            if ($product->sale_price && $product->sale_price < $originalPrice) {
+            if ($product->sale_price && $product->sale_price < $product->price) {
                 $payload['salePrice'] = [
                     'value' => (string) (int) $product->sale_price,
                     'currency' => $this->currency,
                 ];
                 $payload['price'] = [
-                    'value' => (string) (int) $originalPrice,
+                    'value' => (string) (int) $product->price,
                     'currency' => $this->currency,
                 ];
             }
@@ -274,7 +339,7 @@ class GoogleMerchantService
             }
             if ($gender) $payload['gender'] = $gender;
             if ($color) $payload['color'] = $color;
-            if ($material) $payload['material'] = $material;
+            if ($materialBase) $payload['material'] = $materialBase;
             if ($product->sku) $payload['mpn'] = $product->sku;
 
             $payloads[] = $payload;
@@ -298,13 +363,12 @@ class GoogleMerchantService
     public function insertProduct(Product $product, ?string $siteUrl = null): array
     {
         $token = $this->getAccessToken();
-        $colorNames = is_array($product->color_names) ? array_filter($product->color_names) : [];
+        $payloads = $this->buildProductPayloads($product, $siteUrl);
 
-        if (count($colorNames) > 1) {
+        if (count($payloads) > 1) {
             $success = true;
             $errors = [];
             $merchantIds = [];
-            $payloads = $this->buildProductPayloads($product, $siteUrl);
 
             foreach ($payloads as $payload) {
                 $resp = Http::withToken($token)
@@ -313,13 +377,14 @@ class GoogleMerchantService
 
                 if (!$resp->successful()) {
                     $success = false;
-                    $errors[] = $payload['color'] . ': ' . ($resp->json('error.message') ?: $resp->body());
+                    $variantLabel = ($payload['color'] ?? '') . ' ' . ($payload['material'] ?? '') . ' ' . ($payload['size'] ?? '') . ' ' . ($payload['pattern'] ?? '');
+                    $errors[] = trim($variantLabel) . ': ' . ($resp->json('error.message') ?: $resp->body());
                 } else {
                     $merchantIds[] = $resp->json('id');
                 }
             }
 
-            // If the product used to be a standalone item, delete it to prevent duplicate orphans
+            // Delete standalone item if it was converted to variants
             $baseId = (string) ($product->sku ?: 'sku-' . $product->id);
             $gmcIdStandalone = sprintf('online:%s:%s:%s', $this->language, $this->country, $baseId);
             Http::withToken($token)->delete(self::API_BASE . '/' . $this->merchantId . '/products/' . rawurlencode($gmcIdStandalone));
@@ -331,7 +396,6 @@ class GoogleMerchantService
                 'error' => $errors ? implode('; ', $errors) : null,
             ];
         } else {
-            $payloads = $this->buildProductPayloads($product, $siteUrl);
             $payload = $payloads[0];
 
             $resp = Http::withToken($token)
@@ -361,16 +425,13 @@ class GoogleMerchantService
     public function deleteProduct(Product $product): array
     {
         $token = $this->getAccessToken();
-        $baseId = (string) ($product->sku ?: 'sku-' . $product->id);
-        $colorNames = is_array($product->color_names) ? array_filter($product->color_names) : [];
+        $payloads = $this->buildProductPayloads($product);
 
-        if (count($colorNames) > 1) {
+        if (count($payloads) > 1) {
             $success = true;
             $errors = [];
-            foreach ($colorNames as $colorName) {
-                $colorSlug = $this->getSafeSuffix($colorName);
-                $offerId = $baseId . '-' . $colorSlug;
-                $gmcId = sprintf('online:%s:%s:%s', $this->language, $this->country, $offerId);
+            foreach ($payloads as $payload) {
+                $gmcId = sprintf('online:%s:%s:%s', $this->language, $this->country, $payload['offerId']);
 
                 $resp = Http::withToken($token)
                     ->delete(self::API_BASE . '/' . $this->merchantId . '/products/' . rawurlencode($gmcId));
@@ -386,6 +447,7 @@ class GoogleMerchantService
                 'error' => $errors ? implode('; ', $errors) : null
             ];
         } else {
+            $baseId = (string) ($product->sku ?: 'sku-' . $product->id);
             $gmcId = sprintf('online:%s:%s:%s', $this->language, $this->country, $baseId);
 
             $resp = Http::withToken($token)
@@ -401,6 +463,124 @@ class GoogleMerchantService
 
             return ['success' => true, 'product_id' => $product->id];
         }
+    }
+
+    /**
+     * Helper to generate variant combinations based on colors and active addon options.
+     */
+    private function generateVariantCombinations(Product $product): array
+    {
+        $colors = is_array($product->color_names) ? array_filter($product->color_names) : [];
+        if (empty($colors)) {
+            $colors = [null];
+        }
+
+        // Get addon groups and options
+        $groups = $product->addonGroups()->with('options')->get();
+        $prices = $product->addonPrices->keyBy('option_id');
+
+        $dimensions = [];
+        // Dimension 0: Colors
+        $colorDimension = [];
+        foreach ($colors as $c) {
+            $colorDimension[] = ['type' => 'color', 'value' => $c, 'id' => null, 'price' => 0];
+        }
+        $dimensions[] = $colorDimension;
+
+        // Group dimensions
+        foreach ($groups as $group) {
+            $groupDimension = [];
+            foreach ($group->options as $opt) {
+                $priceRecord = $prices->get($opt->id);
+                $isAvailable = $priceRecord ? (bool) $priceRecord->is_available : true;
+                $additionalPrice = $priceRecord ? (float) $priceRecord->additional_price : 0;
+
+                if ($isAvailable) {
+                    $groupDimension[] = [
+                        'type' => 'option',
+                        'group_id' => $group->id,
+                        'group_name' => $group->name,
+                        'value' => $opt->name,
+                        'id' => $opt->id,
+                        'price' => $additionalPrice,
+                    ];
+                }
+            }
+            if (!empty($groupDimension)) {
+                $dimensions[] = $groupDimension;
+            }
+        }
+
+        // Generate Cartesian Product
+        $combinations = [[]];
+        foreach ($dimensions as $dim) {
+            $temp = [];
+            foreach ($combinations as $comb) {
+                foreach ($dim as $item) {
+                    $temp[] = array_merge($comb, [$item]);
+                }
+            }
+            $combinations = $temp;
+        }
+
+        // Filter combinations by constraints
+        $optionIds = $groups->pluck('options')->flatten()->pluck('id')->toArray();
+        $constraints = [];
+        if (!empty($optionIds)) {
+            try {
+                $constraints = \App\Models\AddonOptionConstraint::where('product_id', $product->id)
+                    ->orWhereNull('product_id')
+                    ->where(function ($q) use ($optionIds) {
+                        $q->whereIn('option_id', $optionIds)
+                          ->orWhereIn('blocked_option_id', $optionIds);
+                    })
+                    ->get();
+            } catch (\Exception $e) {
+                // Table might not exist
+            }
+        }
+
+        $filteredCombinations = [];
+        foreach ($combinations as $comb) {
+            $selectedOptionIds = [];
+            foreach ($comb as $item) {
+                if ($item['type'] === 'option') {
+                    $selectedOptionIds[] = $item['id'];
+                }
+            }
+
+            $violates = false;
+            foreach ($constraints as $c) {
+                if (in_array($c->option_id, $selectedOptionIds) && in_array($c->blocked_option_id, $selectedOptionIds)) {
+                    $violates = true;
+                    break;
+                }
+            }
+
+            if (!$violates) {
+                $filteredCombinations[] = $comb;
+            }
+        }
+
+        return $filteredCombinations;
+    }
+
+    /**
+     * Map addon group name to standard Google Merchant attributes (color, size, material, pattern).
+     */
+    private function getGoogleAttributeName(string $groupName): string
+    {
+        $normalized = strtolower($this->getSafeSuffix($groupName));
+        if (str_contains($normalized, 'chat-lieu') || str_contains($normalized, 'trong-kinh') || str_contains($normalized, 'chat-lieu-trong-kinh')) {
+            return 'material';
+        }
+        if (str_contains($normalized, 'do-can') || str_contains($normalized, 'kich-thuoc') || str_contains($normalized, 'size')) {
+            return 'size';
+        }
+        if (str_contains($normalized, 'mau-sac') || str_contains($normalized, 'color')) {
+            return 'color';
+        }
+        return 'pattern'; // fallback
     }
 
     /**
