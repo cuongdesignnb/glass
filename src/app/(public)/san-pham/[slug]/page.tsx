@@ -91,17 +91,16 @@ export async function generateMetadata({
     img.startsWith('http') ? img : `${API_MEDIA_URL}${img}`
   ) || [];
 
-  const queryParams: string[] = [];
-  if (color) queryParams.push(`color=${encodeURIComponent(color)}`);
-  if (optionIdsStr) queryParams.push(`option_ids=${encodeURIComponent(optionIdsStr)}`);
-  const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
+  const canonicalParams: string[] = [];
+  if (color) canonicalParams.push(`color=${encodeURIComponent(color)}`);
+  const canonicalQueryString = canonicalParams.length > 0 ? `?${canonicalParams.join('&')}` : '';
 
   return generateMeta({
     title: product.meta_title || variantTitle,
     description: product.meta_desc || product.description || `Mua ${variantTitle} chính hãng tại Glass Eyewear. Giá tốt, bảo hành 12 tháng.`,
     keywords: product.meta_keywords || `${product.name}, kính mắt, glass eyewear`,
     ogImage: product.og_image || images[0],
-    url: `/san-pham/${product.slug}${queryString}`,
+    url: `/san-pham/${product.slug}${canonicalQueryString}`,
     type: 'product',
   });
 }

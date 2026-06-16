@@ -11,12 +11,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           '/admin/',
           '/api/',
-          '/gio-hang',
-          '/thanh-toan',
-          '/tai-khoan',
-          '/dang-nhap',
-          '/dang-ky',
-          '/tra-cuu-don-hang',
         ],
       },
     ],

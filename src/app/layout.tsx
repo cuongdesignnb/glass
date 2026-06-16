@@ -118,6 +118,7 @@ export async function generateMetadata(): Promise<Metadata> {
     : `${APP_URL}/og-default.jpg`;
 
   return {
+    metadataBase: new URL(APP_URL),
     title: {
       default: title,
       template: `%s | ${siteName}`,
