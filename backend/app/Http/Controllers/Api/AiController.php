@@ -590,7 +590,14 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
 
             // ── Auto-generate images based on H2/H3 headings ──
             $generatedImages = [];
+            
+            // Clean markdown code blocks if the LLM wrapped it
             $content = $rawContent;
+            $content = preg_replace('/^```html\s*/i', '', $content);
+            $content = preg_replace('/\s*```$/i', '', $content);
+            
+            // Normalize Markdown to HTML so headings match successfully
+            $content = $this->normalizeMarkdownToHtml($content);
 
             if ($imageCount > 0) {
                 // Remove any [IMG:...] placeholders ChatGPT might have added
@@ -709,52 +716,86 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
 
         $prompt = $description . ' Style: modern, clean, editorial photography. No text or watermarks. Output ONLY the image.';
 
-        // Same payload format as tryOn (which works)
-        $payload = [
-            'contents' => [
-                ['parts' => [['text' => $prompt]]],
-            ],
-            'generationConfig' => [
-                'responseModalities' => ['TEXT', 'IMAGE'],
-            ],
-        ];
-
         foreach ($models as $model) {
             try {
-                $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
-                \Log::info("AI Image Gemini: Trying {$model}");
+                if (str_contains($model, 'imagen')) {
+                    // Use predict endpoint for Imagen models
+                    $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:predict?key={$apiKey}";
+                    \Log::info("AI Image Gemini: Trying Imagen model {$model} via predict");
 
-                $response = Http::timeout(60)->withoutVerifying()
-                    ->withHeaders(['Content-Type' => 'application/json'])
-                    ->post($url, $payload);
+                    $response = Http::timeout(60)->withoutVerifying()
+                        ->withHeaders(['Content-Type' => 'application/json'])
+                        ->post($url, [
+                            'instances' => [['prompt' => $prompt]],
+                            'parameters' => ['sampleCount' => 1],
+                        ]);
 
-                if (in_array($response->status(), [429, 400, 404])) {
-                    $errMsg = $response->json()['error']['message'] ?? '';
-                    $warnings[] = "Model Gemini {$model} trả về lỗi HTTP {$response->status()}: {$errMsg}";
-                    \Log::warning("AI Image Gemini: {$model} HTTP {$response->status()}: " . substr($errMsg, 0, 150));
-                    // 400 "does not support" → try next model
-                    if ($response->status() === 400 && !str_contains($errMsg, 'does not support')) {
-                        break; // Other 400 error → stop
+                    if ($response->failed()) {
+                        $errData = $response->json();
+                        $errMsg = $errData['error']['message'] ?? $response->body() ?? '';
+                        $warnings[] = "Model Gemini {$model} (predict) thất bại (HTTP {$response->status()}): {$errMsg}";
+                        \Log::warning("AI Image Gemini: {$model} predict HTTP {$response->status()}: " . substr($errMsg, 0, 150));
+                        continue;
                     }
-                    continue;
+
+                    $result = $response->json();
+                    $prediction = $result['predictions'][0] ?? null;
+                    if ($prediction && isset($prediction['bytesBase64Encoded'])) {
+                        \Log::info("AI Image Gemini: SUCCESS with {$model} (predict)");
+                        return $this->saveBase64Image(
+                            $prediction['bytesBase64Encoded'],
+                            $prediction['mimeType'] ?? 'image/png',
+                            $description,
+                            $slug,
+                            $idx
+                        );
+                    }
+
+                    $warnings[] = "Model Gemini {$model} (predict) không trả về dữ liệu hình ảnh.";
+                    \Log::warning("AI Image Gemini: {$model} predict returned no image data");
+                } else {
+                    // Use generateContent endpoint for multimodal Gemini models
+                    $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
+                    \Log::info("AI Image Gemini: Trying Gemini model {$model} via generateContent");
+
+                    $payload = [
+                        'contents' => [
+                            ['parts' => [['text' => $prompt]]],
+                        ],
+                        'generationConfig' => [
+                            'responseModalities' => ['TEXT', 'IMAGE'],
+                        ],
+                    ];
+
+                    $response = Http::timeout(60)->withoutVerifying()
+                        ->withHeaders(['Content-Type' => 'application/json'])
+                        ->post($url, $payload);
+
+                    if (in_array($response->status(), [429, 400, 404])) {
+                        $errData = $response->json();
+                        $errMsg = $errData['error']['message'] ?? $response->body() ?? '';
+                        $warnings[] = "Model Gemini {$model} (generateContent) trả về lỗi HTTP {$response->status()}: {$errMsg}";
+                        \Log::warning("AI Image Gemini: {$model} HTTP {$response->status()}: " . substr($errMsg, 0, 150));
+                        continue;
+                    }
+
+                    if ($response->failed()) {
+                        $warnings[] = "Model Gemini {$model} thất bại với mã HTTP {$response->status()}";
+                        \Log::warning("AI Image Gemini: {$model} failed HTTP {$response->status()}");
+                        continue;
+                    }
+
+                    $result = $response->json();
+                    $imageData = $this->extractImageFromGeminiResponse($result);
+
+                    if ($imageData) {
+                        \Log::info("AI Image Gemini: SUCCESS with {$model}");
+                        return $this->saveBase64Image($imageData['data'], $imageData['mime'], $description, $slug, $idx);
+                    }
+
+                    $warnings[] = "Model Gemini {$model} không trả về dữ liệu hình ảnh.";
+                    \Log::warning("AI Image Gemini: {$model} returned no image data");
                 }
-
-                if ($response->failed()) {
-                    $warnings[] = "Model Gemini {$model} thất bại với mã HTTP {$response->status()}";
-                    \Log::warning("AI Image Gemini: {$model} failed HTTP {$response->status()}");
-                    continue;
-                }
-
-                $result = $response->json();
-                $imageData = $this->extractImageFromGeminiResponse($result);
-
-                if ($imageData) {
-                    \Log::info("AI Image Gemini: SUCCESS with {$model}");
-                    return $this->saveBase64Image($imageData['data'], $imageData['mime'], $description, $slug, $idx);
-                }
-
-                $warnings[] = "Model Gemini {$model} không trả về dữ liệu hình ảnh.";
-                \Log::warning("AI Image Gemini: {$model} returned no image data");
             } catch (\Exception $e) {
                 $warnings[] = "Lỗi Exception ở Model Gemini {$model}: {$e->getMessage()}";
                 \Log::warning("AI Image Gemini: {$model} exception: " . $e->getMessage());
@@ -798,8 +839,9 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
                     ])->post($url, $payload);
 
                 if ($response->failed()) {
-                    $errMsg = $response->json()['error']['message'] ?? 'OpenAI Image API error';
-                    $warnings[] = "Model OpenAI {$model} thất bại với mã HTTP {$response->status()}: {$errMsg}";
+                    $errData = $response->json();
+                    $errMsg = $errData['error']['message'] ?? $response->body() ?? 'OpenAI Image API error';
+                    $warnings[] = "Model OpenAI {$model} thất bại (HTTP {$response->status()}): {$errMsg}";
                     \Log::warning("AI Image OpenAI: {$model} failed HTTP {$response->status()}: {$errMsg}");
                     continue; // Try next model
                 }
@@ -946,5 +988,23 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
             'slug' => $a->slug,
             'keywords' => $a->meta_keywords ?: '',
         ])->toArray();
+    }
+
+    /**
+     * Convert basic markdown elements (headings, bold, italic) to HTML.
+     */
+    private function normalizeMarkdownToHtml(string $content): string
+    {
+        // Convert markdown headings to HTML (ensuring they start on a new line or at the beginning of text)
+        $content = preg_replace('/^##\s+(.*?)$/m', '<h2>$1</h2>', $content);
+        $content = preg_replace('/^###\s+(.*?)$/m', '<h3>$1</h3>', $content);
+        $content = preg_replace('/^####\s+(.*?)$/m', '<h4>$1</h4>', $content);
+        $content = preg_replace('/^#\s+(.*?)$/m', '<h1>$1</h1>', $content);
+
+        // Convert bold/italic
+        $content = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $content);
+        $content = preg_replace('/\*(.*?)\*/', '<em>$1</em>', $content);
+
+        return $content;
     }
 }

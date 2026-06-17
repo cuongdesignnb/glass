@@ -130,10 +130,24 @@ class GoogleMerchantService
     public function buildProductPayloads(Product $product, ?string $siteUrl = null): array
     {
         $siteUrl = rtrim($siteUrl ?: (string) (Setting::getValue('site_url') ?: config('app.url')), '/');
+        
+        // Detect if app.url is localhost or 127.0.0.1, fallback to siteUrl
         $apiBase = rtrim((string) config('app.url'), '/');
+        if (str_contains($apiBase, 'localhost') || str_contains($apiBase, '127.0.0.1')) {
+            $apiBase = $siteUrl;
+        }
+
+        // Thumbnail fallback: first image, or site logo, or placeholder
+        $thumb = (string) ($product->thumbnail ?? '');
+        if (!$thumb && is_array($product->images) && !empty($product->images)) {
+            $thumb = (string) reset($product->images);
+        }
+        if (!$thumb) {
+            $logo = Setting::getValue('site_logo') ?: '';
+            $thumb = $logo ?: '/images/placeholder.png';
+        }
 
         // Thumbnail: nếu relative thì ghép với apiBase (storage URL)
-        $thumb = (string) ($product->thumbnail ?? '');
         if ($thumb && !str_starts_with($thumb, 'http')) {
             $thumb = $apiBase . '/' . ltrim($thumb, '/');
         }
@@ -401,10 +415,12 @@ class GoogleMerchantService
             ]);
 
         if (!$resp->successful()) {
+            $errMsg = $resp->json('error.message') ?: $resp->body();
+            \Log::error("Google Merchant insertProduct HTTP Failed: " . $errMsg . " | Payload: " . json_encode($entries));
             return [
                 'success' => false,
                 'product_id' => $product->id,
-                'error' => $resp->json('error.message') ?: $resp->body(),
+                'error' => $errMsg,
             ];
         }
 
@@ -428,6 +444,7 @@ class GoogleMerchantService
                     $errMsgs[] = $e['message'] ?? 'Unknown error';
                 }
                 $errors[] = $meta . ': ' . implode(', ', $errMsgs);
+                \Log::warning("Google Merchant insertProduct item validation error (Product ID: {$product->id}): " . implode(', ', $errMsgs));
             } else {
                 $merchantIds[] = $respEntry['product']['id'] ?? $respEntry['batchId'];
             }
@@ -740,6 +757,7 @@ class GoogleMerchantService
 
                 if (!$resp->successful()) {
                     $errMsg = $resp->json('error.message') ?: $resp->body();
+                    \Log::error("Google Merchant syncProducts Batch HTTP Failed: " . $errMsg);
                     foreach ($chunk as $entry) {
                         $meta = $batchMap[$entry['batchId']];
                         if ($meta['type'] !== 'delete_standalone') {
@@ -783,25 +801,27 @@ class GoogleMerchantService
                             $errMsgs[] = $e['message'] ?? 'Unknown error';
                         }
                         $productStatus[$meta['product_id']]['errors'][] = $meta['offer_id'] . ': ' . implode(', ', $errMsgs);
+                        \Log::warning("Google Merchant syncProducts item error (Product: {$meta['name']}, ID: {$meta['product_id']}): " . implode(', ', $errMsgs));
                     }
                 }
             } catch (\Throwable $e) {
+                \Log::error("Google Merchant syncProducts exception: " . $e->getMessage());
                 foreach ($chunk as $entry) {
                     $meta = $batchMap[$entry['batchId']];
                     if ($meta['type'] !== 'delete_standalone') {
                         if (!isset($productStatus[$meta['product_id']])) {
                             $productStatus[$meta['product_id']] = [
-                                'name' => $meta['name'],
-                                'success' => false,
-                                'errors' => [],
-                            ];
+                                    'name' => $meta['name'],
+                                    'success' => false,
+                                    'errors' => [],
+                                ];
+                            }
+                            $productStatus[$meta['product_id']]['success'] = false;
+                            $productStatus[$meta['product_id']]['errors'][] = $meta['offer_id'] . ': Request exception: ' . $e->getMessage();
                         }
-                        $productStatus[$meta['product_id']]['success'] = false;
-                        $productStatus[$meta['product_id']]['errors'][] = $meta['offer_id'] . ': Request exception: ' . $e->getMessage();
                     }
                 }
             }
-        }
 
         $okCount = 0;
         foreach ($productStatus as $pId => $status) {
