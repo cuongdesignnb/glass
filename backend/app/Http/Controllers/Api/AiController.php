@@ -446,6 +446,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
     {
         set_time_limit(300);
         ini_set('memory_limit', '512M');
+        $warnings = [];
 
         $request->validate([
             'topic'       => 'required|string|max:500',
@@ -621,9 +622,9 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
 
                         $imageUrl = null;
                         if ($imageGenerator === 'openai') {
-                            $imageUrl = $this->generateAndSaveImageOpenAI($openaiKey, $openaiImageModel, $imgPrompt, $headingSlug, $idx);
+                            $imageUrl = $this->generateAndSaveImageOpenAI($openaiKey, $openaiImageModel, $imgPrompt, $headingSlug, $idx, $warnings);
                         } else {
-                            $imageUrl = $this->generateAndSaveImage($geminiKey, $modelsToTry, $imgPrompt, $headingSlug, $idx);
+                            $imageUrl = $this->generateAndSaveImage($geminiKey, $modelsToTry, $imgPrompt, $headingSlug, $idx, $warnings);
                         }
 
                         if ($imageUrl) {
@@ -652,6 +653,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
                         return $tag;
                     }, $content);
                 } else {
+                    $warnings[] = "Không tìm thấy thẻ tiêu đề H2 hoặc H3 nào trong bài viết để chèn hình ảnh.";
                     \Log::warning("AI Images: No H2 or H3 headings found in content to attach images to");
                 }
             }
@@ -671,6 +673,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
                 'success' => true,
                 'content' => $content,
                 'images'  => $cleanImages,
+                'warnings' => $warnings,
                 'usage'   => $result['usage'] ?? null,
             ];
 
@@ -696,9 +699,10 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
      * Generate image via Gemini and save to Media library.
      * Uses the same approach as the working tryOn feature.
      */
-    private function generateAndSaveImage(?string $apiKey, array $models, string $description, string $slug, int $idx): ?string
+    private function generateAndSaveImage(?string $apiKey, array $models, string $description, string $slug, int $idx, array &$warnings = []): ?string
     {
         if (!$apiKey) {
+            $warnings[] = "Sinh ảnh Gemini thất bại: API key trống.";
             \Log::warning("AI Image: Gemini API key is missing");
             return null;
         }
@@ -726,6 +730,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
 
                 if (in_array($response->status(), [429, 400, 404])) {
                     $errMsg = $response->json()['error']['message'] ?? '';
+                    $warnings[] = "Model Gemini {$model} trả về lỗi HTTP {$response->status()}: {$errMsg}";
                     \Log::warning("AI Image Gemini: {$model} HTTP {$response->status()}: " . substr($errMsg, 0, 150));
                     // 400 "does not support" → try next model
                     if ($response->status() === 400 && !str_contains($errMsg, 'does not support')) {
@@ -735,6 +740,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
                 }
 
                 if ($response->failed()) {
+                    $warnings[] = "Model Gemini {$model} thất bại với mã HTTP {$response->status()}";
                     \Log::warning("AI Image Gemini: {$model} failed HTTP {$response->status()}");
                     continue;
                 }
@@ -747,8 +753,10 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
                     return $this->saveBase64Image($imageData['data'], $imageData['mime'], $description, $slug, $idx);
                 }
 
+                $warnings[] = "Model Gemini {$model} không trả về dữ liệu hình ảnh.";
                 \Log::warning("AI Image Gemini: {$model} returned no image data");
             } catch (\Exception $e) {
+                $warnings[] = "Lỗi Exception ở Model Gemini {$model}: {$e->getMessage()}";
                 \Log::warning("AI Image Gemini: {$model} exception: " . $e->getMessage());
             }
         }
@@ -760,46 +768,59 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
     /**
      * Generate image via OpenAI ChatGPT Image 2 (gpt-image-2) and save to Media library.
      */
-    private function generateAndSaveImageOpenAI(string $apiKey, string $model, string $description, string $slug, int $idx): ?string
+    private function generateAndSaveImageOpenAI(string $apiKey, string $preferredModel, string $description, string $slug, int $idx, array &$warnings = []): ?string
     {
-        try {
-            $url = "https://api.openai.com/v1/images/generations";
-            
-            $payload = [
-                'model' => $model, // 'gpt-image-2'
-                'prompt' => $description,
-                'n' => 1,
-                'size' => '1024x1024',
-                'response_format' => 'b64_json',
-            ];
+        $modelsToTry = array_unique(array_filter([
+            $preferredModel,
+            'gpt-image-2',
+            'dall-e-3',
+            'dall-e-2',
+        ]));
 
-            \Log::info("AI Image OpenAI: Trying {$model} for: " . substr($description, 0, 80));
+        foreach ($modelsToTry as $model) {
+            try {
+                $url = "https://api.openai.com/v1/images/generations";
+                
+                $payload = [
+                    'model' => $model,
+                    'prompt' => $description,
+                    'n' => 1,
+                    'size' => '1024x1024',
+                    'response_format' => 'b64_json',
+                ];
 
-            $response = Http::timeout(60)->withoutVerifying()
-                ->withHeaders([
-                    'Authorization' => "Bearer {$apiKey}",
-                    'Content-Type' => 'application/json',
-                ])->post($url, $payload);
+                \Log::info("AI Image OpenAI: Trying {$model} for: " . substr($description, 0, 80));
 
-            if ($response->failed()) {
-                $errMsg = $response->json()['error']['message'] ?? 'OpenAI Image API error';
-                \Log::warning("AI Image OpenAI: {$model} failed HTTP {$response->status()}: {$errMsg}");
-                return null;
+                $response = Http::timeout(60)->withoutVerifying()
+                    ->withHeaders([
+                        'Authorization' => "Bearer {$apiKey}",
+                        'Content-Type' => 'application/json',
+                    ])->post($url, $payload);
+
+                if ($response->failed()) {
+                    $errMsg = $response->json()['error']['message'] ?? 'OpenAI Image API error';
+                    $warnings[] = "Model OpenAI {$model} thất bại với mã HTTP {$response->status()}: {$errMsg}";
+                    \Log::warning("AI Image OpenAI: {$model} failed HTTP {$response->status()}: {$errMsg}");
+                    continue; // Try next model
+                }
+
+                $result = $response->json();
+                $base64Data = $result['data'][0]['b64_json'] ?? null;
+
+                if ($base64Data) {
+                    \Log::info("AI Image OpenAI: SUCCESS with {$model}");
+                    return $this->saveBase64Image($base64Data, 'image/png', $description, $slug, $idx);
+                }
+
+                $warnings[] = "Model OpenAI {$model} không chứa dữ liệu hình ảnh.";
+                \Log::warning("AI Image OpenAI: {$model} returned no image data");
+            } catch (\Exception $e) {
+                $warnings[] = "Lỗi Exception ở Model OpenAI {$model}: {$e->getMessage()}";
+                \Log::warning("AI Image OpenAI: exception: " . $e->getMessage());
             }
-
-            $result = $response->json();
-            $base64Data = $result['data'][0]['b64_json'] ?? null;
-
-            if ($base64Data) {
-                \Log::info("AI Image OpenAI: SUCCESS with {$model}");
-                return $this->saveBase64Image($base64Data, 'image/png', $description, $slug, $idx);
-            }
-
-            \Log::warning("AI Image OpenAI: {$model} returned no image data");
-        } catch (\Exception $e) {
-            \Log::warning("AI Image OpenAI: exception: " . $e->getMessage());
         }
 
+        \Log::error("AI Image OpenAI: ALL models failed for: " . substr($description, 0, 80));
         return null;
     }
 

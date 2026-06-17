@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import { adminApi } from '@/lib/api';
-import { FiCpu, FiSend, FiCopy, FiRefreshCw, FiImage, FiFileText, FiZap } from 'react-icons/fi';
+import { FiCpu, FiSend, FiCopy, FiRefreshCw, FiImage, FiFileText, FiZap, FiSave } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 export default function AdminAiContentPage() {
+  const router = useRouter();
   const [topic, setTopic] = useState('');
   const [type, setType] = useState('article');
   const [tone, setTone] = useState('professional');
@@ -18,6 +20,7 @@ export default function AdminAiContentPage() {
   const [generatedContent, setGeneratedContent] = useState('');
   const [generatedImages, setGeneratedImages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const handleGenerate = async () => {
     if (!topic) return;
@@ -48,11 +51,54 @@ export default function AdminAiContentPage() {
       if (data.full_article) parts.push('(bài hoàn chỉnh)');
       if (data.images?.length) parts.push(`(${data.images.length} ảnh)`);
       toast.success(parts.join(' '), { id: aiToast });
+
+      if (data.warnings && data.warnings.length > 0) {
+        data.warnings.forEach((warn: string) => {
+          toast.error(warn, { duration: 6000 });
+        });
+      }
     } catch (err: any) {
       setGeneratedContent('Lỗi: ' + (err.message || 'Không thể tạo'));
       toast.error('Lỗi: ' + (err.message || 'Không thể tạo'), { id: aiToast });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!generatedContent) return;
+    const token = localStorage.getItem('admin_token');
+    if (!token) {
+      toast.error('Vui lòng đăng nhập lại.');
+      return;
+    }
+    setSaving(true);
+    const saveToast = toast.loading('Đang lưu bài viết nháp...');
+    try {
+      const payload = {
+        title: articleMeta?.title || topic || 'Bài viết từ AI',
+        excerpt: articleMeta?.excerpt || '',
+        content: generatedContent,
+        is_published: false,
+        meta_title: articleMeta?.meta_title || '',
+        meta_desc: articleMeta?.meta_desc || '',
+        meta_keywords: articleMeta?.meta_keywords || '',
+        tags: articleMeta?.tags || [],
+        thumbnail: generatedImages.length > 0 ? generatedImages[0].url : null,
+      };
+
+      const res = await adminApi.createArticle(token, payload);
+      toast.success('Đã lưu bài viết nháp thành công!', { id: saveToast });
+      
+      if (res && res.id) {
+        router.push(`/admin/articles/${res.id}`);
+      } else {
+        router.push('/admin/articles');
+      }
+    } catch (err: any) {
+      toast.error('Lỗi khi lưu bài viết: ' + (err.message || 'Không thể lưu'), { id: saveToast });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -172,9 +218,14 @@ export default function AdminAiContentPage() {
                   </span>
                 )}
                 {generatedContent && (
-                  <button className="admin-btn admin-btn--secondary admin-btn--sm" onClick={copyToClipboard}>
-                    <FiCopy /> Copy
-                  </button>
+                  <>
+                    <button className="admin-btn admin-btn--primary admin-btn--sm" onClick={handleSaveDraft} disabled={saving} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <FiSave /> {saving ? 'Đang lưu...' : 'Lưu Nháp'}
+                    </button>
+                    <button className="admin-btn admin-btn--secondary admin-btn--sm" onClick={copyToClipboard} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <FiCopy /> Copy
+                    </button>
+                  </>
                 )}
               </div>
             </div>
