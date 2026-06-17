@@ -463,9 +463,15 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             return response()->json(['error' => 'OpenAI API key chưa được cấu hình.'], 500);
         }
 
-        $geminiKey = Setting::getValue('gemini_api_key') ?: env('GEMINI_API_KEY');
-        if (!$geminiKey || trim($geminiKey) === '') {
-            return response()->json(['error' => 'Gemini API key chưa được cấu hình. Cần để sinh ảnh.'], 500);
+        $imageGenerator = Setting::getValue('image_generator') ?: 'gemini';
+        $imageCount = $request->get('image_count', 2);
+
+        $geminiKey = null;
+        if ($imageGenerator === 'gemini' && $imageCount > 0) {
+            $geminiKey = Setting::getValue('gemini_api_key') ?: env('GEMINI_API_KEY');
+            if (!$geminiKey || trim($geminiKey) === '') {
+                return response()->json(['error' => 'Gemini API key chưa được cấu hình. Cần thiết để sinh ảnh bằng Gemini.'], 500);
+            }
         }
 
         $model = Setting::getValue('openai_model') ?: 'gpt-4o-mini';
@@ -581,7 +587,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
                 }
             }
 
-            // ── Auto-generate images based on H2 headings ──
+            // ── Auto-generate images based on H2/H3 headings ──
             $generatedImages = [];
             $content = $rawContent;
 
@@ -589,57 +595,90 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
                 // Remove any [IMG:...] placeholders ChatGPT might have added
                 $content = preg_replace('/\[IMG:[^\]]*\]/', '', $content);
 
-                // Parse H2 headings from content
-                if (preg_match_all('/<h2[^>]*>(.*?)<\/h2>/i', $content, $h2Matches)) {
-                    $geminiModel = Setting::getValue('gemini_image_model') ?: 'gemini-2.0-flash-preview-image-generation';
-                    $modelsToTry = array_unique([
-                        $geminiModel,
+                // Parse H2 and H3 headings from content
+                if (preg_match_all('/<(h[23])[^>]*>(.*?)<\/h[23]>/i', $content, $headingMatches)) {
+                    $openaiImageModel = Setting::getValue('openai_image_model') ?: 'gpt-image-2';
+
+                    $geminiModel = Setting::getValue('gemini_image_model') ?: 'imagen-3.0-generate-002';
+                    $modelsToTry = array_unique(array_filter([
+                        ($geminiModel && trim($geminiModel) !== '') ? trim($geminiModel) : null,
+                        'imagen-3.0-generate-002',
+                        'gemini-2.5-flash-image',
                         'gemini-2.0-flash-preview-image-generation',
                         'gemini-2.0-flash-exp-image-generation',
                         'gemini-2.0-flash-exp',
-                    ]);
+                    ]));
 
-                    $headingsToProcess = array_slice($h2Matches[0], 0, $imageCount);
-                    $headingTexts = array_slice($h2Matches[1], 0, $imageCount);
+                    $headingsToProcess = array_slice($headingMatches[0], 0, $imageCount);
+                    $headingTexts = array_slice($headingMatches[2], 0, $imageCount);
 
                     foreach ($headingTexts as $idx => $headingHtml) {
                         $headingText = strip_tags($headingHtml);
                         $headingSlug = \Illuminate\Support\Str::slug($headingText) ?: 'ai-image';
                         $imgPrompt = "Professional editorial photo about: {$headingText}. For a Vietnamese eyewear fashion blog.";
 
-                        \Log::info("AI Image #{$idx}: heading='{$headingText}' slug={$headingSlug}");
+                        \Log::info("AI Image #{$idx}: heading='{$headingText}' slug={$headingSlug} generator={$imageGenerator}");
 
-                        $imageUrl = $this->generateAndSaveImage($geminiKey, $modelsToTry, $imgPrompt, $headingSlug, $idx);
+                        $imageUrl = null;
+                        if ($imageGenerator === 'openai') {
+                            $imageUrl = $this->generateAndSaveImageOpenAI($openaiKey, $openaiImageModel, $imgPrompt, $headingSlug, $idx);
+                        } else {
+                            $imageUrl = $this->generateAndSaveImage($geminiKey, $modelsToTry, $imgPrompt, $headingSlug, $idx);
+                        }
 
                         if ($imageUrl) {
                             $altText = $headingText;
-                            $generatedImages[] = ['heading' => $headingText, 'url' => $imageUrl];
-                            $figureHtml = '<figure style="margin:24px 0;text-align:center">'
-                                . '<img src="' . $imageUrl . '" alt="' . htmlspecialchars($altText) . '" style="max-width:100%;border-radius:8px" loading="lazy" />'
-                                . '<figcaption style="font-size:0.85em;color:#666;margin-top:8px">' . htmlspecialchars($altText) . '</figcaption>'
-                                . '</figure>';
-                            // Insert figure right after the H2 tag
-                            $h2Tag = $headingsToProcess[$idx];
-                            $content = preg_replace('/' . preg_quote($h2Tag, '/') . '/', $h2Tag . "\n" . $figureHtml, $content, 1);
+                            $generatedImages[$idx] = [
+                                'heading' => $headingText,
+                                'url' => $imageUrl,
+                                'figure_html' => '<figure style="margin:24px 0;text-align:center">'
+                                    . '<img src="' . $imageUrl . '" alt="' . htmlspecialchars($altText) . '" style="max-width:100%;border-radius:8px" loading="lazy" />'
+                                    . '<figcaption style="font-size:0.85em;color:#666;margin-top:8px">' . htmlspecialchars($altText) . '</figcaption>'
+                                    . '</figure>'
+                            ];
                         }
                     }
+
+                    // Insert figures right after the corresponding heading
+                    $headingCount = 0;
+                    $content = preg_replace_callback('/<(h[23])[^>]*>.*?<\/h[23]>/i', function($match) use (&$headingCount, $imageCount, $generatedImages) {
+                        $tag = $match[0];
+                        $idx = $headingCount;
+                        $headingCount++;
+
+                        if ($idx < $imageCount && isset($generatedImages[$idx])) {
+                            return $tag . "\n" . $generatedImages[$idx]['figure_html'];
+                        }
+                        return $tag;
+                    }, $content);
                 } else {
-                    \Log::warning("AI Images: No H2 headings found in content to attach images to");
+                    \Log::warning("AI Images: No H2 or H3 headings found in content to attach images to");
                 }
             }
 
+            // Exclude figure HTML from raw image data mapping
+            $cleanImages = [];
+            foreach ($generatedImages as $img) {
+                if (isset($img['heading']) && isset($img['url'])) {
+                    $cleanImages[] = [
+                        'heading' => $img['heading'],
+                        'url' => $img['url']
+                    ];
+                }
+            }
 
             $responseData = [
                 'success' => true,
                 'content' => $content,
-                'images'  => $generatedImages,
+                'images'  => $cleanImages,
                 'usage'   => $result['usage'] ?? null,
             ];
 
             if ($fullArticle && $articleMeta) {
                 $responseData['full_article'] = true;
                 $responseData['title'] = $articleMeta['title'] ?? $request->topic;
-                $responseData['excerpt'] = $articleMeta['excerpt'] ?? '';
+                // Strip tags from excerpt to avoid HTML formatting
+                $responseData['excerpt'] = isset($articleMeta['excerpt']) ? strip_tags($articleMeta['excerpt']) : '';
                 $responseData['meta_title'] = $articleMeta['meta_title'] ?? '';
                 $responseData['meta_desc'] = $articleMeta['meta_desc'] ?? '';
                 $responseData['meta_keywords'] = $articleMeta['meta_keywords'] ?? '';
@@ -657,8 +696,13 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
      * Generate image via Gemini and save to Media library.
      * Uses the same approach as the working tryOn feature.
      */
-    private function generateAndSaveImage(string $apiKey, array $models, string $description, string $slug, int $idx): ?string
+    private function generateAndSaveImage(?string $apiKey, array $models, string $description, string $slug, int $idx): ?string
     {
+        if (!$apiKey) {
+            \Log::warning("AI Image: Gemini API key is missing");
+            return null;
+        }
+
         $prompt = $description . ' Style: modern, clean, editorial photography. No text or watermarks. Output ONLY the image.';
 
         // Same payload format as tryOn (which works)
@@ -671,20 +715,10 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
             ],
         ];
 
-        // Use same model list as tryOn: gemini-2.5-flash-image first
-        $dbModel = Setting::getValue('gemini_image_model');
-        $modelsToTry = array_unique(array_filter([
-            ($dbModel && trim($dbModel) !== '') ? trim($dbModel) : null,
-            'gemini-2.5-flash-image',
-            'gemini-2.0-flash-preview-image-generation',
-            'gemini-2.0-flash-exp-image-generation',
-            'gemini-2.0-flash-exp',
-        ]));
-
-        foreach ($modelsToTry as $model) {
+        foreach ($models as $model) {
             try {
                 $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
-                \Log::info("AI Image: Trying {$model}");
+                \Log::info("AI Image Gemini: Trying {$model}");
 
                 $response = Http::timeout(60)->withoutVerifying()
                     ->withHeaders(['Content-Type' => 'application/json'])
@@ -692,7 +726,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
 
                 if (in_array($response->status(), [429, 400, 404])) {
                     $errMsg = $response->json()['error']['message'] ?? '';
-                    \Log::warning("AI Image: {$model} HTTP {$response->status()}: " . substr($errMsg, 0, 150));
+                    \Log::warning("AI Image Gemini: {$model} HTTP {$response->status()}: " . substr($errMsg, 0, 150));
                     // 400 "does not support" → try next model
                     if ($response->status() === 400 && !str_contains($errMsg, 'does not support')) {
                         break; // Other 400 error → stop
@@ -701,7 +735,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
                 }
 
                 if ($response->failed()) {
-                    \Log::warning("AI Image: {$model} failed HTTP {$response->status()}");
+                    \Log::warning("AI Image Gemini: {$model} failed HTTP {$response->status()}");
                     continue;
                 }
 
@@ -709,17 +743,63 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
                 $imageData = $this->extractImageFromGeminiResponse($result);
 
                 if ($imageData) {
-                    \Log::info("AI Image: SUCCESS with {$model}");
+                    \Log::info("AI Image Gemini: SUCCESS with {$model}");
                     return $this->saveBase64Image($imageData['data'], $imageData['mime'], $description, $slug, $idx);
                 }
 
-                \Log::warning("AI Image: {$model} returned no image data");
+                \Log::warning("AI Image Gemini: {$model} returned no image data");
             } catch (\Exception $e) {
-                \Log::warning("AI Image: {$model} exception: " . $e->getMessage());
+                \Log::warning("AI Image Gemini: {$model} exception: " . $e->getMessage());
             }
         }
 
-        \Log::error("AI Image: ALL models failed for: " . substr($description, 0, 80));
+        \Log::error("AI Image Gemini: ALL models failed for: " . substr($description, 0, 80));
+        return null;
+    }
+
+    /**
+     * Generate image via OpenAI ChatGPT Image 2 (gpt-image-2) and save to Media library.
+     */
+    private function generateAndSaveImageOpenAI(string $apiKey, string $model, string $description, string $slug, int $idx): ?string
+    {
+        try {
+            $url = "https://api.openai.com/v1/images/generations";
+            
+            $payload = [
+                'model' => $model, // 'gpt-image-2'
+                'prompt' => $description,
+                'n' => 1,
+                'size' => '1024x1024',
+                'response_format' => 'b64_json',
+            ];
+
+            \Log::info("AI Image OpenAI: Trying {$model} for: " . substr($description, 0, 80));
+
+            $response = Http::timeout(60)->withoutVerifying()
+                ->withHeaders([
+                    'Authorization' => "Bearer {$apiKey}",
+                    'Content-Type' => 'application/json',
+                ])->post($url, $payload);
+
+            if ($response->failed()) {
+                $errMsg = $response->json()['error']['message'] ?? 'OpenAI Image API error';
+                \Log::warning("AI Image OpenAI: {$model} failed HTTP {$response->status()}: {$errMsg}");
+                return null;
+            }
+
+            $result = $response->json();
+            $base64Data = $result['data'][0]['b64_json'] ?? null;
+
+            if ($base64Data) {
+                \Log::info("AI Image OpenAI: SUCCESS with {$model}");
+                return $this->saveBase64Image($base64Data, 'image/png', $description, $slug, $idx);
+            }
+
+            \Log::warning("AI Image OpenAI: {$model} returned no image data");
+        } catch (\Exception $e) {
+            \Log::warning("AI Image OpenAI: exception: " . $e->getMessage());
+        }
+
         return null;
     }
 

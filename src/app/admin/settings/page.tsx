@@ -482,6 +482,18 @@ export default function AdminSettingsPage() {
         placeholder: "4096",
         hint: "Giới hạn độ dài output. 1 token ≈ 3/4 từ tiếng Anh. Tối đa tuỳ model.",
       },
+      {
+        key: "image_generator",
+        label: "Bộ sinh ảnh minh họa",
+        placeholder: "gemini",
+        hint: "Bộ sinh ảnh cho AI Studio. Nhập: gemini (Google) hoặc openai (ChatGPT/Image 2). Mặc định: gemini",
+      },
+      {
+        key: "openai_image_model",
+        label: "OpenAI Image Model (ChatGPT Image 2)",
+        placeholder: "gpt-image-2",
+        hint: "Mã model sinh ảnh của OpenAI. Nhập: gpt-image-2 (khuyên dùng) hoặc dall-e-2, dall-e-3.",
+      },
 
       // Google
       {

@@ -137,7 +137,7 @@ export default function AdminAiContentPage() {
                   <input type="checkbox" checked={withImages} onChange={e => setWithImages(e.target.checked)}
                     style={{ accentColor: 'var(--color-gold)', width: '18px', height: '18px' }} />
                   <FiImage style={{ color: 'var(--color-gold)' }} />
-                  Tự động sinh ảnh minh họa (Gemini AI)
+                  Tự động sinh ảnh minh họa (Gemini / ChatGPT Image 2)
                 </label>
                 {withImages && (
                   <div style={{ marginTop: '12px', paddingLeft: '36px' }}>
