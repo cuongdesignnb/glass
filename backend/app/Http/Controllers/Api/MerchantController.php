@@ -108,4 +108,26 @@ class MerchantController extends Controller
 
         return response()->json($result);
     }
+
+    /**
+     * Delete all products from Google Merchant (both legacy and new IDs).
+     */
+    public function deleteAll(GoogleMerchantService $svc)
+    {
+        @set_time_limit(600);
+
+        if (!$svc->isConfigured()) {
+            return response()->json(['message' => 'Google Merchant chưa được cấu hình.'], 422);
+        }
+
+        $products = Product::all();
+
+        try {
+            $result = $svc->deleteAllProducts($products);
+        } catch (\Throwable $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
+
+        return response()->json($result);
+    }
 }

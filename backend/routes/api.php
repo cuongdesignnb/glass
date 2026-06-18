@@ -289,4 +289,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/merchant/sync-all', [MerchantController::class, 'syncAll']);
     Route::post('/merchant/sync/{product}', [MerchantController::class, 'syncOne']);
     Route::delete('/merchant/delete/{product}', [MerchantController::class, 'deleteOne']);
+    Route::post('/merchant/delete-all', [MerchantController::class, 'deleteAll']);
 });

@@ -127,7 +127,7 @@ class GoogleMerchantService
      * Build Google Merchant product payloads (plural) from a Product model.
      * Returns an array of payloads (one for each variant, or one for standalone).
      */
-    public function buildProductPayloads(Product $product, ?string $siteUrl = null): array
+    public function buildProductPayloads(Product $product, ?string $siteUrl = null, bool $useLegacyId = false): array
     {
         $siteUrl = rtrim($siteUrl ?: (string) (Setting::getValue('site_url') ?: config('app.url')), '/');
         
@@ -208,10 +208,26 @@ class GoogleMerchantService
                 if ($color) {
                     $suffixParts[] = $this->getSafeSuffix($color);
                 }
-                foreach ($optionTitles as $title) {
-                    $suffixParts[] = $this->getSafeSuffix($title);
+
+                if ($useLegacyId) {
+                    foreach ($optionTitles as $title) {
+                        $suffixParts[] = $this->getSafeSuffix($title);
+                    }
+                    $variantId = $baseId . '-' . implode('-', $suffixParts);
+                } else {
+                    sort($optionIds, SORT_NUMERIC);
+                    foreach ($optionIds as $optId) {
+                        $suffixParts[] = $optId;
+                    }
+                    $variantId = $baseId . '-' . implode('-', $suffixParts);
+
+                    // Safety check: if variant ID is still over 50 characters, shorten it using MD5 hash suffix
+                    if (strlen($variantId) > 50) {
+                        $hashInput = ($color ? $this->getSafeSuffix($color) : '') . '-' . implode('-', $optionIds);
+                        $shortHash = substr(md5($hashInput), 0, 10);
+                        $variantId = substr($baseId, 0, 38) . '-' . $shortHash;
+                    }
                 }
-                $variantId = $baseId . '-' . implode('-', $suffixParts);
 
                 // Price calculation
                 $originalPrice = (float) $product->price + $addedPrice;
@@ -846,6 +862,108 @@ class GoogleMerchantService
             'success' => $okCount,
             'failed' => $failCount,
             'errors' => $errors
+        ];
+    }
+
+    /**
+     * Delete all products (both active and inactive) from Merchant Center using Batch API.
+     * Deletes both legacy and new variant IDs to ensure a clean wipe.
+     */
+    public function deleteAllProducts($products): array
+    {
+        $token = $this->getAccessToken();
+        
+        $entries = [];
+        $batchId = 1;
+        
+        foreach ($products as $product) {
+            // 1. Build legacy payloads and collect their offerIds
+            $legacyPayloads = [];
+            try {
+                $legacyPayloads = $this->buildProductPayloads($product, null, true);
+            } catch (\Throwable $e) {
+                // Ignore payload errors during deletion
+            }
+            
+            // 2. Build new payloads and collect their offerIds
+            $newPayloads = [];
+            try {
+                $newPayloads = $this->buildProductPayloads($product, null, false);
+            } catch (\Throwable $e) {
+                // Ignore payload errors during deletion
+            }
+            
+            // Collect all unique offerIds to delete
+            $offerIds = [];
+            foreach ($legacyPayloads as $p) {
+                $offerIds[] = $p['offerId'];
+            }
+            foreach ($newPayloads as $p) {
+                $offerIds[] = $p['offerId'];
+            }
+            // Add baseId (standalone ID) just in case
+            $baseId = (string) ($product->sku ?: 'sku-' . $product->id);
+            $offerIds[] = $baseId;
+            
+            $offerIds = array_unique($offerIds);
+            
+            foreach ($offerIds as $offerId) {
+                $gmcId = sprintf('online:%s:%s:%s', $this->language, $this->country, $offerId);
+                $entries[] = [
+                    'batchId' => $batchId++,
+                    'merchantId' => $this->merchantId,
+                    'method' => 'delete',
+                    'productId' => $gmcId,
+                ];
+            }
+        }
+        
+        if (empty($entries)) {
+            return [
+                'success' => true,
+                'total' => 0,
+                'deleted' => 0,
+            ];
+        }
+        
+        $chunks = array_chunk($entries, 200);
+        $deletedCount = 0;
+        $errors = [];
+        
+        foreach ($chunks as $chunk) {
+            try {
+                $resp = Http::withToken($token)
+                    ->acceptJson()
+                    ->post(self::API_BASE . '/products/batch', [
+                        'entries' => $chunk
+                    ]);
+                
+                if ($resp->successful()) {
+                    $respEntries = $resp->json('entries') ?: [];
+                    foreach ($respEntries as $respEntry) {
+                        $errorsList = $respEntry['errors']['errors'] ?? null;
+                        $code = $respEntry['errors']['code'] ?? 200;
+                        if (!$errorsList || $code === 404) {
+                            $deletedCount++;
+                        } else {
+                            foreach ($errorsList as $e) {
+                                $errors[] = $e['message'] ?? 'Unknown error';
+                            }
+                        }
+                    }
+                } else {
+                    $errors[] = $resp->json('error.message') ?: $resp->body();
+                }
+            } catch (\Throwable $e) {
+                $errors[] = $e->getMessage();
+            }
+        }
+        
+        return [
+            'success' => empty($errors),
+            'total' => count($entries),
+            'deleted' => $deletedCount,
+            'errors' => array_slice(array_unique($errors), 0, 10),
         ];
     }
 }

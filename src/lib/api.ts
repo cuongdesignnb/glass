@@ -633,6 +633,8 @@ export const adminApi = {
     fetchApi(`/merchant/sync/${productId}`, { method: "POST", token }),
   merchantDeleteOne: (token: string, productId: number) =>
     fetchApi(`/merchant/delete/${productId}`, { method: "DELETE", token }),
+  merchantDeleteAll: (token: string) =>
+    fetchApi("/merchant/delete-all", { method: "POST", token }),
 
   // Reviews
   getReviews: (token: string, params?: Record<string, string>) => {

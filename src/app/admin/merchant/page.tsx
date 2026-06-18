@@ -39,6 +39,7 @@ export default function AdminMerchantPage() {
     Record<number, string>
   >({});
   const [onlyActive, setOnlyActive] = useState(true);
+  const [deletingAll, setDeletingAll] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -137,6 +138,38 @@ export default function AdminMerchantPage() {
         delete n[productId];
         return n;
       });
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    if (!token) return;
+    if (
+      !confirm(
+        "Cảnh báo: Bạn có chắc chắn muốn xóa TẤT CẢ sản phẩm biến thể (cả ID cũ và ID mới) khỏi Google Merchant Center không?"
+      )
+    )
+      return;
+    setDeletingAll(true);
+    const t = toast.loading("Đang xóa tất cả sản phẩm khỏi Google Merchant...");
+    try {
+      const result = await adminApi.merchantDeleteAll(token);
+      if (result.success) {
+        toast.success(
+          `Đã xóa sạch: ${result.deleted}/${result.total} ID biến thể thành công`,
+          { id: t }
+        );
+      } else {
+        toast.error(
+          `Đã xóa ${result.deleted}/${result.total} ID. Lỗi: ${
+            result.errors?.[0] || "Không rõ"
+          }`,
+          { id: t }
+        );
+      }
+    } catch (err: any) {
+      toast.error("Lỗi: " + (err.message || ""), { id: t });
+    } finally {
+      setDeletingAll(false);
     }
   };
 
@@ -297,11 +330,20 @@ export default function AdminMerchantPage() {
               </label>
               <button
                 className="admin-btn admin-btn--primary"
-                disabled={syncing || !status.token_ok}
+                disabled={syncing || !status.token_ok || deletingAll}
                 onClick={handleSyncAll}
               >
                 <FiRefreshCw className={syncing ? "spin" : ""} />
                 {syncing ? "Đang đồng bộ..." : "Đẩy tất cả lên Merchant"}
+              </button>
+              <button
+                className="admin-btn"
+                disabled={syncing || !status.token_ok || deletingAll}
+                onClick={handleDeleteAll}
+                style={{ backgroundColor: "#ef4444", color: "#fff" }}
+              >
+                <FiTrash2 className={deletingAll ? "spin" : ""} />
+                {deletingAll ? "Đang xóa..." : "Xóa sạch khỏi Merchant"}
               </button>
             </div>
 
