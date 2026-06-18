@@ -286,7 +286,11 @@ class GoogleMerchantService
                     $payload['color'] = $color;
                 }
                 foreach ($gmcAttributes as $attrKey => $attrVal) {
-                    $payload[$attrKey] = $attrVal;
+                    if ($attrKey === 'sizes') {
+                        $payload['sizes'] = [$attrVal];
+                    } else {
+                        $payload[$attrKey] = $attrVal;
+                    }
                 }
 
                 // Fallback for material/size if not defined by options
@@ -649,7 +653,7 @@ class GoogleMerchantService
             return 'material';
         }
         if (str_contains($normalized, 'do-can') || str_contains($normalized, 'kich-thuoc') || str_contains($normalized, 'size')) {
-            return 'size';
+            return 'sizes';
         }
         if (str_contains($normalized, 'mau-sac') || str_contains($normalized, 'color')) {
             return 'color';
