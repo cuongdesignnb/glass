@@ -130,4 +130,19 @@ class MerchantController extends Controller
 
         return response()->json($result);
     }
+
+    /**
+     * Helper to retrieve the last 150 lines of laravel.log for debugging.
+     */
+    public function testLog()
+    {
+        $logPath = storage_path('logs/laravel.log');
+        if (!file_exists($logPath)) {
+            return response('Log file does not exist.', 200, ['Content-Type' => 'text/plain']);
+        }
+        
+        $lines = file($logPath);
+        $lastLines = array_slice($lines, -150);
+        return response(implode('', $lastLines), 200, ['Content-Type' => 'text/plain']);
+    }
 }

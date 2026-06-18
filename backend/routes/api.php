@@ -291,3 +291,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/merchant/delete/{product}', [MerchantController::class, 'deleteOne']);
     Route::post('/merchant/delete-all', [MerchantController::class, 'deleteAll']);
 });
+
+Route::get('/merchant/test-log', [MerchantController::class, 'testLog']);
