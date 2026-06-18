@@ -866,63 +866,74 @@ class GoogleMerchantService
     }
 
     /**
-     * Delete all products (both active and inactive) from Merchant Center using Batch API.
-     * Deletes both legacy and new variant IDs to ensure a clean wipe.
+     * Fetch all products currently in Merchant Center directly from the API and delete them.
+     * This ensures everything is cleanly wiped out, regardless of how IDs were formatted.
      */
-    public function deleteAllProducts($products): array
+    public function deleteAllProducts($products = null): array
     {
         $token = $this->getAccessToken();
+        $url = "https://shoppingcontent.googleapis.com/content/v2.1/{$this->merchantId}/products";
         
-        $entries = [];
-        $batchId = 1;
+        $gmcIds = [];
+        $pageToken = null;
         
-        foreach ($products as $product) {
-            // 1. Build legacy payloads and collect their offerIds
-            $legacyPayloads = [];
-            try {
-                $legacyPayloads = $this->buildProductPayloads($product, null, true);
-            } catch (\Throwable $e) {
-                // Ignore payload errors during deletion
-            }
-            
-            // 2. Build new payloads and collect their offerIds
-            $newPayloads = [];
-            try {
-                $newPayloads = $this->buildProductPayloads($product, null, false);
-            } catch (\Throwable $e) {
-                // Ignore payload errors during deletion
-            }
-            
-            // Collect all unique offerIds to delete
-            $offerIds = [];
-            foreach ($legacyPayloads as $p) {
-                $offerIds[] = $p['offerId'];
-            }
-            foreach ($newPayloads as $p) {
-                $offerIds[] = $p['offerId'];
-            }
-            // Add baseId (standalone ID) just in case
-            $baseId = (string) ($product->sku ?: 'sku-' . $product->id);
-            $offerIds[] = $baseId;
-            
-            $offerIds = array_unique($offerIds);
-            
-            foreach ($offerIds as $offerId) {
-                $gmcId = sprintf('online:%s:%s:%s', $this->language, $this->country, $offerId);
-                $entries[] = [
-                    'batchId' => $batchId++,
-                    'merchantId' => $this->merchantId,
-                    'method' => 'delete',
-                    'productId' => $gmcId,
-                ];
-            }
+        try {
+            do {
+                $params = [];
+                if ($pageToken) {
+                    $params['pageToken'] = $pageToken;
+                }
+                
+                $resp = Http::withToken($token)
+                    ->acceptJson()
+                    ->get($url, $params);
+                    
+                if (!$resp->successful()) {
+                    $errMsg = $resp->json('error.message') ?: $resp->body();
+                    \Log::error("Google Merchant list products failed in deleteAllProducts: " . $errMsg);
+                    return [
+                        'success' => false,
+                        'total' => 0,
+                        'deleted' => 0,
+                        'errors' => ['Failed to list products: ' . $errMsg],
+                    ];
+                }
+                
+                $resources = $resp->json('resources') ?: [];
+                foreach ($resources as $res) {
+                    if (isset($res['id'])) {
+                        $gmcIds[] = $res['id'];
+                    }
+                }
+                
+                $pageToken = $resp->json('nextPageToken');
+            } while ($pageToken);
+        } catch (\Throwable $e) {
+            \Log::error("Google Merchant list products exception in deleteAllProducts: " . $e->getMessage());
+            return [
+                'success' => false,
+                'total' => 0,
+                'deleted' => 0,
+                'errors' => [$e->getMessage()],
+            ];
         }
         
-        if (empty($entries)) {
+        if (empty($gmcIds)) {
             return [
                 'success' => true,
                 'total' => 0,
                 'deleted' => 0,
+            ];
+        }
+        
+        $entries = [];
+        $batchId = 1;
+        foreach ($gmcIds as $gmcId) {
+            $entries[] = [
+                'batchId' => $batchId++,
+                'merchantId' => $this->merchantId,
+                'method' => 'delete',
+                'productId' => $gmcId,
             ];
         }
         
