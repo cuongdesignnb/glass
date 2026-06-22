@@ -49,6 +49,14 @@ async function fetchApi(endpoint: string, options: FetchOptions = {}) {
   return response.json();
 }
 
+export async function aiGenerateContentWithImages(payload: any, token?: string) {
+  return fetchApi("/ai/content-with-images", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    ...(token ? { token } : {}),
+  });
+}
+
 // ==========================================
 // PUBLIC API
 // ==========================================

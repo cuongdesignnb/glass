@@ -38,7 +38,7 @@ class AiContentQueueController extends Controller
             'tone'         => 'nullable|string|in:professional,casual,luxury',
             'length'       => 'nullable|string|in:short,medium,long',
             'with_images'  => 'nullable|boolean',
-            'image_count'  => 'nullable|integer|min:0|max:5',
+            'image_count'  => 'nullable|integer|min:0|max:10',
             'keywords'     => 'nullable|string',
         ]);
 
@@ -240,10 +240,9 @@ class AiContentQueueController extends Controller
                 $slug = $baseSlug . '-' . $counter++;
             }
 
-            // Pick the first generated image as thumbnail / og_image
-            $thumbnail = null;
+            $thumbnail = $data['thumbnail'] ?? $data['og_image'] ?? null;
             if (!empty($data['images']) && is_array($data['images'])) {
-                $thumbnail = $data['images'][0]['url'] ?? null;
+                $thumbnail = $thumbnail ?: ($data['images'][0]['url'] ?? null);
             }
 
             $tags = $data['tags'] ?? [];

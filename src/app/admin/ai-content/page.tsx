@@ -18,6 +18,7 @@ export default function AdminAiContentPage() {
   const [withImages, setWithImages] = useState(false);
   const [articleMeta, setArticleMeta] = useState<any>(null);
   const [generatedContent, setGeneratedContent] = useState('');
+  const [generatedThumbnail, setGeneratedThumbnail] = useState('');
   const [generatedImages, setGeneratedImages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -28,6 +29,7 @@ export default function AdminAiContentPage() {
     if (!token) return;
     setLoading(true);
     setGeneratedImages([]);
+    setGeneratedThumbnail('');
     setArticleMeta(null);
     const aiToast = toast.loading(withImages ? 'AI đang viết bài và sinh ảnh... (1-2 phút)' : 'AI đang viết bài...');
     try {
@@ -39,6 +41,7 @@ export default function AdminAiContentPage() {
         data = await adminApi.aiGenerateContent(token, payload);
       }
       setGeneratedContent(data.content || 'Không có nội dung');
+      setGeneratedThumbnail(data.thumbnail || data.og_image || data.images?.[0]?.url || '');
       setGeneratedImages(data.images || []);
       if (data.full_article) {
         setArticleMeta({
@@ -84,7 +87,8 @@ export default function AdminAiContentPage() {
         meta_desc: articleMeta?.meta_desc || '',
         meta_keywords: articleMeta?.meta_keywords || '',
         tags: articleMeta?.tags || [],
-        thumbnail: generatedImages.length > 0 ? generatedImages[0].url : null,
+        thumbnail: generatedThumbnail || generatedImages?.[0]?.url || null,
+        og_image: generatedThumbnail || generatedImages?.[0]?.url || null,
       };
 
       const res = await adminApi.createArticle(token, payload);
@@ -183,16 +187,19 @@ export default function AdminAiContentPage() {
                   <input type="checkbox" checked={withImages} onChange={e => setWithImages(e.target.checked)}
                     style={{ accentColor: 'var(--color-gold)', width: '18px', height: '18px' }} />
                   <FiImage style={{ color: 'var(--color-gold)' }} />
-                  Tự động sinh ảnh minh họa (Gemini / ChatGPT Image 2)
+                  Tu dong sinh anh minh hoa bang OpenAI
                 </label>
                 {withImages && (
                   <div style={{ marginTop: '12px', paddingLeft: '36px' }}>
-                    <label className="admin-form__label" style={{ fontSize: '0.8rem' }}>Số lượng ảnh</label>
+                    <label className="admin-form__label" style={{ fontSize: '0.8rem' }}>So anh trong bai</label>
                     <select className="admin-form__input" value={imageCount}
                       onChange={e => setImageCount(Number(e.target.value))}
                       style={{ maxWidth: '160px' }}>
-                      {[1,2,3,4,5].map(n => <option key={n} value={n}>{n} ảnh</option>)}
+                      {[0,1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n} anh</option>)}
                     </select>
+                    <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', marginTop: '6px' }}>
+                      Khong tinh anh thumbnail. Thumbnail luon sinh rieng khi bat sinh anh.
+                    </p>
                   </div>
                 )}
               </div>

@@ -437,10 +437,8 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
     }
 
     /**
-     * Generate article content with AI-generated images.
-     * Step 1: ChatGPT writes HTML with [IMG:description] placeholders.
-     * Step 2: Gemini generates an image for each placeholder.
-     * Step 3: Images are saved to Media library and URLs inserted.
+     * Generate article content, thumbnail, and inline images with OpenAI.
+     * Gemini is reserved for product virtual try-on only.
      */
     public function generateContentWithImages(Request $request)
     {
@@ -449,35 +447,37 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
         $warnings = [];
 
         $request->validate([
-            'topic'       => 'required|string|max:500',
-            'type'        => 'nullable|string|in:article,product_description,seo',
-            'keywords'    => 'nullable|string',
-            'tone'        => 'nullable|string|in:professional,casual,luxury',
-            'length'      => 'nullable|string|in:short,medium,long',
-            'image_count' => 'nullable|integer|min:0|max:5',
+            'topic' => 'required|string|max:500',
+            'type' => 'nullable|string|in:article,product_description,seo',
+            'keywords' => 'nullable|string',
+            'tone' => 'nullable|string|in:professional,casual,luxury',
+            'length' => 'nullable|string|in:short,medium,long',
+            'image_count' => 'nullable|integer|min:0|max:10',
             'full_article' => 'nullable|boolean',
             'category_id' => 'nullable|integer|exists:article_categories,id',
         ]);
 
         $openaiKey = Setting::getValue('openai_api_key') ?: env('OPENAI_API_KEY');
         if (!$openaiKey || trim($openaiKey) === '') {
-            return response()->json(['error' => 'OpenAI API key chưa được cấu hình.'], 500);
+            return response()->json([
+                'error' => 'OpenAI API key chua duoc cau hinh. AI dang bai can OpenAI de sinh noi dung va hinh anh.'
+            ], 500);
         }
 
-        $imageGenerator = Setting::getValue('image_generator') ?: 'gemini';
-        $imageCount = $request->get('image_count', 2);
+        $openaiImageModel = Setting::getValue('openai_image_model') ?: env('OPENAI_IMAGE_MODEL', 'gpt-image-2');
+        $openaiImageQuality = Setting::getValue('openai_image_quality') ?: env('OPENAI_IMAGE_QUALITY', 'medium');
+        $imageCount = max(0, min((int) $request->get('image_count', 2), 10));
 
-        $geminiKey = null;
-        if ($imageGenerator === 'gemini' && $imageCount > 0) {
-            $geminiKey = Setting::getValue('gemini_api_key') ?: env('GEMINI_API_KEY');
-            if (!$geminiKey || trim($geminiKey) === '') {
-                return response()->json(['error' => 'Gemini API key chưa được cấu hình. Cần thiết để sinh ảnh bằng Gemini.'], 500);
-            }
-        }
+        \Log::info('AI Article Image Config', [
+            'provider' => 'openai',
+            'image_model' => $openaiImageModel,
+            'image_quality' => $openaiImageQuality,
+            'image_count' => $imageCount,
+            'has_openai_key' => !empty($openaiKey),
+        ]);
 
-        $model = Setting::getValue('openai_model') ?: 'gpt-4o-mini';
-        $maxTokens = (int)(Setting::getValue('openai_max_tokens') ?: 4096);
-        $imageCount = $request->get('image_count', 2);
+        $model = Setting::getValue('openai_model') ?: env('OPENAI_MODEL', 'gpt-4o-mini');
+        $maxTokens = (int) (Setting::getValue('openai_max_tokens') ?: env('OPENAI_MAX_TOKENS', 4096));
         $fullArticle = $request->boolean('full_article', false);
 
         $type = $request->get('type', 'article');
@@ -486,59 +486,57 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
         $keywords = $request->get('keywords', '');
 
         $lengthGuide = match ($length) {
-            'short'  => '500-800 từ',
-            'long'   => '2000-3000 từ',
-            default  => '1000-1500 từ',
+            'short' => '500-800 tu',
+            'long' => '2000-3000 tu',
+            default => '1000-1500 tu',
         };
 
-        $imgInstruction = "";
-
-        // ── Query related articles for internal linking ──
         $categoryId = $request->get('category_id');
         $relatedArticles = $this->getRelatedArticlesForLinking($categoryId);
         $linkInstruction = '';
         if (!empty($relatedArticles)) {
-            $linkInstruction = "\nLIÊN KẾT NỘI BỘ (Internal Linking):\nTrong bài viết, hãy chèn LINK đến các bài viết liên quan bên dưới một cách TỰ NHIÊN, XUÔI CÂU. Dùng thẻ <a href=\"URL\">anchor text</a>.\n- Anchor text phải là từ khóa/cụm từ PHÙ HỢP với ngữ cảnh câu văn, KHÔNG phải tiêu đề nguyên văn.\n- Chèn tối đa 2-3 link, rải đều trong bài, không tập trung 1 chỗ.\n- Viết câu có chứa link sao cho đọc lên hoàn toàn tự nhiên, như thể tác giả đang giới thiệu chủ đề liên quan.\n- KHÔNG dùng các mẫu \"Xem thêm:\", \"Đọc thêm:\" — hãy viết xuôi câu.\n\nDanh sách bài liên quan:\n";
+            $linkInstruction = "\nLIEN KET NOI BO (Internal Linking):\nTrong bai viet, hay chen link den cac bai viet lien quan ben duoi mot cach tu nhien. Dung the <a href=\"URL\">anchor text</a>.\n- Chen toi da 2-3 link, rai deu trong bai.\n- Khong dung cac mau 'Xem them:' hoac 'Doc them:'.\n\nDanh sach bai lien quan:\n";
             foreach ($relatedArticles as $ra) {
-                $linkInstruction .= "- \"{$ra['title']}\" → URL: /bai-viet/{$ra['slug']}" . ($ra['keywords'] ? " (từ khóa: {$ra['keywords']})" : "") . "\n";
+                $linkInstruction .= "- \"{$ra['title']}\" -> URL: /bai-viet/{$ra['slug']}" . ($ra['keywords'] ? " (tu khoa: {$ra['keywords']})" : '') . "\n";
             }
         }
 
         if ($fullArticle) {
-            $systemPrompt = "Bạn là content writer chuyên nghiệp cho ngành thời trang kính mắt. Viết bằng tiếng Việt. Giọng văn {$tone}.
-
-QUY TẮC CẤU TRÚC BÀI VIẾT:
-- Dùng các thẻ <h2> cho mỗi phần chính, <h3> cho phần phụ
-- Nội dung trong <p>, danh sách dùng <ul><li>
-- Dùng <strong>, <em> để nhấn mạnh từ khóa quan trọng
-- Độ dài: {$lengthGuide}
-{$imgInstruction}
-{$linkInstruction}
-
-Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu trúc:
-{
-  \"title\": \"Tiêu đề bài viết hấp dẫn, chuẩn SEO\",
-  \"excerpt\": \"Tóm tắt bài viết 2-3 câu\",
-  \"content\": \"Nội dung HTML theo quy tắc trên\",
-  \"meta_title\": \"SEO title (tối đa 60 ký tự)\",
-  \"meta_desc\": \"SEO description (tối đa 160 ký tự)\",
-  \"meta_keywords\": \"từ khóa 1, từ khóa 2, từ khóa 3\",
-  \"tags\": [\"tag1\", \"tag2\", \"tag3\"]
-}";
+            $systemPrompt = "Ban la content writer chuyen nghiep cho nganh thoi trang kinh mat. Viet bang tieng Viet. Giong van {$tone}.\n\n"
+                . "QUY TAC CAU TRUC BAI VIET:\n"
+                . "- Dung cac the <h2> cho moi phan chinh, <h3> cho phan phu\n"
+                . "- Noi dung trong <p>, danh sach dung <ul><li>\n"
+                . "- Dung <strong>, <em> de nhan manh tu khoa quan trong\n"
+                . "- Do dai: {$lengthGuide}\n"
+                . $linkInstruction
+                . "\nBan PHAI tra ve KET QUA DUOI DANG JSON HOP LE, khong markdown, voi cau truc:\n"
+                . "{\n"
+                . "  \"title\": \"Tieu de bai viet hap dan, chuan SEO\",\n"
+                . "  \"excerpt\": \"Tom tat bai viet 2-3 cau\",\n"
+                . "  \"content\": \"Noi dung HTML theo quy tac tren\",\n"
+                . "  \"meta_title\": \"SEO title toi da 60 ky tu\",\n"
+                . "  \"meta_desc\": \"SEO description toi da 160 ky tu\",\n"
+                . "  \"meta_keywords\": \"tu khoa 1, tu khoa 2, tu khoa 3\",\n"
+                . "  \"tags\": [\"tag1\", \"tag2\", \"tag3\"]\n"
+                . "}";
         } else {
-            $systemPrompt = "Bạn là content writer chuyên nghiệp cho ngành thời trang kính mắt. Viết bài viết chất lượng cao, hấp dẫn, với giọng văn {$tone}. Độ dài: {$lengthGuide}. Viết bằng tiếng Việt. Cấu trúc: dùng <h2> cho phần chính, <h3> cho phần phụ, nội dung trong <p>, danh sách <ul><li>, nhấn mạnh bằng <strong>, <em>. {$imgInstruction}{$linkInstruction}";
+            $systemPrompt = "Ban la content writer chuyen nghiep cho nganh thoi trang kinh mat. "
+                . "Viet bai viet chat luong cao, hap dan, voi giong van {$tone}. Do dai: {$lengthGuide}. "
+                . "Viet bang tieng Viet. Cau truc: dung <h2> cho phan chinh, <h3> cho phan phu, "
+                . "noi dung trong <p>, danh sach <ul><li>, nhan manh bang <strong>, <em>. "
+                . $linkInstruction;
         }
 
         $userPrompt = $fullArticle
-            ? "Viết bài viết hoàn chỉnh về chủ đề: {$request->topic}" . ($keywords ? "\nTừ khóa SEO: {$keywords}" : "")
-            : "Viết nội dung về chủ đề: {$request->topic}" . ($keywords ? "\nTừ khóa cần tích hợp: {$keywords}" : "");
+            ? "Viet bai viet hoan chinh ve chu de: {$request->topic}" . ($keywords ? "\nTu khoa SEO: {$keywords}" : '')
+            : "Viet noi dung ve chu de: {$request->topic}" . ($keywords ? "\nTu khoa can tich hop: {$keywords}" : '');
 
         try {
             $requestBody = [
-                'model'    => $model,
+                'model' => $model,
                 'messages' => [
                     ['role' => 'system', 'content' => $systemPrompt],
-                    ['role' => 'user',   'content' => $userPrompt],
+                    ['role' => 'user', 'content' => $userPrompt],
                 ],
                 'max_completion_tokens' => $maxTokens,
             ];
@@ -550,20 +548,18 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
             $response = Http::timeout(90)->withoutVerifying()
                 ->withHeaders([
                     'Authorization' => "Bearer {$openaiKey}",
-                    'Content-Type'  => 'application/json',
+                    'Content-Type' => 'application/json',
                 ])->post('https://api.openai.com/v1/chat/completions', $requestBody);
 
             $result = $response->json();
 
-            if ($response->status() === 400
-                && str_contains($result['error']['message'] ?? '', 'max_completion_tokens')
-            ) {
+            if ($response->status() === 400 && str_contains($result['error']['message'] ?? '', 'max_completion_tokens')) {
                 unset($requestBody['max_completion_tokens']);
                 $requestBody['max_tokens'] = $maxTokens;
                 $response = Http::timeout(90)->withoutVerifying()
                     ->withHeaders([
                         'Authorization' => "Bearer {$openaiKey}",
-                        'Content-Type'  => 'application/json',
+                        'Content-Type' => 'application/json',
                     ])->post('https://api.openai.com/v1/chat/completions', $requestBody);
                 $result = $response->json();
             }
@@ -574,10 +570,8 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
             }
 
             $rawContent = $result['choices'][0]['message']['content'] ?? '';
-
-            // Parse full_article JSON if needed
             $articleMeta = null;
-            $categoryId = $request->get('category_id');
+
             if ($fullArticle) {
                 $cleaned = trim($rawContent);
                 $cleaned = preg_replace('/^```json\s*/i', '', $cleaned);
@@ -588,106 +582,89 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
                 }
             }
 
-            // ── Auto-generate images based on H2/H3 headings ──
-            $generatedImages = [];
-            
-            // Clean markdown code blocks if the LLM wrapped it
             $content = $rawContent;
             $content = preg_replace('/^```html\s*/i', '', $content);
             $content = preg_replace('/\s*```$/i', '', $content);
-            
-            // Normalize Markdown to HTML so headings match successfully
             $content = $this->normalizeMarkdownToHtml($content);
+            $content = preg_replace('/\[IMG:[^\]]*\]/', '', $content);
 
-            if ($imageCount > 0) {
-                // Remove any [IMG:...] placeholders ChatGPT might have added
-                $content = preg_replace('/\[IMG:[^\]]*\]/', '', $content);
-
-                // Parse H2 and H3 headings from content
-                if (preg_match_all('/<(h[23])[^>]*>(.*?)<\/h[23]>/i', $content, $headingMatches)) {
-                    $openaiImageModel = Setting::getValue('openai_image_model') ?: 'gpt-image-2';
-
-                    $geminiModel = Setting::getValue('gemini_image_model') ?: 'imagen-3.0-generate-002';
-                    $modelsToTry = array_unique(array_filter([
-                        ($geminiModel && trim($geminiModel) !== '') ? trim($geminiModel) : null,
-                        'imagen-3.0-generate-002',
-                        'gemini-2.5-flash-image',
-                        'gemini-2.0-flash-preview-image-generation',
-                        'gemini-2.0-flash-exp-image-generation',
-                        'gemini-2.0-flash-exp',
-                    ]));
-
-                    $headingsToProcess = array_slice($headingMatches[0], 0, $imageCount);
-                    $headingTexts = array_slice($headingMatches[2], 0, $imageCount);
-
-                    foreach ($headingTexts as $idx => $headingHtml) {
-                        $headingText = strip_tags($headingHtml);
-                        $headingSlug = \Illuminate\Support\Str::slug($headingText) ?: 'ai-image';
-                        $imgPrompt = "Professional editorial photo about: {$headingText}. For a Vietnamese eyewear fashion blog.";
-
-                        \Log::info("AI Image #{$idx}: heading='{$headingText}' slug={$headingSlug} generator={$imageGenerator}");
-
-                        $imageUrl = null;
-                        if ($imageGenerator === 'openai') {
-                            $imageUrl = $this->generateAndSaveImageOpenAI($openaiKey, $openaiImageModel, $imgPrompt, $headingSlug, $idx, $warnings);
-                        } else {
-                            $imageUrl = $this->generateAndSaveImage($geminiKey, $modelsToTry, $imgPrompt, $headingSlug, $idx, $warnings);
-                        }
-
-                        if ($imageUrl) {
-                            $altText = $headingText;
-                            $generatedImages[$idx] = [
-                                'heading' => $headingText,
-                                'url' => $imageUrl,
-                                'figure_html' => '<figure style="margin:24px 0;text-align:center">'
-                                    . '<img src="' . $imageUrl . '" alt="' . htmlspecialchars($altText) . '" style="max-width:100%;border-radius:8px" loading="lazy" />'
-                                    . '<figcaption style="font-size:0.85em;color:#666;margin-top:8px">' . htmlspecialchars($altText) . '</figcaption>'
-                                    . '</figure>'
-                            ];
-                        }
-                    }
-
-                    // Insert figures right after the corresponding heading
-                    $headingCount = 0;
-                    $content = preg_replace_callback('/<(h[23])[^>]*>.*?<\/h[23]>/i', function($match) use (&$headingCount, $imageCount, $generatedImages) {
-                        $tag = $match[0];
-                        $idx = $headingCount;
-                        $headingCount++;
-
-                        if ($idx < $imageCount && isset($generatedImages[$idx])) {
-                            return $tag . "\n" . $generatedImages[$idx]['figure_html'];
-                        }
-                        return $tag;
-                    }, $content);
-                } else {
-                    $warnings[] = "Không tìm thấy thẻ tiêu đề H2 hoặc H3 nào trong bài viết để chèn hình ảnh.";
-                    \Log::warning("AI Images: No H2 or H3 headings found in content to attach images to");
+            $headings = $this->extractArticleHeadings($content, $articleMeta['title'] ?? $request->topic);
+            $h1Heading = null;
+            foreach ($headings as $heading) {
+                if (($heading['tag'] ?? '') === 'h1') {
+                    $h1Heading = $heading;
+                    break;
                 }
             }
 
-            // Exclude figure HTML from raw image data mapping
-            $cleanImages = [];
-            foreach ($generatedImages as $img) {
-                if (isset($img['heading']) && isset($img['url'])) {
-                    $cleanImages[] = [
-                        'heading' => $img['heading'],
-                        'url' => $img['url']
-                    ];
+            $titleForImage = $h1Heading['text'] ?? $articleMeta['title'] ?? $request->topic;
+            $thumbnailUrl = $this->generateAndSaveImageOpenAI(
+                apiKey: $openaiKey,
+                preferredModel: $openaiImageModel,
+                description: $this->buildArticleImagePrompt($titleForImage, $titleForImage, 'thumbnail', 'h1'),
+                slug: \Illuminate\Support\Str::slug($titleForImage . '-thumbnail') ?: 'ai-thumbnail',
+                idx: 0,
+                warnings: $warnings
+            );
+
+            $generatedImages = [];
+            $selectedHeadings = $this->selectHeadingsForImages($headings, $imageCount);
+
+            if ($imageCount > 0 && empty($selectedHeadings)) {
+                $warnings[] = 'Khong tim thay H1/H2/H3 phu hop de chen hinh anh inline.';
+                \Log::warning('AI Images: No H1/H2/H3 headings found for inline images');
+            }
+
+            foreach ($selectedHeadings as $idx => $heading) {
+                $headingText = $heading['text'];
+                $headingTag = $heading['tag'];
+                $imageUrl = $this->generateAndSaveImageOpenAI(
+                    apiKey: $openaiKey,
+                    preferredModel: $openaiImageModel,
+                    description: $this->buildArticleImagePrompt($headingText, $titleForImage, 'inline', $headingTag),
+                    slug: \Illuminate\Support\Str::slug($headingText) ?: 'ai-image',
+                    idx: $idx + 1,
+                    warnings: $warnings
+                );
+
+                if (!$imageUrl) {
+                    continue;
                 }
+
+                $safeHeading = htmlspecialchars($headingText, ENT_QUOTES, 'UTF-8');
+                $figureHtml = '<figure class="ai-article-image" style="margin:24px 0;text-align:center">'
+                    . '<img src="' . $imageUrl . '" alt="' . $safeHeading . '" style="max-width:100%;height:auto;border-radius:12px" loading="lazy" />'
+                    . '<figcaption style="font-size:0.85em;color:#666;margin-top:8px">' . $safeHeading . '</figcaption>'
+                    . '</figure>';
+
+                $content = $this->insertFigureAfterHeading($content, $heading, $figureHtml);
+
+                $generatedImages[] = [
+                    'type' => 'inline',
+                    'heading_tag' => $headingTag,
+                    'heading' => $headingText,
+                    'url' => $imageUrl,
+                    'position' => $idx + 1,
+                ];
+            }
+
+            if (!$thumbnailUrl && !empty($generatedImages[0]['url'])) {
+                $thumbnailUrl = $generatedImages[0]['url'];
             }
 
             $responseData = [
                 'success' => true,
                 'content' => $content,
-                'images'  => $cleanImages,
+                'thumbnail' => $thumbnailUrl,
+                'og_image' => $thumbnailUrl,
+                'images' => $generatedImages,
                 'warnings' => $warnings,
-                'usage'   => $result['usage'] ?? null,
+                'usage' => $result['usage'] ?? null,
             ];
 
             if ($fullArticle && $articleMeta) {
                 $responseData['full_article'] = true;
                 $responseData['title'] = $articleMeta['title'] ?? $request->topic;
-                // Strip tags from excerpt to avoid HTML formatting
                 $responseData['excerpt'] = isset($articleMeta['excerpt']) ? strip_tags($articleMeta['excerpt']) : '';
                 $responseData['meta_title'] = $articleMeta['meta_title'] ?? '';
                 $responseData['meta_desc'] = $articleMeta['meta_desc'] ?? '';
@@ -698,112 +675,138 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
             return response()->json($responseData);
         } catch (\Exception $e) {
             \Log::error('AI Content+Images Exception: ' . $e->getMessage());
-            return response()->json(['error' => 'Lỗi tạo nội dung: ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Loi tao noi dung: ' . $e->getMessage()], 500);
         }
     }
 
-    /**
-     * Generate image via Gemini and save to Media library.
-     * Uses the same approach as the working tryOn feature.
-     */
-    private function generateAndSaveImage(?string $apiKey, array $models, string $description, string $slug, int $idx, array &$warnings = []): ?string
+    private function extractArticleHeadings(string $html, ?string $fallbackTitle = null): array
     {
-        if (!$apiKey) {
-            $warnings[] = "Sinh ảnh Gemini thất bại: API key trống.";
-            \Log::warning("AI Image: Gemini API key is missing");
-            return null;
+        $headings = [];
+
+        preg_match_all('/<(h1|h2|h3)[^>]*>(.*?)<\/\1>/is', $html, $matches, PREG_SET_ORDER);
+
+        foreach ($matches as $index => $match) {
+            $tag = strtolower($match[1]);
+            $text = trim(strip_tags($match[2]));
+
+            if ($text === '') {
+                continue;
+            }
+
+            $headings[] = [
+                'tag' => $tag,
+                'text' => $text,
+                'html' => $match[0],
+                'index' => $index,
+            ];
         }
 
-        $prompt = $description . ' Style: modern, clean, editorial photography. No text or watermarks. Output ONLY the image.';
+        if (!$this->articleHasH1($headings) && $fallbackTitle) {
+            array_unshift($headings, [
+                'tag' => 'h1',
+                'text' => $fallbackTitle,
+                'html' => '',
+                'index' => -1,
+            ]);
+        }
 
-        foreach ($models as $model) {
-            try {
-                if (str_contains($model, 'imagen')) {
-                    // Use predict endpoint for Imagen models
-                    $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:predict?key={$apiKey}";
-                    \Log::info("AI Image Gemini: Trying Imagen model {$model} via predict");
+        return $headings;
+    }
 
-                    $response = Http::timeout(60)->withoutVerifying()
-                        ->withHeaders(['Content-Type' => 'application/json'])
-                        ->post($url, [
-                            'instances' => [['prompt' => $prompt]],
-                            'parameters' => ['sampleCount' => 1],
-                        ]);
-
-                    if ($response->failed()) {
-                        $errData = $response->json();
-                        $errMsg = $errData['error']['message'] ?? $response->body() ?? '';
-                        $warnings[] = "Model Gemini {$model} (predict) thất bại (HTTP {$response->status()}): {$errMsg}";
-                        \Log::warning("AI Image Gemini: {$model} predict HTTP {$response->status()}: " . substr($errMsg, 0, 150));
-                        continue;
-                    }
-
-                    $result = $response->json();
-                    $prediction = $result['predictions'][0] ?? null;
-                    if ($prediction && isset($prediction['bytesBase64Encoded'])) {
-                        \Log::info("AI Image Gemini: SUCCESS with {$model} (predict)");
-                        return $this->saveBase64Image(
-                            $prediction['bytesBase64Encoded'],
-                            $prediction['mimeType'] ?? 'image/png',
-                            $description,
-                            $slug,
-                            $idx
-                        );
-                    }
-
-                    $warnings[] = "Model Gemini {$model} (predict) không trả về dữ liệu hình ảnh.";
-                    \Log::warning("AI Image Gemini: {$model} predict returned no image data");
-                } else {
-                    // Use generateContent endpoint for multimodal Gemini models
-                    $url = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$apiKey}";
-                    \Log::info("AI Image Gemini: Trying Gemini model {$model} via generateContent");
-
-                    $payload = [
-                        'contents' => [
-                            ['parts' => [['text' => $prompt]]],
-                        ],
-                        'generationConfig' => [
-                            'responseModalities' => ['TEXT', 'IMAGE'],
-                        ],
-                    ];
-
-                    $response = Http::timeout(60)->withoutVerifying()
-                        ->withHeaders(['Content-Type' => 'application/json'])
-                        ->post($url, $payload);
-
-                    if (in_array($response->status(), [429, 400, 404])) {
-                        $errData = $response->json();
-                        $errMsg = $errData['error']['message'] ?? $response->body() ?? '';
-                        $warnings[] = "Model Gemini {$model} (generateContent) trả về lỗi HTTP {$response->status()}: {$errMsg}";
-                        \Log::warning("AI Image Gemini: {$model} HTTP {$response->status()}: " . substr($errMsg, 0, 150));
-                        continue;
-                    }
-
-                    if ($response->failed()) {
-                        $warnings[] = "Model Gemini {$model} thất bại với mã HTTP {$response->status()}";
-                        \Log::warning("AI Image Gemini: {$model} failed HTTP {$response->status()}");
-                        continue;
-                    }
-
-                    $result = $response->json();
-                    $imageData = $this->extractImageFromGeminiResponse($result);
-
-                    if ($imageData) {
-                        \Log::info("AI Image Gemini: SUCCESS with {$model}");
-                        return $this->saveBase64Image($imageData['data'], $imageData['mime'], $description, $slug, $idx);
-                    }
-
-                    $warnings[] = "Model Gemini {$model} không trả về dữ liệu hình ảnh.";
-                    \Log::warning("AI Image Gemini: {$model} returned no image data");
-                }
-            } catch (\Exception $e) {
-                $warnings[] = "Lỗi Exception ở Model Gemini {$model}: {$e->getMessage()}";
-                \Log::warning("AI Image Gemini: {$model} exception: " . $e->getMessage());
+    private function articleHasH1(array $headings): bool
+    {
+        foreach ($headings as $heading) {
+            if (($heading['tag'] ?? '') === 'h1') {
+                return true;
             }
         }
 
-        \Log::error("AI Image Gemini: ALL models failed for: " . substr($description, 0, 80));
-        return null;
+        return false;
+    }
+
+    private function selectHeadingsForImages(array $headings, int $imageCount): array
+    {
+        if ($imageCount <= 0) {
+            return [];
+        }
+
+        $candidates = array_values(array_filter($headings, function ($heading) {
+            return in_array($heading['tag'], ['h2', 'h3'], true);
+        }));
+
+        if (empty($candidates)) {
+            $candidates = array_values(array_filter($headings, function ($heading) {
+                return $heading['tag'] === 'h1';
+            }));
+        }
+
+        if (empty($candidates)) {
+            return [];
+        }
+
+        $max = min($imageCount, count($candidates));
+
+        if ($max >= count($candidates)) {
+            return $candidates;
+        }
+
+        $selected = [];
+        $step = count($candidates) / $max;
+
+        for ($i = 0; $i < $max; $i++) {
+            $rangeStart = (int) floor($i * $step);
+            $rangeEnd = min(count($candidates) - 1, (int) floor(($i + 1) * $step) - 1);
+
+            if ($rangeEnd < $rangeStart) {
+                $rangeEnd = $rangeStart;
+            }
+
+            $selected[] = $candidates[random_int($rangeStart, $rangeEnd)];
+        }
+
+        $unique = [];
+        $seen = [];
+
+        foreach ($selected as $item) {
+            $key = $item['tag'] . ':' . $item['text'];
+            if (!isset($seen[$key])) {
+                $seen[$key] = true;
+                $unique[] = $item;
+            }
+        }
+
+        return array_values($unique);
+    }
+
+    private function buildArticleImagePrompt(string $headingText, string $articleTitle, string $imageType = 'inline', string $headingTag = 'h2'): string
+    {
+        if ($imageType === 'thumbnail') {
+            return "Tao anh thumbnail ngang 16:9 cho bai viet nganh kinh mat Viet Nam. "
+                . "Anh phai the hien dung noi dung H1/tieu de chinh: '{$headingText}'. "
+                . "Phong cach editorial cao cap, hien dai, thuong mai dien tu, anh sang dep, bo cuc sach, chuyen nghiep. "
+                . "Khong chu, khong logo, khong watermark, khong mockup chu, khong typography.";
+        }
+
+        return "Tao anh minh hoa trong bai viet nganh kinh mat Viet Nam. "
+            . "Anh phai bam sat noi dung the {$headingTag}: '{$headingText}'. "
+            . "Boi canh tong the cua bai viet: '{$articleTitle}'. "
+            . "Phong cach editorial hien dai, tu nhien, cao cap, phu hop blog thuong mai dien tu. "
+            . "Khong chu, khong logo, khong watermark, khong typography. "
+            . "Anh nen co bo cuc ro rang, dung duoc trong noi dung bai viet.";
+    }
+
+    private function insertFigureAfterHeading(string $content, array $heading, string $figureHtml): string
+    {
+        if (!empty($heading['html']) && str_contains($content, $heading['html'])) {
+            return preg_replace(
+                '/' . preg_quote($heading['html'], '/') . '/i',
+                $heading['html'] . "\n" . $figureHtml,
+                $content,
+                1
+            );
+        }
+
+        return $content . "\n" . $figureHtml;
     }
 
     /**
@@ -811,96 +814,109 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
      */
     private function generateAndSaveImageOpenAI(string $apiKey, string $preferredModel, string $description, string $slug, int $idx, array &$warnings = []): ?string
     {
-        $modelsToTry = array_unique(array_filter([
+        $modelsToTry = array_values(array_unique(array_filter([
             $preferredModel,
             'gpt-image-2',
+            'gpt-image-1',
             'dall-e-3',
-            'dall-e-2',
-        ]));
+        ])));
 
         foreach ($modelsToTry as $model) {
             try {
-                $url = "https://api.openai.com/v1/images/generations";
-                
                 $payload = [
                     'model' => $model,
                     'prompt' => $description,
                     'n' => 1,
-                    'size' => '1024x1024',
-                    'response_format' => 'b64_json',
                 ];
 
-                \Log::info("AI Image OpenAI: Trying {$model} for: " . substr($description, 0, 80));
+                if (str_starts_with($model, 'gpt-image')) {
+                    $payload['size'] = '1536x1024';
+                    $payload['quality'] = Setting::getValue('openai_image_quality') ?: env('OPENAI_IMAGE_QUALITY', 'medium');
+                    $payload['output_format'] = 'png';
+                } elseif ($model === 'dall-e-3') {
+                    $payload['size'] = '1792x1024';
+                    $payload['response_format'] = 'b64_json';
+                } else {
+                    $payload['size'] = '1024x1024';
+                    $payload['response_format'] = 'b64_json';
+                }
 
-                $response = Http::timeout(60)->withoutVerifying()
+                \Log::info('OpenAI article image request', [
+                    'model' => $model,
+                    'size' => $payload['size'] ?? null,
+                    'slug' => $slug,
+                    'idx' => $idx,
+                ]);
+
+                $response = Http::timeout(120)
+                    ->withoutVerifying()
                     ->withHeaders([
                         'Authorization' => "Bearer {$apiKey}",
                         'Content-Type' => 'application/json',
-                    ])->post($url, $payload);
-
-                if ($response->failed()) {
-                    $errData = $response->json();
-                    $errMsg = $errData['error']['message'] ?? $response->body() ?? 'OpenAI Image API error';
-                    $warnings[] = "Model OpenAI {$model} thất bại (HTTP {$response->status()}): {$errMsg}";
-                    \Log::warning("AI Image OpenAI: {$model} failed HTTP {$response->status()}: {$errMsg}");
-                    continue; // Try next model
-                }
+                    ])
+                    ->post('https://api.openai.com/v1/images/generations', $payload);
 
                 $result = $response->json();
+
+                if ($response->failed()) {
+                    $message = $result['error']['message'] ?? $response->body();
+                    $warnings[] = "OpenAI image model {$model} loi HTTP {$response->status()}: {$message}";
+
+                    \Log::warning('OpenAI article image failed', [
+                        'model' => $model,
+                        'status' => $response->status(),
+                        'body' => mb_substr($response->body(), 0, 1000),
+                    ]);
+
+                    continue;
+                }
+
                 $base64Data = $result['data'][0]['b64_json'] ?? null;
 
+                if (!$base64Data && !empty($result['data'][0]['url'])) {
+                    $imageResponse = Http::timeout(60)->withoutVerifying()->get($result['data'][0]['url']);
+                    if ($imageResponse->successful()) {
+                        $base64Data = base64_encode($imageResponse->body());
+                    }
+                }
+
                 if ($base64Data) {
-                    \Log::info("AI Image OpenAI: SUCCESS with {$model}");
-                    return $this->saveBase64Image($base64Data, 'image/png', $description, $slug, $idx);
+                    return $this->saveBase64ImageAsWebpToLibrary(
+                        base64Data: $base64Data,
+                        originalMimeType: 'image/png',
+                        altText: $description,
+                        topic: $slug,
+                        idx: $idx
+                    );
                 }
 
-                $warnings[] = "Model OpenAI {$model} không chứa dữ liệu hình ảnh.";
-                \Log::warning("AI Image OpenAI: {$model} returned no image data");
-            } catch (\Exception $e) {
-                $warnings[] = "Lỗi Exception ở Model OpenAI {$model}: {$e->getMessage()}";
-                \Log::warning("AI Image OpenAI: exception: " . $e->getMessage());
+                $warnings[] = "OpenAI image model {$model} khong tra ve b64_json hoac url.";
+            } catch (\Throwable $e) {
+                $warnings[] = "Loi sinh anh OpenAI model {$model}: {$e->getMessage()}";
+
+                \Log::error('OpenAI article image exception', [
+                    'model' => $model,
+                    'message' => $e->getMessage(),
+                ]);
             }
         }
 
-        \Log::error("AI Image OpenAI: ALL models failed for: " . substr($description, 0, 80));
         return null;
     }
 
-    /**
-     * Extract base64 image data from Gemini generateContent response.
-     */
-    private function extractImageFromGeminiResponse(array $result): ?array
-    {
-        foreach ($result['candidates'] ?? [] as $candidate) {
-            foreach ($candidate['content']['parts'] ?? [] as $part) {
-                if (isset($part['inlineData']['data'])) {
-                    return ['data' => $part['inlineData']['data'], 'mime' => $part['inlineData']['mimeType'] ?? 'image/png'];
-                }
-                if (isset($part['inline_data']['data'])) {
-                    return ['data' => $part['inline_data']['data'], 'mime' => $part['inline_data']['mime_type'] ?? 'image/png'];
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Save base64 image data to storage and Media table.
-     * Generates SEO-friendly filename from topic slug.
-     */
-    private function saveBase64Image(string $base64Data, string $mimeType, string $altText, string $topic, int $idx): string
+    private function saveBase64ImageAsWebpToLibrary(string $base64Data, string $originalMimeType, string $altText, string $topic, int $idx): string
     {
         $binary = base64_decode($base64Data);
-        $month = date('Y-m');
 
-        // Generate SEO-friendly slug from topic
-        $slug = \Illuminate\Support\Str::slug($topic);
-        $slug = $slug ?: 'ai-image';
-        // Limit slug length to avoid overly long filenames
-        $slug = mb_substr($slug, 0, 60);
-        // Add index suffix for multiple images
+        if (!$binary) {
+            throw new \RuntimeException('Khong decode duoc base64 image.');
+        }
+
+        $month = date('Y-m');
+        $slug = \Illuminate\Support\Str::slug($topic) ?: 'ai-image';
+        $slug = mb_substr($slug, 0, 70);
+
         $suffix = $idx > 0 ? '-' . ($idx + 1) : '';
-        // Use webp for best SEO/performance
         $filename = "{$slug}{$suffix}.webp";
 
         $dir = storage_path("app/public/uploads/{$month}");
@@ -908,54 +924,59 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ với cấu t
             mkdir($dir, 0755, true);
         }
 
-        // Ensure unique filename
         $relativePath = "uploads/{$month}/{$filename}";
         $fullPath = storage_path("app/public/{$relativePath}");
+
         if (file_exists($fullPath)) {
-            $filename = "{$slug}{$suffix}-" . time() . '.webp';
+            $filename = "{$slug}{$suffix}-" . time() . '-' . random_int(1000, 9999) . '.webp';
             $relativePath = "uploads/{$month}/{$filename}";
             $fullPath = storage_path("app/public/{$relativePath}");
         }
 
-        // Convert to WebP if possible, otherwise save as-is
         try {
             $image = \Intervention\Image\Laravel\Facades\Image::read($binary);
-            if ($image->width() > 1200) {
-                $image->scaleDown(width: 1200);
+
+            if ($image->width() > 1600) {
+                $image->scaleDown(width: 1600);
             }
+
             $image->toWebp(85)->save($fullPath);
-            $mimeType = 'image/webp';
         } catch (\Throwable $e) {
-            // Fallback: save raw binary
-            file_put_contents($fullPath, $binary);
+            \Log::error('Convert AI image to WebP failed', [
+                'message' => $e->getMessage(),
+                'path' => $relativePath,
+                'original_mime_type' => $originalMimeType,
+            ]);
+
+            throw $e;
         }
 
         $width = null;
         $height = null;
+
         if (function_exists('getimagesize')) {
             $info = @getimagesize($fullPath);
-            if ($info) { $width = $info[0]; $height = $info[1]; }
+            if ($info) {
+                $width = $info[0] ?? null;
+                $height = $info[1] ?? null;
+            }
         }
 
-        // SEO alt text in Vietnamese
-        $seoAlt = mb_substr($altText, 0, 255);
-
         Media::create([
-            'filename'      => $filename,
+            'filename' => $filename,
             'original_name' => $filename,
-            'path'          => $relativePath,
-            'url'           => "/storage/{$relativePath}",
-            'mime_type'     => $mimeType,
-            'size'          => filesize($fullPath),
-            'width'         => $width,
-            'height'        => $height,
-            'alt'           => $seoAlt,
-            'folder'        => 'ai-generated',
+            'path' => $relativePath,
+            'url' => "/storage/{$relativePath}",
+            'mime_type' => 'image/webp',
+            'size' => filesize($fullPath),
+            'width' => $width,
+            'height' => $height,
+            'alt' => mb_substr(strip_tags($altText), 0, 255),
+            'folder' => 'ai-generated',
         ]);
 
         return "/storage/{$relativePath}";
     }
-
     /**
      * Get related published articles for internal linking.
      * Returns array of [title, slug, keywords] for the prompt.

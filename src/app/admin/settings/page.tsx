@@ -445,8 +445,8 @@ export default function AdminSettingsPage() {
         label: "Gemini API Key",
         placeholder: "AIzaSy...",
         isPassword: true,
-        section: "Google Gemini AI – Thử kính ảo (Try-on)",
-        hint: "Lấy tại: aistudio.google.com → Get API key. Dùng cho tính năng Thử Kính AI trên website.",
+        section: "Gemini - Chi dung cho Deo thu kinh san pham",
+        hint: "Chi dung cho tinh nang Deo thu kinh / Virtual Try-On o trang chi tiet san pham.",
       },
       {
         key: "gemini_model",
@@ -456,9 +456,9 @@ export default function AdminSettingsPage() {
       },
       {
         key: "gemini_image_model",
-        label: "Gemini Model (Sinh ảnh bài viết)",
-        placeholder: "gemini-2.5-flash-image",
-        hint: "Dùng cùng model với Thử Kính. Mặc định: gemini-2.5-flash-image. Hệ thống tự fallback qua nhiều model.",
+        label: "Legacy Gemini Image Model",
+        placeholder: "legacy",
+        hint: "Legacy - khong con dung cho AI dang bai. AI dang bai luon dung OpenAI de sinh anh.",
       },
 
       // OpenAI
@@ -467,8 +467,8 @@ export default function AdminSettingsPage() {
         label: "OpenAI API Key",
         placeholder: "sk-proj-...",
         isPassword: true,
-        section: "OpenAI – Tạo nội dung AI (Bài viết, Mô tả sản phẩm)",
-        hint: "Lấy tại: platform.openai.com → API Keys. Dùng để tự động tạo bài viết và mô tả sản phẩm.",
+        section: "OpenAI - AI dang bai",
+        hint: "Dung cho AI dang bai: sinh noi dung, thumbnail va anh inline trong bai viet.",
       },
       {
         key: "openai_model",
@@ -484,15 +484,21 @@ export default function AdminSettingsPage() {
       },
       {
         key: "image_generator",
-        label: "Bộ sinh ảnh minh họa",
-        placeholder: "gemini",
-        hint: "Bộ sinh ảnh cho AI Studio. Nhập: gemini (Google) hoặc openai (ChatGPT/Image 2). Mặc định: gemini",
+        label: "Legacy Image Generator",
+        placeholder: "legacy",
+        hint: "Legacy - khong con dung cho AI dang bai. Article AI images always use OpenAI.",
       },
       {
         key: "openai_image_model",
         label: "OpenAI Image Model (ChatGPT Image 2)",
         placeholder: "gpt-image-2",
         hint: "Mã model sinh ảnh của OpenAI. Nhập: gpt-image-2 (khuyên dùng) hoặc dall-e-2, dall-e-3.",
+      },
+      {
+        key: "openai_image_quality",
+        label: "OpenAI Image Quality",
+        placeholder: "medium",
+        hint: "Goi y mac dinh: medium.",
       },
 
       // Google

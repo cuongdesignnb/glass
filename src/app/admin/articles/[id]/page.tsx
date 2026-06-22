@@ -24,6 +24,7 @@ export default function ArticleFormPage() {
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [mediaTarget, setMediaTarget] = useState<'thumbnail' | 'editor'>('thumbnail');
   const [editorInsertFn, setEditorInsertFn] = useState<((url: string) => void) | null>(null);
+  const [aiImageCount, setAiImageCount] = useState(2);
 
   const [form, setForm] = useState({
     title: '', excerpt: '', content: '', thumbnail: '',
@@ -120,13 +121,18 @@ export default function ArticleFormPage() {
 
       let data: any;
       if (withImages) {
-        data = await adminApi.aiGenerateContentWithImages(token, { ...basePayload, image_count: 3 });
+        data = await adminApi.aiGenerateContentWithImages(token, { ...basePayload, image_count: aiImageCount });
       } else {
         data = await adminApi.aiGenerateContent(token, basePayload);
       }
 
       if (data.content) {
         const updates: any = { content: data.content };
+        const aiThumb = data.thumbnail || data.og_image || data.images?.[0]?.url || '';
+        if (aiThumb) {
+          updates.thumbnail = aiThumb;
+          updates.og_image = aiThumb;
+        }
         if (data.full_article) {
           if (data.title) updates.title = data.title;
           if (data.excerpt) updates.excerpt = data.excerpt;
@@ -230,6 +236,26 @@ export default function ArticleFormPage() {
 
           {/* Sidebar */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div className="admin-card">
+              <h3 className="admin-card__title" style={{ marginBottom: '16px' }}>AI Images</h3>
+              <div className="admin-form">
+                <div className="admin-form__group">
+                  <label className="admin-form__label">So anh trong bai</label>
+                  <input
+                    className="admin-form__input"
+                    type="number"
+                    min={0}
+                    max={10}
+                    value={aiImageCount}
+                    onChange={e => setAiImageCount(Math.max(0, Math.min(10, Number(e.target.value) || 0)))}
+                  />
+                  <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', marginTop: '6px' }}>
+                    Thumbnail sinh rieng, khong tinh vao so anh nay.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Publish Settings */}
             <div className="admin-card">
               <h3 className="admin-card__title" style={{ marginBottom: '16px' }}>Xuất bản</h3>

@@ -157,7 +157,7 @@ export default function AdminAiQueuePage() {
         tone,
         length,
         with_images: withImages,
-        image_count: imageCount,
+        image_count: Math.max(0, Math.min(10, imageCount)),
         keywords,
       });
       toast.success(data.message || 'Đã thêm vào hàng đợi');
@@ -380,6 +380,22 @@ export default function AdminAiQueuePage() {
                 Sinh ảnh minh họa ({imageCount} ảnh/bài)
               </label>
 
+              {withImages && (
+                <div className="admin-form__group">
+                  <label className="admin-form__label">So anh trong bai</label>
+                  <input
+                    className="admin-form__input"
+                    type="number"
+                    min={0}
+                    max={10}
+                    value={imageCount}
+                    onChange={e => setImageCount(Math.max(0, Math.min(10, Number(e.target.value) || 0)))}
+                  />
+                  <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', marginTop: '4px' }}>
+                    Thumbnail sinh rieng, so luong nay chi tinh anh trong bai.
+                  </p>
+                </div>
+              )}
               <button className="admin-btn admin-btn--primary" onClick={handleAdd}
                 disabled={adding || !topicsText.trim()}
                 style={{ width: '100%', padding: '14px', marginTop: '12px' }}>
