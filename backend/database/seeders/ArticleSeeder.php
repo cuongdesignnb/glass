@@ -12,6 +12,29 @@ class ArticleSeeder extends Seeder
     {
         $now = Carbon::now();
 
+        // Seed article categories
+        $categories = [
+            ['name' => 'Tư Vấn Kính', 'slug' => 'tu-van', 'order' => 1],
+            ['name' => 'Xu Hướng', 'slug' => 'xu-huong', 'order' => 2],
+            ['name' => 'Chăm Sóc Kính', 'slug' => 'cham-soc', 'order' => 3],
+            ['name' => 'Kiến Thức', 'slug' => 'kien-thuc', 'order' => 4],
+            ['name' => 'Tin Tức', 'slug' => 'tin-tuc', 'order' => 5],
+            ['name' => 'Đánh Giá', 'slug' => 'review', 'order' => 6],
+        ];
+
+        $categoryMap = [];
+        foreach ($categories as $cat) {
+            $createdCat = \App\Models\ArticleCategory::updateOrCreate(
+                ['slug' => $cat['slug']],
+                [
+                    'name' => $cat['name'],
+                    'order' => $cat['order'],
+                    'is_active' => true,
+                ]
+            );
+            $categoryMap[$cat['slug']] = $createdCat->id;
+        }
+
         $articles = [
             // --- TƯ VẤN KÍNH ---
             [
@@ -175,13 +198,28 @@ class ArticleSeeder extends Seeder
         ];
 
         foreach ($articles as $article) {
-            DB::table('articles')->insert(array_merge($article, [
-                'meta_title'    => $article['meta_title'] ?? $article['title'] . ' | Glass Eyewear',
-                'meta_desc'     => $article['meta_desc'] ?? $article['excerpt'],
-                'meta_keywords' => 'kính mắt, ' . implode(', ', json_decode($article['tags'], true)),
-                'created_at'    => $article['published_at'],
-                'updated_at'    => $article['published_at'],
-            ]));
+            $tags = json_decode($article['tags'], true);
+            $firstTag = !empty($tags) ? $tags[0] : null;
+            $categoryId = null;
+            if ($firstTag && isset($categoryMap[$firstTag])) {
+                $categoryId = $categoryMap[$firstTag];
+            }
+
+            $exists = DB::table('articles')->where('slug', $article['slug'])->exists();
+            if (!$exists) {
+                DB::table('articles')->insert(array_merge($article, [
+                    'article_category_id' => $categoryId,
+                    'meta_title'    => $article['meta_title'] ?? $article['title'] . ' | Glass Eyewear',
+                    'meta_desc'     => $article['meta_desc'] ?? $article['excerpt'],
+                    'meta_keywords' => 'kính mắt, ' . implode(', ', $tags),
+                    'created_at'    => $article['published_at'],
+                    'updated_at'    => $article['published_at'],
+                ]));
+            } else {
+                DB::table('articles')
+                    ->where('slug', $article['slug'])
+                    ->update(['article_category_id' => $categoryId]);
+            }
         }
 
         $this->command->info('✅ Đã tạo ' . count($articles) . ' bài viết mẫu!');

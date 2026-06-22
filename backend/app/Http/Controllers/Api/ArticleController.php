@@ -25,6 +25,16 @@ class ArticleController extends Controller
             $query->where('article_category_id', $request->article_category_id);
         }
 
+        if ($request->filled('tag')) {
+            $tag = $request->tag;
+            $query->where(function ($q) use ($tag) {
+                $q->whereJsonContains('tags', $tag)
+                  ->orWhereHas('category', function ($catQuery) use ($tag) {
+                      $catQuery->where('slug', $tag);
+                  });
+            });
+        }
+
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
