@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\Media;
 use App\Models\Article;
+use App\Models\Product;
 
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
@@ -309,16 +310,9 @@ Generate ONE realistic photo of this person wearing these exact glasses.
             default => '1000-1500 từ',
         };
 
-        // ── Query related articles for internal linking ──
+        // Build random SEO anchor opportunities from articles and products.
         $categoryId = $request->get('category_id');
-        $relatedArticles = $this->getRelatedArticlesForLinking($categoryId);
-        $linkInstruction = '';
-        if (!empty($relatedArticles)) {
-            $linkInstruction = "\nLIÊN KẾT NỘI BỘ (Internal Linking):\nTrong bài viết, hãy chèn LINK đến các bài viết liên quan bên dưới một cách TỰ NHIÊN, XUÔI CÂU. Dùng thẻ <a href=\"URL\">anchor text</a>.\n- Anchor text phải là từ khóa/cụm từ PHÙ HỢP với ngữ cảnh câu văn, KHÔNG phải tiêu đề nguyên văn.\n- Chèn tối đa 2-3 link, rải đều trong bài, không tập trung 1 chỗ.\n- Viết câu có chứa link sao cho đọc lên hoàn toàn tự nhiên, như thể tác giả đang giới thiệu chủ đề liên quan.\n- KHÔNG dùng các mẫu \"Xem thêm:\", \"Đọc thêm:\" — hãy viết xuôi câu.\n\nDanh sách bài liên quan:\n";
-            foreach ($relatedArticles as $ra) {
-                $linkInstruction .= "- \"{$ra['title']}\" → URL: /bai-viet/{$ra['slug']}" . ($ra['keywords'] ? " (từ khóa: {$ra['keywords']})" : "") . "\n";
-            }
-        }
+        $linkInstruction = $this->buildSeoAnchorInstruction($categoryId, $length, $request->topic, $keywords);
 
         if ($fullArticle) {
             $systemPrompt = "Bạn là content writer chuyên nghiệp cho ngành thời trang kính mắt. Viết bằng tiếng Việt. Giọng văn {$tone}.
@@ -492,14 +486,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
         };
 
         $categoryId = $request->get('category_id');
-        $relatedArticles = $this->getRelatedArticlesForLinking($categoryId);
-        $linkInstruction = '';
-        if (!empty($relatedArticles)) {
-            $linkInstruction = "\nLIEN KET NOI BO (Internal Linking):\nTrong bai viet, hay chen link den cac bai viet lien quan ben duoi mot cach tu nhien. Dung the <a href=\"URL\">anchor text</a>.\n- Chen toi da 2-3 link, rai deu trong bai.\n- Khong dung cac mau 'Xem them:' hoac 'Doc them:'.\n\nDanh sach bai lien quan:\n";
-            foreach ($relatedArticles as $ra) {
-                $linkInstruction .= "- \"{$ra['title']}\" -> URL: /bai-viet/{$ra['slug']}" . ($ra['keywords'] ? " (tu khoa: {$ra['keywords']})" : '') . "\n";
-            }
-        }
+        $linkInstruction = $this->buildSeoAnchorInstruction($categoryId, $length, $request->topic, $keywords);
 
         if ($fullArticle) {
             $systemPrompt = "Ban la content writer chuyen nghiep cho nganh thoi trang kinh mat. Viet bang tieng Viet. Giong van {$tone}.\n\n"
@@ -977,40 +964,144 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
 
         return "/storage/{$relativePath}";
     }
-    /**
-     * Get related published articles for internal linking.
-     * Returns array of [title, slug, keywords] for the prompt.
-     */
-    private function getRelatedArticlesForLinking(?int $categoryId = null): array
+    private function buildSeoAnchorInstruction(?int $categoryId, string $length, string $topic, string $keywords = ''): string
     {
-        $query = Article::where('is_published', true)
-            ->whereNotNull('slug')
-            ->where('slug', '!=', '')
-            ->orderByDesc('created_at');
+        $targetCount = match ($length) {
+            'short' => 2,
+            'long' => 4,
+            default => 3,
+        };
 
-        if ($categoryId) {
-            $query->where('article_category_id', $categoryId);
+        $anchors = $this->getSeoAnchorOpportunities($categoryId, $targetCount, $topic, $keywords);
+
+        if (empty($anchors)) {
+            return '';
         }
 
-        $articles = $query->limit(8)->get(['title', 'slug', 'meta_keywords']);
+        $instruction = "\nSEO INTERNAL LINKS / ANCHOR TEXT TU NHIEN:\n";
+        $instruction .= "- Chen dung {$targetCount} anchor text neu ngu canh phu hop; toi thieu 2 anchor, toi da 4 anchor trong mot bai.\n";
+        $instruction .= "- Phan bo deu trong than bai, khong dat lien tiep trong cung mot doan.\n";
+        $instruction .= "- Moi URL chi dung mot lan. Khong nhai lai mot anchor text.\n";
+        $instruction .= "- Viet cau van tu nhien truoc, sau do gan link vao cum tu phu hop. Khong viet kieu danh sach link, khong dung 'xem them', 'doc them', 'tai day'.\n";
+        $instruction .= "- Anchor text nen la cum 2-6 tu, co lien quan ngu canh, uu tien tu khoa/bien the tu khoa tu database, khong bat buoc dung nguyen ten san pham/tieu de.\n";
+        $instruction .= "- Neu anchor la san pham, chi chen khi cau van dang noi ve nhu cau, phong cach, chat lieu, kieu dang hoac lua chon kinh phu hop.\n";
+        $instruction .= "- Bat buoc tra ve link HTML dang <a href=\"URL\">anchor text</a>.\n";
+        $instruction .= "\nDanh sach anchor duoc phep chon random cho bai nay:\n";
+
+        foreach ($anchors as $anchor) {
+            $phrases = implode(' | ', array_slice($anchor['anchor_texts'], 0, 5));
+            $instruction .= "- {$anchor['type']}: {$anchor['title']} -> {$anchor['url']} | anchor goi y: {$phrases}\n";
+        }
+
+        return $instruction;
+    }
+
+    private function getSeoAnchorOpportunities(?int $categoryId, int $limit, string $topic, string $keywords = ''): array
+    {
+        $articleLimit = max(1, (int) ceil($limit / 2));
+        $productLimit = max(1, $limit - $articleLimit + 1);
+
+        $articleQuery = Article::where('is_published', true)
+            ->whereNotNull('slug')
+            ->where('slug', '!=', '')
+            ->select(['title', 'slug', 'meta_keywords']);
+
+        if ($categoryId) {
+            $articleQuery->where('article_category_id', $categoryId);
+        }
+
+        $articles = $articleQuery->inRandomOrder()->limit($articleLimit + 2)->get();
 
         if ($articles->isEmpty() && $categoryId) {
-            // Fallback: get any published articles if none in this category
             $articles = Article::where('is_published', true)
                 ->whereNotNull('slug')
                 ->where('slug', '!=', '')
-                ->orderByDesc('created_at')
-                ->limit(5)
+                ->inRandomOrder()
+                ->limit($articleLimit + 2)
                 ->get(['title', 'slug', 'meta_keywords']);
         }
 
-        return $articles->map(fn($a) => [
-            'title' => $a->title,
-            'slug' => $a->slug,
-            'keywords' => $a->meta_keywords ?: '',
-        ])->toArray();
+        $products = Product::where('is_active', true)
+            ->whereNotNull('slug')
+            ->where('slug', '!=', '')
+            ->inRandomOrder()
+            ->limit($productLimit + 2)
+            ->get(['name', 'slug', 'brand', 'meta_keywords', 'frame_styles', 'materials', 'gender']);
+
+        $items = [];
+
+        foreach ($articles as $article) {
+            $items[] = [
+                'type' => 'article',
+                'title' => $article->title,
+                'url' => '/bai-viet/' . $article->slug,
+                'anchor_texts' => $this->buildAnchorTextCandidates($article->title, $article->meta_keywords, $topic, $keywords),
+            ];
+        }
+
+        foreach ($products as $product) {
+            $descriptorParts = array_filter([
+                $product->brand,
+                is_array($product->frame_styles) ? implode(', ', $product->frame_styles) : $product->frame_styles,
+                is_array($product->materials) ? implode(', ', $product->materials) : $product->materials,
+                is_array($product->gender) ? implode(', ', $product->gender) : $product->gender,
+            ]);
+
+            $items[] = [
+                'type' => 'product',
+                'title' => $product->name,
+                'url' => '/san-pham/' . $product->slug,
+                'anchor_texts' => $this->buildAnchorTextCandidates(
+                    $product->name,
+                    trim(($product->meta_keywords ?: '') . ', ' . implode(', ', $descriptorParts), ', '),
+                    $topic,
+                    $keywords
+                ),
+            ];
+        }
+
+        shuffle($items);
+
+        return array_slice($items, 0, min($limit, count($items)));
     }
 
+    private function buildAnchorTextCandidates(string $title, ?string $sourceKeywords = null, string $topic = '', string $requestKeywords = ''): array
+    {
+        $candidates = [];
+        $keywordSource = implode(',', array_filter([$sourceKeywords, $requestKeywords]));
+
+        foreach (explode(',', $keywordSource) as $keyword) {
+            $keyword = trim(strip_tags($keyword));
+            if ($keyword !== '' && mb_strlen($keyword) >= 3 && mb_strlen($keyword) <= 60) {
+                $candidates[] = $keyword;
+            }
+        }
+
+        $cleanTitle = trim(strip_tags($title));
+        if ($cleanTitle !== '') {
+            $candidates[] = $cleanTitle;
+        }
+
+        $topic = trim(strip_tags($topic));
+        if ($topic !== '') {
+            $candidates[] = 'lua chon phu hop voi ' . mb_strtolower($topic);
+            $candidates[] = 'goi y lien quan den ' . mb_strtolower($topic);
+        }
+
+        $generic = [
+            'mau kinh phu hop',
+            'gong kinh thoi trang',
+            'kinh mat cao cap',
+            'lua chon kinh hien dai',
+            'phong cach kinh mat',
+        ];
+
+        $candidates = array_merge($candidates, $generic);
+        $candidates = array_values(array_unique(array_filter($candidates)));
+        shuffle($candidates);
+
+        return array_slice($candidates, 0, 6);
+    }
     /**
      * Convert basic markdown elements (headings, bold, italic) to HTML.
      */
