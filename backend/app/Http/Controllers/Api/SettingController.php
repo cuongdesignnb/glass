@@ -9,21 +9,87 @@ use Illuminate\Support\Facades\Cache;
 
 class SettingController extends Controller
 {
-    /**
-     * Get settings by group or all
-     */
     public function index(Request $request)
     {
         if ($request->filled('group')) {
             $group = $request->group;
-            return response()->json(Cache::remember("glass_settings_group_{$group}", 3600, function() use ($group) {
+            $settings = Cache::remember("glass_settings_group_{$group}", 3600, function() use ($group) {
                 return Setting::getByGroup($group);
-            }));
+            });
+        } else {
+            $settings = Cache::remember("glass_settings_all", 3600, function() {
+                return Setting::getAllSettings();
+            });
         }
 
-        return response()->json(Cache::remember("glass_settings_all", 3600, function() {
-            return Setting::getAllSettings();
-        }));
+        if ($request->is('*public*')) {
+            $settings = $this->filterSensitiveSettings($settings);
+        }
+
+        return response()->json($settings);
+    }
+
+    /**
+     * Filter out sensitive settings for public endpoints
+     */
+    private function filterSensitiveSettings(array $settings): array
+    {
+        $sensitiveKeys = [
+            'openai_api_key',
+            'vpost_token',
+            'vpost_password',
+            'vpost_user',
+            'sepay_api_key',
+        ];
+
+        $isGrouped = false;
+        foreach ($settings as $key => $value) {
+            if (is_array($value)) {
+                $isGrouped = true;
+                break;
+            }
+        }
+
+        if ($isGrouped) {
+            foreach ($settings as $group => $items) {
+                if (is_array($items)) {
+                    foreach ($items as $key => $value) {
+                        if ($this->isSensitiveKey($key, $sensitiveKeys)) {
+                            unset($settings[$group][$key]);
+                        }
+                    }
+                }
+            }
+        } else {
+            foreach ($settings as $key => $value) {
+                if ($this->isSensitiveKey($key, $sensitiveKeys)) {
+                    unset($settings[$key]);
+                }
+            }
+        }
+
+        return $settings;
+    }
+
+    /**
+     * Determine if a setting key is sensitive
+     */
+    private function isSensitiveKey(string $key, array $sensitiveKeys): bool
+    {
+        $keyLower = strtolower($key);
+        
+        if (in_array($keyLower, $sensitiveKeys)) {
+            return true;
+        }
+        
+        $keywords = ['api_key', 'secret', 'password', 'token'];
+        foreach ($keywords as $kw) {
+            if (str_contains($keyLower, $kw)) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     /**
