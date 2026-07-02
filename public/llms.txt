@@ -1,0 +1,15 @@
+# Glass Eyewear
+> Cửa hàng kính mắt thời trang cao cấp Glass Eyewear, hỗ trợ công nghệ thử kính AI thế hệ mới trực tiếp trên trình duyệt.
+
+## Trang chính
+- [Trang chủ](https://mitoo.vn/): Trang chủ của Glass Eyewear.
+- [Sản phẩm](https://mitoo.vn/san-pham): Danh mục sản phẩm kính mắt, gọng kính, tròng kính.
+- [Thử kính AI](https://mitoo.vn/thu-kinh-ao): Tính năng thử kính ảo (Virtual Try-On) trực tuyến sử dụng công nghệ AI.
+- [Bài viết & Kiến thức](https://mitoo.vn/bai-viet): Các bài viết chia sẻ xu hướng kính mắt, mẹo chăm sóc kính và kiến thức nhãn khoa.
+- [Liên hệ](https://mitoo.vn/lien-he): Thông tin liên hệ, bản đồ và hỗ trợ khách hàng.
+
+## Hỗ trợ & Chính sách
+- [Hướng dẫn mua hàng](https://mitoo.vn/huong-dan-mua-hang): Các bước hướng dẫn mua kính mắt trực tuyến.
+- [Chính sách đổi trả](https://mitoo.vn/chinh-sach-doi-tra): Quy định về đổi trả sản phẩm lỗi hoặc không vừa vặn.
+- [Chính sách bảo hành](https://mitoo.vn/chinh-sach-bao-hanh): Thời hạn và điều kiện bảo hành gọng kính, tròng kính.
+- [Chính sách vận chuyển](https://mitoo.vn/van-chuyen): Thời gian và phí giao hàng toàn quốc.

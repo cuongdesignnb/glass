@@ -104,7 +104,7 @@ export default function Footer() {
           {/* Brand Column */}
           <div className="footer__brand-col">
             <div className="footer__brand-name">
-              <RiGlassesLine />
+              <RiGlassesLine aria-hidden="true" />
               {siteName}
             </div>
             <p className="footer__brand-desc">
@@ -117,22 +117,22 @@ export default function Footer() {
               <div className="footer__contact-list">
                 {settings['contact_phone'] && (
                   <a href={`tel:${settings['contact_phone']}`} className="footer__contact-item">
-                    <FiPhone /> <span>{settings['contact_phone']}</span>
+                    <FiPhone aria-hidden="true" /> <span>{settings['contact_phone']}</span>
                   </a>
                 )}
                 {settings['contact_email'] && (
                   <a href={`mailto:${settings['contact_email']}`} className="footer__contact-item">
-                    <FiMail /> <span>{settings['contact_email']}</span>
+                    <FiMail aria-hidden="true" /> <span>{settings['contact_email']}</span>
                   </a>
                 )}
                 {settings['contact_address'] && (
                   <div className="footer__contact-item">
-                    <FiMapPin /> <span>{settings['contact_address']}</span>
+                    <FiMapPin aria-hidden="true" /> <span>{settings['contact_address']}</span>
                   </div>
                 )}
                 {openingHours && (
                   <div className="footer__contact-item">
-                    <FiClock /> <span>{openingHours}</span>
+                    <FiClock aria-hidden="true" /> <span>{openingHours}</span>
                   </div>
                 )}
               </div>
@@ -143,29 +143,29 @@ export default function Footer() {
               <div className="footer__social">
                 {settings['social_facebook'] && (
                   <a href={settings['social_facebook']} className="footer__social-link" aria-label="Facebook" target="_blank" rel="noopener noreferrer">
-                    <FiFacebook />
+                    <FiFacebook aria-hidden="true" />
                   </a>
                 )}
                 {settings['social_instagram'] && (
                   <a href={settings['social_instagram']} className="footer__social-link" aria-label="Instagram" target="_blank" rel="noopener noreferrer">
-                    <FiInstagram />
+                    <FiInstagram aria-hidden="true" />
                   </a>
                 )}
                 {settings['social_youtube'] && (
                   <a href={settings['social_youtube']} className="footer__social-link" aria-label="YouTube" target="_blank" rel="noopener noreferrer">
-                    <FiYoutube />
+                    <FiYoutube aria-hidden="true" />
                   </a>
                 )}
                 {settings['social_tiktok'] && (
                   <a href={settings['social_tiktok']} className="footer__social-link" aria-label="TikTok" target="_blank" rel="noopener noreferrer">
-                    <SiTiktok />
+                    <SiTiktok aria-hidden="true" />
                   </a>
                 )}
                 {/* Fallback */}
                 {!hasSocial && (
                   <>
-                    <a href="#" className="footer__social-link" aria-label="Facebook"><FiFacebook /></a>
-                    <a href="#" className="footer__social-link" aria-label="Instagram"><FiInstagram /></a>
+                    <a href="#" className="footer__social-link" aria-label="Facebook"><FiFacebook aria-hidden="true" /></a>
+                    <a href="#" className="footer__social-link" aria-label="Instagram"><FiInstagram aria-hidden="true" /></a>
                   </>
                 )}
               </div>
@@ -183,6 +183,7 @@ export default function Footer() {
                   {col.title}
                   <FiChevronDown
                     className="footer__accordion-icon"
+                    aria-hidden="true"
                     style={{
                       transition: 'transform 0.2s ease',
                       transform: openAccordion === `col-${i}` ? 'rotate(180deg)' : 'rotate(0deg)',
