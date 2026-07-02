@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import CartClient from './CartClient';
 
 export const metadata: Metadata = {
-  title: 'Giỏ Hàng | Glass Eyewear',
+  title: 'Giỏ Hàng',
   robots: {
     index: false,
     follow: false,

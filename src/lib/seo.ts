@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { getPublicSettings } from './settings';
 
 interface SEOProps {
   title: string;
@@ -12,15 +13,18 @@ interface SEOProps {
 const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Glass Eyewear';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-export function generateMeta({
+export async function generateMeta({
   title,
   description,
   keywords,
   ogImage,
   url,
   type = 'website',
-}: SEOProps): Metadata {
-  const fullTitle = `${title} | ${APP_NAME}`;
+}: SEOProps): Promise<Metadata> {
+  const settings = await getPublicSettings();
+  const siteName = settings['site_name'] || APP_NAME;
+
+  const fullTitle = `${title} | ${siteName}`;
   const fullUrl = url ? `${APP_URL}${url}` : APP_URL;
   const imageUrl = ogImage || `${APP_URL}/og-default.jpg`;
 
@@ -32,7 +36,7 @@ export function generateMeta({
       title: fullTitle,
       description,
       url: fullUrl,
-      siteName: APP_NAME,
+      siteName: siteName,
       images: [{ url: imageUrl, width: 1200, height: 630 }],
       locale: 'vi_VN',
       type: type === 'product' ? 'website' : type,
@@ -92,7 +96,7 @@ export function generateProductSchema(product: {
 }
 
 // Schema.org Article structured data
-export function generateArticleSchema(article: {
+export async function generateArticleSchema(article: {
   title: string;
   description: string;
   image?: string;
@@ -101,6 +105,9 @@ export function generateArticleSchema(article: {
   updatedAt?: string;
   url: string;
 }) {
+  const settings = await getPublicSettings();
+  const siteName = settings['site_name'] || APP_NAME;
+
   return {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -109,11 +116,11 @@ export function generateArticleSchema(article: {
     image: article.image,
     author: {
       '@type': 'Person',
-      name: article.author || APP_NAME,
+      name: article.author || siteName,
     },
     publisher: {
       '@type': 'Organization',
-      name: APP_NAME,
+      name: siteName,
       logo: { '@type': 'ImageObject', url: `${APP_URL}/logo.png` },
     },
     datePublished: article.publishedAt,

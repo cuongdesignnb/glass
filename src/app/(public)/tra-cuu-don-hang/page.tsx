@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import OrderLookupClient from './OrderLookupClient';
 
 export const metadata: Metadata = {
-  title: 'Tra Cứu Đơn Hàng | Glass Eyewear',
+  title: 'Tra Cứu Đơn Hàng',
   robots: {
     index: false,
     follow: false,

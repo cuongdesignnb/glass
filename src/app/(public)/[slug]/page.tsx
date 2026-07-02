@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { generateMeta, generateBreadcrumbSchema } from '@/lib/seo';
 import { Metadata } from 'next';
+import { getPublicSettings } from '@/lib/settings';
 
 export const revalidate = 300;
 
@@ -36,9 +37,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const page = await getPage(slug);
   if (!page) return {};
-  return generateMeta({
+  const settings = await getPublicSettings();
+  const siteName = settings['site_name'] || 'Glass Eyewear';
+  return await generateMeta({
     title: page.meta_title || page.title,
-    description: page.meta_desc || `${page.title} - Glass Eyewear`,
+    description: page.meta_desc || `${page.title} - ${siteName}`,
     url: `/${page.slug}`,
   });
 }
@@ -47,6 +50,9 @@ export default async function StaticPage({ params }: { params: Promise<{ slug: s
   const { slug } = await params;
   const page = await getPage(slug);
   if (!page) return notFound();
+
+  const settings = await getPublicSettings();
+  const siteName = settings['site_name'] || 'Glass Eyewear';
 
   const breadcrumbItems = [
     { name: 'Trang chủ', url: '/' },
@@ -62,7 +68,7 @@ export default async function StaticPage({ params }: { params: Promise<{ slug: s
     url: `${APP_URL}/${page.slug}`,
     isPartOf: {
       '@type': 'WebSite',
-      name: 'Glass Eyewear',
+      name: siteName,
       url: APP_URL,
     },
     dateModified: page.updated_at,

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { Inter, Playfair_Display } from 'next/font/google';
 import './globals.css';
+import { getPublicSettings } from '@/lib/settings';
 
 const inter = Inter({
   subsets: ['latin', 'vietnamese'],
@@ -77,32 +78,8 @@ h1, h2, h3, h4, h5, h6 {
 `.trim();
 }
 
-async function fetchPublicSettings(): Promise<Record<string, string>> {
-  try {
-    const headers: Record<string, string> = { Accept: 'application/json' };
-    if (API_HOST) headers['Host'] = API_HOST;
-    const res = await fetch(`${INTERNAL_API}/public/settings`, {
-      next: { revalidate: 300 },
-      headers,
-    });
-    if (!res.ok) return {};
-    const data = await res.json();
-    const flat: Record<string, string> = {};
-    Object.values(data).forEach((group: any) => {
-      if (typeof group === 'object' && group !== null) {
-        Object.entries(group).forEach(([key, value]) => {
-          flat[key] = value as string;
-        });
-      }
-    });
-    return flat;
-  } catch {
-    return {};
-  }
-}
-
 export async function generateMetadata(): Promise<Metadata> {
-  const s = await fetchPublicSettings();
+  const s = await getPublicSettings();
 
   const siteName = s['site_name'] || 'Glass Eyewear';
   const title = s['seo_title'] || `${siteName} - Kính Mắt Thời Trang Cao Cấp`;
@@ -168,7 +145,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const settings = await fetchPublicSettings();
+  const settings = await getPublicSettings();
   const customFont = resolveCustomFont(settings);
   const fontStyle = customFont ? buildFontStyle(customFont) : null;
 
@@ -196,7 +173,7 @@ export default async function RootLayout({
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'WebSite',
-              name: 'Glass Eyewear',
+              name: settings['site_name'] || 'Glass Eyewear',
               url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
               potentialAction: {
                 '@type': 'SearchAction',
@@ -216,11 +193,15 @@ export default async function RootLayout({
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'Organization',
-              name: 'Glass Eyewear',
+              name: settings['site_name'] || 'Glass Eyewear',
               url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-              logo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/logo.png`,
+              logo: settings['site_logo']
+                ? (settings['site_logo'].startsWith('http') ? settings['site_logo'] : `${MEDIA_BASE}${settings['site_logo']}`)
+                : `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/logo.png`,
               contactPoint: {
                 '@type': 'ContactPoint',
+                telephone: settings['contact_phone'],
+                email: settings['contact_email'],
                 contactType: 'customer service',
                 areaServed: 'VN',
                 availableLanguage: 'Vietnamese',

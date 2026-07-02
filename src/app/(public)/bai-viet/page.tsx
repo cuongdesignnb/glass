@@ -6,7 +6,7 @@ import './articles.css';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 export async function generateMetadata(): Promise<Metadata> {
-  return generateMeta({
+  return await generateMeta({
     title: 'Bài Viết & Kiến Thức Kính Mắt',
     description: 'Khám phá xu hướng kính mắt mới nhất, mẹo chăm sóc, kiến thức chuyên sâu và đánh giá từ các chuyên gia. Cập nhật liên tục.',
     keywords: 'bài viết kính mắt, kiến thức kính, xu hướng kính, chăm sóc kính, tư vấn kính mắt',

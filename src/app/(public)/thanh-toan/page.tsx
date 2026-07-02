@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import CheckoutClient from './CheckoutClient';
 
 export const metadata: Metadata = {
-  title: 'Thanh Toán | Glass Eyewear',
+  title: 'Thanh Toán',
   robots: {
     index: false,
     follow: false,

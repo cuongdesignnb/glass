@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { generateMeta, generateProductSchema, generateBreadcrumbSchema } from '@/lib/seo';
+import { getPublicSettings } from '@/lib/settings';
 import Breadcrumb from '@/components/layout/Breadcrumb';
 import ProductDetailClient from './ProductDetailClient';
 
@@ -95,10 +96,13 @@ export async function generateMetadata({
   if (color) canonicalParams.push(`color=${encodeURIComponent(color)}`);
   const canonicalQueryString = canonicalParams.length > 0 ? `?${canonicalParams.join('&')}` : '';
 
-  return generateMeta({
+  const settings = await getPublicSettings();
+  const siteName = settings['site_name'] || 'Glass Eyewear';
+
+  return await generateMeta({
     title: product.meta_title || variantTitle,
-    description: product.meta_desc || product.description || `Mua ${variantTitle} chính hãng tại Glass Eyewear. Giá tốt, bảo hành 12 tháng.`,
-    keywords: product.meta_keywords || `${product.name}, kính mắt, glass eyewear`,
+    description: product.meta_desc || product.description || `Mua ${variantTitle} chính hãng tại ${siteName}. Giá tốt, bảo hành 12 tháng.`,
+    keywords: product.meta_keywords || `${product.name}, kính mắt, ${siteName.toLowerCase()}`,
     ogImage: product.og_image || images[0],
     url: `/san-pham/${product.slug}${canonicalQueryString}`,
     type: 'product',

@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import LoginClient from './LoginClient';
 
 export const metadata: Metadata = {
-  title: 'Đăng Nhập | Glass Eyewear',
+  title: 'Đăng Nhập',
   robots: {
     index: false,
     follow: false,

@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { generateMeta, generateArticleSchema, generateBreadcrumbSchema } from '@/lib/seo';
+import { getPublicSettings } from '@/lib/settings';
 import ArticleDetailClient from './ArticleDetailClient';
 import '../articles.css';
 
@@ -68,10 +69,12 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 
   const ogImage = article.thumbnail ? buildImageUrl(article.thumbnail) : undefined;
+  const settings = await getPublicSettings();
+  const siteName = settings['site_name'] || 'Glass Eyewear';
 
-  return generateMeta({
+  return await generateMeta({
     title: article.meta_title || article.title,
-    description: article.meta_desc || article.excerpt || `${article.title} - Glass Eyewear`,
+    description: article.meta_desc || article.excerpt || `${article.title} - ${siteName}`,
     keywords: article.meta_keywords || article.tags?.join(', '),
     ogImage,
     url: `/bai-viet/${article.slug}`,
@@ -89,12 +92,15 @@ export default async function ArticleDetailPage({ params }: { params: Promise<{ 
   // Process content: inject heading IDs for TOC
   const processedContent = article.content ? injectHeadingIds(article.content) : '';
 
+  const settings = await getPublicSettings();
+  const siteName = settings['site_name'] || 'Glass Eyewear';
+
   // Schema: Article
-  const articleSchema = generateArticleSchema({
+  const articleSchema = await generateArticleSchema({
     title: article.title,
     description: article.excerpt || article.title,
     image: article.thumbnail ? buildImageUrl(article.thumbnail) : undefined,
-    author: article.author_name || article.author || 'Glass Eyewear',
+    author: article.author_name || article.author || siteName,
     publishedAt: article.published_at || article.created_at,
     updatedAt: article.updated_at,
     url: `/bai-viet/${slug}`,

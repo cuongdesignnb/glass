@@ -1,14 +1,17 @@
 import { Metadata } from 'next';
 import { generateMeta, generateCollectionPageSchema, generateBreadcrumbSchema } from '@/lib/seo';
+import { getPublicSettings } from '@/lib/settings';
 import ProductListingClient from './ProductListingClient';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 export async function generateMetadata(): Promise<Metadata> {
-  return generateMeta({
+  const settings = await getPublicSettings();
+  const siteName = settings['site_name'] || 'Glass Eyewear';
+  return await generateMeta({
     title: 'Bộ Sưu Tập Kính Mắt',
     description: 'Khám phá bộ sưu tập kính mắt thời trang cao cấp. Kính cận, kính râm, kính thời trang đa dạng kiểu dáng. Miễn phí vận chuyển.',
-    keywords: 'kính mắt, kính cận, kính râm, kính thời trang, mắt kính, glass eyewear, mua kính online',
+    keywords: `kính mắt, kính cận, kính râm, kính thời trang, mắt kính, ${siteName.toLowerCase()}, mua kính online`,
     url: '/san-pham',
   });
 }

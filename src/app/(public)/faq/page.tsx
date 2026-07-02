@@ -16,8 +16,8 @@ function ssrHeaders(): Record<string, string> {
 }
 
 export const metadata: Metadata = {
-  title: 'Câu Hỏi Thường Gặp (FAQ) | Glass Eyewear',
-  description: 'Tổng hợp các câu hỏi thường gặp về sản phẩm, bảo hành, chính sách mua hàng và ưu đãi tại Glass Eyewear.',
+  title: 'Câu Hỏi Thường Gặp (FAQ)',
+  description: 'Tổng hợp các câu hỏi thường gặp về sản phẩm, bảo hành, chính sách mua hàng và ưu đãi.',
   alternates: {
     canonical: '/faq',
   },
