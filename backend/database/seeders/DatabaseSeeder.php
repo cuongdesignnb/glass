@@ -198,7 +198,6 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             ProductAttributeSeeder::class,
-            ArticleSeeder::class,
         ]);
     }
 }
