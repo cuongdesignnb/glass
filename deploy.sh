@@ -12,11 +12,9 @@ echo "🚀 Bắt đầu deploy Glass Eyewear..."
 echo "📥 Pull code từ Git..."
 git pull origin main
 
-# 2. Backend: migrate & seed
+# 2. Backend: migrate
 echo "🔧 Backend: chạy migrate..."
 php backend/artisan migrate --force
-echo "🌱 Backend: chạy seeder..."
-php backend/artisan db:seed --class=ArticleSeeder --force
 
 # 3. Frontend: rebuild
 echo "🏗️ Frontend: build Next.js..."

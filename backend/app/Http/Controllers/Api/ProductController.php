@@ -890,6 +890,9 @@ class ProductController extends Controller
             'is_available' => 'required|boolean',
             'filter_by_old_price' => 'required|boolean',
             'old_price' => 'nullable|numeric|min:0',
+            'apply_to' => 'required|string|in:linked,all,category',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'integer|exists:categories,id',
         ]);
 
         $optionId = $data['option_id'];
@@ -897,25 +900,60 @@ class ProductController extends Controller
         $isAvailable = $data['is_available'];
         $filterByOldPrice = $data['filter_by_old_price'];
         $oldPrice = $data['old_price'] !== null ? floatval($data['old_price']) : null;
+        $applyTo = $data['apply_to'];
+        $categoryIds = $data['category_ids'] ?? [];
 
         try {
             $option = \App\Models\ProductAddonOption::findOrFail($optionId);
             $groupId = $option->group_id;
 
-            // 1. Get all products associated with this option's group
-            $productIds = \DB::table('product_addon_group_product')
-                ->where('group_id', $groupId)
-                ->pluck('product_id')
-                ->toArray();
+            // 1. Determine target product IDs
+            if ($applyTo === 'all') {
+                $productIds = \App\Models\Product::pluck('id')->toArray();
+            } elseif ($applyTo === 'category' && !empty($categoryIds)) {
+                $productIds = \DB::table('category_product')
+                    ->whereIn('category_id', $categoryIds)
+                    ->pluck('product_id')
+                    ->merge(
+                        \App\Models\Product::whereIn('category_id', $categoryIds)->pluck('id')
+                    )
+                    ->unique()
+                    ->toArray();
+            } else {
+                // 'linked' (Default behavior)
+                $productIds = \DB::table('product_addon_group_product')
+                    ->where('group_id', $groupId)
+                    ->pluck('product_id')
+                    ->toArray();
+            }
 
             if (empty($productIds)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Không có sản phẩm nào liên kết với nhóm addon của tùy chọn này.'
+                    'message' => 'Không tìm thấy sản phẩm nào phù hợp với phạm vi áp dụng đã chọn.'
                 ], 422);
             }
 
-            $result = \DB::transaction(function () use ($productIds, $optionId, $newPrice, $isAvailable, $filterByOldPrice, $oldPrice) {
+            $result = \DB::transaction(function () use ($productIds, $optionId, $groupId, $newPrice, $isAvailable, $filterByOldPrice, $oldPrice) {
+                // Ensure all target products are linked to this addon group
+                $existingGroupRelations = \DB::table('product_addon_group_product')
+                    ->where('group_id', $groupId)
+                    ->whereIn('product_id', $productIds)
+                    ->pluck('product_id')
+                    ->toArray();
+
+                $missingGroupRelationIds = array_diff($productIds, $existingGroupRelations);
+                if (!empty($missingGroupRelationIds)) {
+                    $insertData = [];
+                    foreach ($missingGroupRelationIds as $mId) {
+                        $insertData[] = [
+                            'product_id' => $mId,
+                            'group_id' => $groupId,
+                        ];
+                    }
+                    \DB::table('product_addon_group_product')->insert($insertData);
+                }
+
                 // 2. Query all existing prices for this option across target products
                 $existingPricesQuery = \App\Models\ProductAddonPrice::whereIn('product_id', $productIds)
                     ->where('option_id', $optionId);
@@ -988,14 +1026,10 @@ class ProductController extends Controller
 
                 return [
                     'success' => true,
-                    'message' => 'Đồng bộ thành công cho ' . count($snapshot) . ' sản phẩm.',
+                    'message' => 'Đồng bộ giá hàng loạt thành công. Đã cập nhật ' . count($snapshot) . ' sản phẩm.',
                     'log_id' => $log->id,
                 ];
             });
-
-            if (!$result['success']) {
-                return response()->json($result, 422);
-            }
 
             \Illuminate\Support\Facades\Cache::flush();
 

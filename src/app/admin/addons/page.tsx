@@ -52,10 +52,27 @@ export default function AddonGroupsPage() {
   const [syncingBulk, setSyncingBulk] = useState(false);
   const [revertingLogId, setRevertingLogId] = useState<number | null>(null);
 
+  // Bulk Apply Range States
+  const [categories, setCategories] = useState<any[]>([]);
+  const [applyTo, setApplyTo] = useState<'linked' | 'all' | 'category'>('linked');
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+
   const handleOpenBulkSync = () => {
     setShowBulkSyncModal(true);
     setActiveModalTab('sync');
     loadSyncLogs();
+    if (categories.length === 0 && token) {
+      loadCategories();
+    }
+  };
+
+  const loadCategories = async () => {
+    try {
+      const data = await adminApi.getCategories(token!);
+      setCategories(data || []);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const loadSyncLogs = async () => {
@@ -81,6 +98,9 @@ export default function AddonGroupsPage() {
     if (filterByOldPrice && (oldSyncPrice === '' || isNaN(Number(oldSyncPrice)))) {
       return toast.error('Vui lòng nhập giá cũ hợp lệ để lọc');
     }
+    if (applyTo === 'category' && selectedCategoryIds.length === 0) {
+      return toast.error('Vui lòng chọn ít nhất một danh mục để áp dụng');
+    }
 
     setSyncingBulk(true);
     const loadingToast = toast.loading('Đang đồng bộ giá...');
@@ -91,12 +111,16 @@ export default function AddonGroupsPage() {
         is_available: isSyncAvailable,
         filter_by_old_price: filterByOldPrice,
         old_price: filterByOldPrice ? Number(oldSyncPrice) : null,
+        apply_to: applyTo,
+        category_ids: applyTo === 'category' ? selectedCategoryIds : null,
       });
 
       toast.success(response.message || 'Đồng bộ thành công!', { id: loadingToast });
       setNewSyncPrice('');
       setOldSyncPrice('');
       setFilterByOldPrice(false);
+      setApplyTo('linked');
+      setSelectedCategoryIds([]);
       loadSyncLogs();
     } catch (err: any) {
       toast.error(err.message || 'Không thể đồng bộ giá', { id: loadingToast });
@@ -608,6 +632,80 @@ export default function AddonGroupsPage() {
                       <option value="0">Hết hàng / Tạm khóa</option>
                     </select>
                   </div>
+                </div>
+
+                {/* Scope selection */}
+                <div className="admin-form__group" style={{ marginBottom: '20px' }}>
+                  <label className="admin-form__label">Bước 5: Phạm vi áp dụng cho sản phẩm</label>
+                  <div style={{ display: 'flex', gap: '20px', marginTop: '8px', flexWrap: 'wrap' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fff', fontSize: '0.875rem', cursor: 'pointer' }}>
+                      <input 
+                        type="radio" 
+                        name="apply_to" 
+                        value="linked" 
+                        checked={applyTo === 'linked'} 
+                        onChange={() => setApplyTo('linked')}
+                        style={{ accentColor: 'var(--color-gold)' }}
+                      />
+                      Sản phẩm đã liên kết nhóm này
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fff', fontSize: '0.875rem', cursor: 'pointer' }}>
+                      <input 
+                        type="radio" 
+                        name="apply_to" 
+                        value="all" 
+                        checked={applyTo === 'all'} 
+                        onChange={() => setApplyTo('all')}
+                        style={{ accentColor: 'var(--color-gold)' }}
+                      />
+                      Tất cả sản phẩm trong hệ thống
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#fff', fontSize: '0.875rem', cursor: 'pointer' }}>
+                      <input 
+                        type="radio" 
+                        name="apply_to" 
+                        value="category" 
+                        checked={applyTo === 'category'} 
+                        onChange={() => setApplyTo('category')}
+                        style={{ accentColor: 'var(--color-gold)' }}
+                      />
+                      Sản phẩm theo Danh mục
+                    </label>
+                  </div>
+
+                  {applyTo === 'category' && (
+                    <div style={{ 
+                      marginTop: '12px', padding: '12px', background: '#16213e', 
+                      border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px',
+                      maxHeight: '160px', overflowY: 'auto'
+                    }}>
+                      <label className="admin-form__label" style={{ marginBottom: '8px', display: 'block', fontSize: '0.75rem' }}>
+                        Chọn một hoặc nhiều danh mục áp dụng:
+                      </label>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                        {categories.map((cat: any) => {
+                          const isChecked = selectedCategoryIds.includes(cat.id);
+                          return (
+                            <label key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'rgba(255,255,255,0.8)', fontSize: '0.8125rem', cursor: 'pointer' }}>
+                              <input 
+                                type="checkbox" 
+                                checked={isChecked}
+                                onChange={() => {
+                                  if (isChecked) {
+                                    setSelectedCategoryIds(prev => prev.filter(id => id !== cat.id));
+                                  } else {
+                                    setSelectedCategoryIds(prev => [...prev, cat.id]);
+                                  }
+                                }}
+                                style={{ accentColor: 'var(--color-gold)' }}
+                              />
+                              {cat.name}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Step 5: Filter by old price */}
