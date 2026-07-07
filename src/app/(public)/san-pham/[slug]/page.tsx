@@ -92,10 +92,6 @@ export async function generateMetadata({
     img.startsWith('http') ? img : `${API_MEDIA_URL}${img}`
   ) || [];
 
-  const canonicalParams: string[] = [];
-  if (color) canonicalParams.push(`color=${encodeURIComponent(color)}`);
-  const canonicalQueryString = canonicalParams.length > 0 ? `?${canonicalParams.join('&')}` : '';
-
   const settings = await getPublicSettings();
   const siteName = settings['site_name'] || 'Glass Eyewear';
 
@@ -104,7 +100,7 @@ export async function generateMetadata({
     description: product.meta_desc || product.description || `Mua ${variantTitle} chính hãng tại ${siteName}. Giá tốt, bảo hành 12 tháng.`,
     keywords: product.meta_keywords || `${product.name}, kính mắt, ${siteName.toLowerCase()}`,
     ogImage: product.og_image || images[0],
-    url: `/san-pham/${product.slug}${canonicalQueryString}`,
+    url: `/san-pham/${product.slug}`,
     type: 'product',
   });
 }
