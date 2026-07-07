@@ -30,6 +30,7 @@ import {
   FiCheckCircle,
   FiZap,
   FiLayout,
+  FiInfo,
 } from "react-icons/fi";
 import toast from "react-hot-toast";
 import { invalidateSettings } from "@/lib/useSettings";
@@ -107,6 +108,7 @@ export default function AdminSettingsPage() {
   };
 
   const getGroup = (key: string): string => {
+    if (key.startsWith("about_")) return "about";
     if (key.startsWith("seo_")) return "seo";
     if (key.startsWith("social_") || key.startsWith("zalo_") || key.startsWith("messenger_") || key.startsWith("chat_")) return "social";
     if (key.startsWith("contact_")) return "contact";
@@ -158,6 +160,7 @@ export default function AdminSettingsPage() {
     { id: "rewards", label: "Phần thưởng", icon: <FiGift /> },
     { id: "font", label: "Font chữ", icon: <FiType /> },
     { id: "api", label: "API & Tích hợp", icon: <FiKey /> },
+    { id: "about", label: "Giới Thiệu", icon: <FiInfo /> },
     { id: "footer", label: "Chân Trang", icon: <FiLayout /> },
   ];
 
@@ -176,6 +179,15 @@ export default function AdminSettingsPage() {
   };
 
   const settingFields: Record<string, SettingField[]> = {
+    about: [
+      { key: "about_seo_title", label: "Tiêu đề SEO", placeholder: "Giới thiệu - Mitoo Eyewear", section: "SEO Trang Giới Thiệu" },
+      { key: "about_seo_description", label: "Mô tả SEO", placeholder: "Tìm hiểu về câu chuyện thương hiệu của chúng tôi...", isTextarea: true },
+      { key: "about_seo_keywords", label: "Từ khóa SEO", placeholder: "giới thiệu mitoo, câu chuyện thương hiệu" },
+      { key: "about_banner", label: "Ảnh Banner", isImage: true, section: "Giao Diện & Nội Dung" },
+      { key: "about_title", label: "Tiêu đề chính", placeholder: "Câu chuyện của Mitoo" },
+      { key: "about_content", label: "Nội dung giới thiệu (HTML)", placeholder: "Nhập nội dung giới thiệu bằng mã HTML...", isTextarea: true, hint: "Nhập mã HTML tùy chỉnh để thiết kế trang giới thiệu sinh động, có thể dùng các thẻ p, h2, ul, li..." },
+      { key: "about_faqs", label: "FAQs Seeder (JSON)", placeholder: '[\n  {"question": "Câu hỏi?", "answer": "Câu trả lời"}\n]', isTextarea: true, hint: "Nhập mảng câu hỏi & câu trả lời dưới định dạng JSON để tạo dữ liệu cấu trúc FAQ Page giúp AI Search (Gemini, ChatGPT) nhận dạng tốt hơn." },
+    ],
     general: [
       { key: "site_name", label: "Tên Website", placeholder: "Glass Eyewear" },
       {

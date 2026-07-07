@@ -1970,3 +1970,43 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Legacy compatibility aliases */
 .text-gold { color: var(--color-brand); }
+
+/* ============================================
+   ABOUT US PAGE CUSTOM HTML STYLES
+   ============================================ */
+.about-content-html h2 {
+  font-size: 1.75rem;
+  color: var(--color-gold);
+  margin-top: 36px;
+  margin-bottom: 18px;
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+.about-content-html h3 {
+  font-size: 1.35rem;
+  color: #fff;
+  margin-top: 28px;
+  margin-bottom: 14px;
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+.about-content-html p {
+  margin-bottom: 20px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1.05rem;
+  line-height: 1.8;
+}
+.about-content-html ul, .about-content-html ol {
+  margin-bottom: 20px;
+  padding-left: 24px;
+  color: rgba(255, 255, 255, 0.8);
+}
+.about-content-html li {
+  margin-bottom: 10px;
+  line-height: 1.7;
+}
+.about-content-html strong {
+  color: var(--color-gold);
+  font-weight: 600;
+}
+
