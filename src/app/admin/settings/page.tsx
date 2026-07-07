@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+const RichEditor = dynamic(() => import('@/components/admin/RichEditor'), { ssr: false });
 import { adminApi } from "@/lib/api";
 import { useToken } from "@/lib/useToken";
 import MediaPicker from "@/components/admin/MediaPicker";
@@ -44,6 +46,7 @@ export default function AdminSettingsPage() {
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [mediaTarget, setMediaTarget] = useState("");
   const [revealedKeys, setRevealedKeys] = useState<Set<string>>(new Set());
+  const [editorInsertFn, setEditorInsertFn] = useState<((url: string) => void) | null>(null);
 
   useEffect(() => {
     if (token) loadSettings();
@@ -179,15 +182,6 @@ export default function AdminSettingsPage() {
   };
 
   const settingFields: Record<string, SettingField[]> = {
-    about: [
-      { key: "about_seo_title", label: "Tiêu đề SEO", placeholder: "Giới thiệu - Mitoo Eyewear", section: "SEO Trang Giới Thiệu" },
-      { key: "about_seo_description", label: "Mô tả SEO", placeholder: "Tìm hiểu về câu chuyện thương hiệu của chúng tôi...", isTextarea: true },
-      { key: "about_seo_keywords", label: "Từ khóa SEO", placeholder: "giới thiệu mitoo, câu chuyện thương hiệu" },
-      { key: "about_banner", label: "Ảnh Banner", isImage: true, section: "Giao Diện & Nội Dung" },
-      { key: "about_title", label: "Tiêu đề chính", placeholder: "Câu chuyện của Mitoo" },
-      { key: "about_content", label: "Nội dung giới thiệu (HTML)", placeholder: "Nhập nội dung giới thiệu bằng mã HTML...", isTextarea: true, hint: "Nhập mã HTML tùy chỉnh để thiết kế trang giới thiệu sinh động, có thể dùng các thẻ p, h2, ul, li..." },
-      { key: "about_faqs", label: "FAQs Seeder (JSON)", placeholder: '[\n  {"question": "Câu hỏi?", "answer": "Câu trả lời"}\n]', isTextarea: true, hint: "Nhập mảng câu hỏi & câu trả lời dưới định dạng JSON để tạo dữ liệu cấu trúc FAQ Page giúp AI Search (Gemini, ChatGPT) nhận dạng tốt hơn." },
-    ],
     general: [
       { key: "site_name", label: "Tên Website", placeholder: "Glass Eyewear" },
       {
@@ -1076,6 +1070,90 @@ export default function AdminSettingsPage() {
             </div>
           </div>
         ))}
+        {/* About Page Visual Editor */}
+        {activeTab === "about" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            {/* SEO Section */}
+            <div className="admin-card">
+              <div style={{ padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", fontSize: "0.8125rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--color-gold)" }}>
+                SEO Trang Giới Thiệu
+              </div>
+              <div className="admin-form" style={{ padding: "20px" }}>
+                <div className="admin-form__group">
+                  <label className="admin-form__label">Tiêu đề SEO</label>
+                  <input className="admin-form__input" value={settings["about_seo_title"] || ""} onChange={e => updateSetting("about_seo_title", e.target.value)} placeholder="VD: Giới thiệu - Mitoo Eyewear" />
+                </div>
+                <div className="admin-form__group">
+                  <label className="admin-form__label">Mô tả SEO</label>
+                  <textarea className="admin-form__input" rows={2} value={settings["about_seo_description"] || ""} onChange={e => updateSetting("about_seo_description", e.target.value)} placeholder="Tìm hiểu câu chuyện thương hiệu của chúng tôi..." />
+                </div>
+                <div className="admin-form__group">
+                  <label className="admin-form__label">Từ khóa SEO</label>
+                  <input className="admin-form__input" value={settings["about_seo_keywords"] || ""} onChange={e => updateSetting("about_seo_keywords", e.target.value)} placeholder="giới thiệu mitoo, câu chuyện thương hiệu" />
+                </div>
+              </div>
+            </div>
+
+            {/* Content & Layout Section */}
+            <div className="admin-card">
+              <div style={{ padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", fontSize: "0.8125rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--color-gold)" }}>
+                Giao Diện & Nội Dung
+              </div>
+              <div className="admin-form" style={{ padding: "20px" }}>
+                <div className="admin-form__group">
+                  <label className="admin-form__label">Ảnh Banner</label>
+                  <div>
+                    <button type="button" className="admin-btn admin-btn--secondary admin-btn--sm" onClick={() => { setMediaTarget("about_banner"); setShowMediaPicker(true); }}>
+                      <FiImage /> Chọn từ Media
+                    </button>
+                    {settings["about_banner"] && (
+                      <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
+                        <img src={settings["about_banner"].startsWith("http") ? settings["about_banner"] : `${process.env.NEXT_PUBLIC_API_URL?.replace("/api", "")}${settings["about_banner"]}`} alt="" style={{ height: "40px", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.1)" }} />
+                        <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)" }}>{settings["about_banner"]}</span>
+                        <button type="button" onClick={() => updateSetting("about_banner", "")} style={{ color: "rgba(255,255,255,0.3)", background: "none", border: "none", cursor: "pointer" }}><FiX /></button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="admin-form__group">
+                  <label className="admin-form__label">Tiêu đề chính</label>
+                  <input className="admin-form__input" value={settings["about_title"] || ""} onChange={e => updateSetting("about_title", e.target.value)} placeholder="Câu chuyện của Mitoo" />
+                </div>
+
+                <div className="admin-form__group">
+                  <label className="admin-form__label">Nội dung giới thiệu (Trình soạn thảo trực quan)</label>
+                  <div style={{ background: '#13132B', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+                    <RichEditor
+                      content={settings["about_content"] || ""}
+                      onChange={(html) => updateSetting("about_content", html)}
+                      placeholder="Soạn thảo nội dung giới thiệu ở đây..."
+                      onMediaPick={(insertFn) => {
+                        setMediaTarget("editor");
+                        setEditorInsertFn(() => insertFn);
+                        setShowMediaPicker(true);
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* FAQs Visual Editor */}
+            <div className="admin-card">
+              <div style={{ padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", fontSize: "0.8125rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--color-gold)" }}>
+                Câu Hỏi Thường Gặp (FAQs)
+              </div>
+              <div style={{ padding: "20px" }}>
+                <AboutFaqsEditor
+                  value={settings["about_faqs"] || "[]"}
+                  onChange={(json) => updateSetting("about_faqs", json)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Footer Menus Editor */}
         {activeTab === "footer" && (
           <FooterMenusEditor
@@ -1677,7 +1755,11 @@ export default function AdminSettingsPage() {
         isOpen={showMediaPicker}
         onClose={() => setShowMediaPicker(false)}
         onSelect={(url) => {
-          updateSetting(mediaTarget, url);
+          if (mediaTarget === "editor" && editorInsertFn) {
+            editorInsertFn(url.startsWith("http") ? url : `${process.env.NEXT_PUBLIC_API_URL?.replace("/api", "")}${url}`);
+          } else {
+            updateSetting(mediaTarget, url);
+          }
         }}
       />
     </>
@@ -2058,5 +2140,133 @@ function FooterMenusEditor({
         </div>
       </div>
     </>
+  );
+}
+
+/* =====================================================
+   About Page FAQ Visual List Builder Component
+   ===================================================== */
+interface FAQItem {
+  question: string;
+  answer: string;
+}
+
+function AboutFaqsEditor({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (json: string) => void;
+}) {
+  let items: FAQItem[] = [];
+  try {
+    if (value) {
+      items = JSON.parse(value);
+    }
+  } catch {
+    items = [];
+  }
+
+  const updateItems = (newItems: FAQItem[]) => {
+    onChange(JSON.stringify(newItems));
+  };
+
+  const handleFieldChange = (index: number, key: keyof FAQItem, val: string) => {
+    const copy = [...items];
+    copy[index] = { ...copy[index], [key]: val };
+    updateItems(copy);
+  };
+
+  const addItem = () => {
+    updateItems([...items, { question: "", answer: "" }]);
+  };
+
+  const removeItem = (index: number) => {
+    updateItems(items.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <p style={{ fontSize: "0.8125rem", color: "rgba(255,255,255,0.4)", marginBottom: "4px" }}>
+        Thêm câu hỏi và câu trả lời để hiển thị FAQ bên dưới chân trang giới thiệu và tối ưu Schema cho AI Search.
+      </p>
+      
+      {items.length === 0 ? (
+        <div style={{ padding: "20px", textAlign: "center", background: "rgba(255,255,255,0.02)", borderRadius: "8px", border: "1px dashed rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }}>
+          Chưa có câu hỏi FAQ nào được tạo.
+        </div>
+      ) : (
+        items.map((item, index) => (
+          <div 
+            key={index} 
+            style={{ 
+              background: "rgba(255,255,255,0.02)", 
+              border: "1px solid rgba(255,255,255,0.06)", 
+              borderRadius: "8px", 
+              padding: "16px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+              position: "relative"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "0.8125rem", fontWeight: 700, color: "var(--color-gold)" }}>
+                FAQ #{index + 1}
+              </span>
+              <button
+                type="button"
+                onClick={() => removeItem(index)}
+                style={{
+                  color: "#ff4d4d",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "0.8125rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  padding: "4px 8px",
+                  borderRadius: "4px",
+                  backgroundColor: "rgba(255, 77, 77, 0.1)"
+                }}
+              >
+                Xóa câu hỏi
+              </button>
+            </div>
+
+            <div className="admin-form__group" style={{ marginBottom: 0 }}>
+              <label className="admin-form__label" style={{ fontSize: "0.75rem", marginBottom: "4px" }}>Câu hỏi</label>
+              <input
+                className="admin-form__input"
+                value={item.question || ""}
+                onChange={(e) => handleFieldChange(index, "question", e.target.value)}
+                placeholder="VD: Chính sách bảo hành như thế nào?"
+              />
+            </div>
+
+            <div className="admin-form__group" style={{ marginBottom: 0 }}>
+              <label className="admin-form__label" style={{ fontSize: "0.75rem", marginBottom: "4px" }}>Câu trả lời</label>
+              <textarea
+                className="admin-form__input"
+                rows={3}
+                value={item.answer || ""}
+                onChange={(e) => handleFieldChange(index, "answer", e.target.value)}
+                placeholder="VD: Tất cả sản phẩm được bảo hành 12 tháng..."
+              />
+            </div>
+          </div>
+        ))
+      )}
+
+      <button
+        type="button"
+        onClick={addItem}
+        className="admin-btn admin-btn--secondary"
+        style={{ width: "100%", justifyContent: "center", display: "flex", gap: "6px" }}
+      >
+        + Thêm Câu Hỏi FAQ
+      </button>
+    </div>
   );
 }
