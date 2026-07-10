@@ -257,7 +257,27 @@ class GoogleMerchantService
 
                 // Image: try color-matching if colors exist
                 $variantImage = $thumb;
-                if ($color && is_array($product->color_names) && is_array($product->images)) {
+                $variantAdditional = [];
+                if ($color && is_array($product->color_variants)) {
+                    foreach ($product->color_variants as $colorVariant) {
+                        $variantColor = (string) ($colorVariant['color'] ?? '');
+                        $variantColorName = (string) ($colorVariant['color_name'] ?? '');
+                        if (strcasecmp($variantColorName, $color) !== 0 && strcasecmp($variantColor, $color) !== 0) continue;
+
+                        foreach ((array) ($colorVariant['images'] ?? []) as $index => $img) {
+                            if (!$img) continue;
+                            $url = str_starts_with((string) $img, 'http') ? $img : ($apiBase . '/' . ltrim((string) $img, '/'));
+                            if ($index === 0) {
+                                $variantImage = $url;
+                            } elseif ($url !== $variantImage) {
+                                $variantAdditional[] = $url;
+                            }
+                        }
+                        break;
+                    }
+                }
+                // Legacy fallback for products that have not configured color variants yet.
+                if ($variantImage === $thumb && $color && is_array($product->color_names) && is_array($product->images)) {
                     $colorIndex = array_search($color, array_filter($product->color_names));
                     if ($colorIndex !== false && isset($product->images[$colorIndex])) {
                         $img = $product->images[$colorIndex];
@@ -315,7 +335,7 @@ class GoogleMerchantService
                 }
 
                 // Additional images
-                $varAdditional = [];
+                $varAdditional = $variantAdditional;
                 if ($variantImage !== $thumb) {
                     $varAdditional[] = $thumb;
                 }

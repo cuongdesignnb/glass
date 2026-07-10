@@ -49,6 +49,7 @@ model Product {
   // Filter attributes
   colors       String[] // hex colors
   colorNames   String[] // color display names
+  colorVariants Json?   // optional per-color image galleries
   prescription String[] // e.g. ["-0.25", "-0.50", ... "-20.00"]
   gender       String   // "nam", "nu", "unisex"
   faceShapes   String[] // "tron", "vuong", "oval", "tim", "dai"

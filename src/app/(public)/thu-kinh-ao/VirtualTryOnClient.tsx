@@ -20,6 +20,7 @@ interface GlassProduct {
   colors: string[];
   color_names?: string[];
   images?: string[];
+  color_variants?: { color: string; color_name: string; images: string[] }[];
   category?: { name: string };
 }
 
@@ -146,11 +147,13 @@ export default function VirtualTryOnClient() {
 
     try {
       // Chuẩn bị glasses image URL
-      const glassesSrc = selectedProduct.thumbnail?.startsWith('http')
-        ? selectedProduct.thumbnail
-        : selectedProduct.thumbnail?.startsWith('/')
-          ? `${API_MEDIA}${selectedProduct.thumbnail}`
-          : selectedProduct.thumbnail;
+      const selectedVariant = selectedProduct.color_variants?.find(v => v.color === selectedColor);
+      const sourceImage = selectedVariant?.images?.[0] || selectedProduct.images?.[0] || selectedProduct.thumbnail;
+      const glassesSrc = sourceImage?.startsWith('http')
+        ? sourceImage
+        : sourceImage?.startsWith('/')
+          ? `${API_MEDIA}${sourceImage}`
+          : sourceImage;
 
       // Gọi Gemini AI qua backend
       const result = await publicApi.aiTryOn({

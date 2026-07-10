@@ -31,6 +31,8 @@ interface TryOnModalProps {
     sale_price?: number | null;
     colors?: string[];
     color_names?: string[];
+    images?: string[];
+    color_variants?: { color: string; color_name: string; images: string[] }[];
   };
   selectedColor?: string;
 }
@@ -159,11 +161,13 @@ export default function TryOnModal({
     setErrorMsg(null);
 
     try {
-      const glassesSrc = product.thumbnail?.startsWith("http")
-        ? product.thumbnail
-        : product.thumbnail?.startsWith("/")
-          ? `${API_MEDIA}${product.thumbnail}`
-          : product.thumbnail;
+      const selectedVariant = product.color_variants?.find(v => v.color === selectedColor);
+      const sourceImage = selectedVariant?.images?.[0] || product.images?.[0] || product.thumbnail;
+      const glassesSrc = sourceImage?.startsWith("http")
+        ? sourceImage
+        : sourceImage?.startsWith("/")
+          ? `${API_MEDIA}${sourceImage}`
+          : sourceImage;
 
       const { publicApi } = await import("@/lib/api");
       const result = await publicApi.aiTryOn({

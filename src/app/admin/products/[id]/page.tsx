@@ -26,7 +26,8 @@ export default function ProductFormPage() {
   const [loading, setLoading] = useState(!!isEdit);
   const [activeTab, setActiveTab] = useState('basic');
   const [showMediaPicker, setShowMediaPicker] = useState(false);
-  const [mediaPickerTarget, setMediaPickerTarget] = useState<'thumbnail' | 'gallery' | 'og_image' | 'editor'>('thumbnail');
+  const [mediaPickerTarget, setMediaPickerTarget] = useState<'thumbnail' | 'gallery' | 'color_variant' | 'og_image' | 'editor'>('thumbnail');
+  const [mediaPickerColor, setMediaPickerColor] = useState<string | null>(null);
   const [editorInsertFn, setEditorInsertFn] = useState<((url: string) => void) | null>(null);
 
   const [form, setForm] = useState({
@@ -35,6 +36,7 @@ export default function ProductFormPage() {
     category_ids: [] as number[],
     gender: [] as string[], brand: '',
     colors: [] as string[], color_names: [] as string[],
+    color_variants: [] as { color: string; color_name: string; images: string[] }[],
     face_shapes: [] as string[], frame_styles: [] as string[], materials: [] as string[],
     images: [] as string[], thumbnail: '',
     weight: '', frame_width: '', lens_width: '', lens_height: '', bridge_width: '', temple_length: '',
@@ -93,6 +95,10 @@ export default function ProductFormPage() {
           category_id: product.category_id ? String(product.category_id) : '',
           gender: Array.isArray(product.gender) ? product.gender : (product.gender ? [product.gender] : []), brand: product.brand || '',
           colors: product.colors || [], color_names: product.color_names || [],
+          color_variants: (product.colors || []).map((color: string, index: number) => {
+            const existingVariant = (product.color_variants || []).find((v: any) => v.color === color);
+            return existingVariant || { color, color_name: product.color_names?.[index] || color, images: [] };
+          }),
           face_shapes: product.face_shapes || [], frame_styles: product.frame_styles || [],
           materials: product.materials || [],
           images: product.images || [], thumbnail: product.thumbnail || '',
@@ -165,12 +171,14 @@ export default function ProductFormPage() {
         ...f,
         colors: f.colors.filter((_, i) => i !== idx),
         color_names: f.color_names.filter((_, i) => i !== idx),
+        color_variants: f.color_variants.filter(v => v.color !== colorValue),
       }));
     } else {
       setForm(f => ({
         ...f,
         colors: [...f.colors, colorValue],
         color_names: [...f.color_names, colorName],
+        color_variants: [...f.color_variants, { color: colorValue, color_name: colorName, images: [] }],
       }));
     }
   };
@@ -530,6 +538,50 @@ export default function ProductFormPage() {
                   </div>
                 )}
               </div>
+
+              {form.colors.length > 0 && (
+                <div className="admin-form__group">
+                  <label className="admin-form__label">Ảnh theo màu</label>
+                  <p style={{ margin: '0 0 12px', fontSize: '0.8125rem', color: 'rgba(255,255,255,0.5)' }}>
+                    Màu chưa có ảnh riêng sẽ tự động sử dụng gallery chung.
+                  </p>
+                  <div style={{ display: 'grid', gap: '16px' }}>
+                    {form.colors.map((color, colorIndex) => {
+                      const colorName = form.color_names[colorIndex] || color;
+                      const variantImages = form.color_variants.find(v => v.color === color)?.images || [];
+                      return (
+                        <div key={color} style={{ padding: '14px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+                              <span style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: color === 'transparent' ? '#f5f5dc' : color, border: '1px solid rgba(255,255,255,0.25)' }} />
+                              {colorName}
+                            </div>
+                            <button type="button" className="admin-btn admin-btn--secondary admin-btn--sm"
+                              onClick={() => { setMediaPickerColor(color); setMediaPickerTarget('color_variant'); setShowMediaPicker(true); }}>
+                              <FiPlus /> Thêm ảnh
+                            </button>
+                          </div>
+                          {variantImages.length > 0 ? (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '10px', marginTop: '12px' }}>
+                              {variantImages.map((url, imageIndex) => (
+                                <div key={`${url}-${imageIndex}`} style={{ position: 'relative', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                  <img src={url.startsWith('http') ? url : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${url}`} alt={`${colorName} ${imageIndex + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  <button type="button" onClick={() => setForm(f => ({ ...f, color_variants: f.color_variants.map(v => v.color === color ? { ...v, images: v.images.filter((_, i) => i !== imageIndex) } : v) }))}
+                                    style={{ position: 'absolute', top: '4px', right: '4px', width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(239,68,68,0.9)', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <FiX style={{ fontSize: '0.625rem' }} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div style={{ marginTop: '10px', fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)' }}>Đang sử dụng gallery chung</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -855,10 +907,12 @@ export default function ProductFormPage() {
       <MediaPicker
         isOpen={showMediaPicker}
         onClose={() => setShowMediaPicker(false)}
-        multiple={mediaPickerTarget === 'gallery'}
+        multiple={mediaPickerTarget === 'gallery' || mediaPickerTarget === 'color_variant'}
         onSelectMultiple={(urls) => {
           if (mediaPickerTarget === 'gallery') {
             setForm(f => ({ ...f, images: [...f.images, ...urls] }));
+          } else if (mediaPickerTarget === 'color_variant' && mediaPickerColor) {
+            setForm(f => ({ ...f, color_variants: f.color_variants.map(v => v.color === mediaPickerColor ? { ...v, images: [...v.images, ...urls] } : v) }));
           }
         }}
         onSelect={(url) => {
@@ -866,6 +920,8 @@ export default function ProductFormPage() {
             setForm(f => ({ ...f, thumbnail: url }));
           } else if (mediaPickerTarget === 'gallery') {
             setForm(f => ({ ...f, images: [...f.images, url] }));
+          } else if (mediaPickerTarget === 'color_variant' && mediaPickerColor) {
+            setForm(f => ({ ...f, color_variants: f.color_variants.map(v => v.color === mediaPickerColor ? { ...v, images: [...v.images, url] } : v) }));
           } else if (mediaPickerTarget === 'og_image') {
             setForm(f => ({ ...f, og_image: url }));
           } else if (mediaPickerTarget === 'editor' && editorInsertFn) {

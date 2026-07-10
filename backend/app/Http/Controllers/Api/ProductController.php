@@ -243,6 +243,11 @@ class ProductController extends Controller
             'thumbnail' => 'nullable|string',
             'colors' => 'nullable|array',
             'color_names' => 'nullable|array',
+            'color_variants' => 'nullable|array',
+            'color_variants.*.color' => 'required|string|max:50',
+            'color_variants.*.color_name' => 'required|string|max:100',
+            'color_variants.*.images' => 'nullable|array',
+            'color_variants.*.images.*' => 'string|max:2048',
             'prescription' => 'nullable|array',
             'gender' => 'nullable|array',
             'face_shapes' => 'nullable|array',
@@ -267,6 +272,11 @@ class ProductController extends Controller
             'bridge_width' => 'nullable|string',
             'temple_length' => 'nullable|string',
         ]);
+
+        $data['color_variants'] = $this->normalizeColorVariants(
+            $data['color_variants'] ?? [],
+            $data['colors'] ?? []
+        );
 
         // Generate slug
         $data['slug'] = VietnameseSlug::make($data['name']);
@@ -338,6 +348,11 @@ class ProductController extends Controller
             'thumbnail' => 'nullable|string',
             'colors' => 'nullable|array',
             'color_names' => 'nullable|array',
+            'color_variants' => 'nullable|array',
+            'color_variants.*.color' => 'required|string|max:50',
+            'color_variants.*.color_name' => 'required|string|max:100',
+            'color_variants.*.images' => 'nullable|array',
+            'color_variants.*.images.*' => 'string|max:2048',
             'prescription' => 'nullable|array',
             'gender' => 'nullable|array',
             'face_shapes' => 'nullable|array',
@@ -362,6 +377,13 @@ class ProductController extends Controller
             'bridge_width' => 'nullable|string',
             'temple_length' => 'nullable|string',
         ]);
+
+        if (array_key_exists('color_variants', $data) || array_key_exists('colors', $data)) {
+            $data['color_variants'] = $this->normalizeColorVariants(
+                $data['color_variants'] ?? ($product->color_variants ?? []),
+                $data['colors'] ?? ($product->colors ?? [])
+            );
+        }
 
         // Regenerate slug if name changed
         if (isset($data['name'])) {
@@ -416,6 +438,31 @@ class ProductController extends Controller
         Cache::flush();
 
         return response()->json($product->load(['faqs', 'addonGroups.options', 'addonPrices', 'collections', 'categories']));
+    }
+
+    private function normalizeColorVariants(array $variants, array $colors): array
+    {
+        $allowedColors = array_fill_keys(array_map('strval', $colors), true);
+        $normalized = [];
+
+        foreach ($variants as $variant) {
+            if (!is_array($variant)) continue;
+
+            $color = trim((string) ($variant['color'] ?? ''));
+            if ($color === '' || !isset($allowedColors[$color]) || isset($normalized[$color])) continue;
+
+            $images = array_values(array_unique(array_filter(
+                array_map(fn ($image) => trim((string) $image), (array) ($variant['images'] ?? []))
+            )));
+
+            $normalized[$color] = [
+                'color' => $color,
+                'color_name' => trim((string) ($variant['color_name'] ?? $color)),
+                'images' => $images,
+            ];
+        }
+
+        return array_values($normalized);
     }
 
     /**
@@ -488,7 +535,7 @@ class ProductController extends Controller
             'Chiều rộng cầu', 'Chiều dài càng',
             'Mô tả ngắn', 'Ảnh đại diện', 'Ảnh chi tiết',
             'Hoạt động', 'Nổi bật', 'Mới',
-            'Meta Title', 'Meta Desc', 'Meta Keywords',
+            'Meta Title', 'Meta Desc', 'Meta Keywords', 'Color Variants JSON',
             'Ngày tạo',
         ];
 
@@ -535,6 +582,7 @@ class ProductController extends Controller
                     $p->meta_title ?? '',
                     $p->meta_desc ?? '',
                     $p->meta_keywords ?? '',
+                    !empty($p->color_variants) ? json_encode($p->color_variants, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '',
                     $p->created_at?->format('Y-m-d H:i:s') ?? '',
                 ]);
             }
@@ -598,6 +646,7 @@ class ProductController extends Controller
             'Mô tả ngắn' => 'description', 'Ảnh đại diện' => 'thumbnail', 'Ảnh chi tiết' => 'images',
             'Hoạt động' => 'is_active', 'Nổi bật' => 'is_featured', 'Mới' => 'is_new',
             'Meta Title' => 'meta_title', 'Meta Desc' => 'meta_desc', 'Meta Keywords' => 'meta_keywords',
+            'Color Variants JSON' => 'color_variants',
         ];
 
         foreach ($headerRow as $index => $header) {
@@ -691,6 +740,16 @@ class ProductController extends Controller
                 if ($getValue('frame_styles') !== null) $productData['frame_styles'] = array_filter(explode('|', $getValue('frame_styles')));
                 if ($getValue('face_shapes') !== null) $productData['face_shapes'] = array_filter(explode('|', $getValue('face_shapes')));
                 if ($getValue('images') !== null) $productData['images'] = array_filter(explode('|', $getValue('images')));
+                if ($getValue('color_variants') !== null) {
+                    $decodedVariants = json_decode($getValue('color_variants'), true);
+                    if (!is_array($decodedVariants)) {
+                        throw new \RuntimeException('Color Variants JSON không hợp lệ');
+                    }
+                    $productData['color_variants'] = $this->normalizeColorVariants(
+                        $decodedVariants,
+                        $productData['colors'] ?? ($existing?->colors ?? [])
+                    );
+                }
 
                 // Category by name
                 $catName = $getValue('category_name');

@@ -12,7 +12,7 @@ class Product extends Model
     protected $fillable = [
         'name', 'slug', 'sku', 'description', 'content',
         'price', 'sale_price', 'images', 'thumbnail',
-        'colors', 'color_names', 'prescription', 'gender',
+        'colors', 'color_names', 'color_variants', 'prescription', 'gender',
         'face_shapes', 'frame_styles', 'materials',
         'brand', 'weight', 'frame_width', 'lens_width',
         'lens_height', 'bridge_width', 'temple_length',
@@ -28,6 +28,7 @@ class Product extends Model
             'gender' => 'array',
             'colors' => 'array',
             'color_names' => 'array',
+            'color_variants' => 'array',
             'prescription' => 'array',
             'face_shapes' => 'array',
             'frame_styles' => 'array',

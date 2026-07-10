@@ -88,7 +88,11 @@ export async function generateMetadata({
   suffixParts.push(...optionNames);
   const variantTitle = suffixParts.length > 0 ? `${product.name} - ${suffixParts.join(' - ')}` : product.name;
 
-  const images = product.images?.map((img: string) =>
+  const selectedVariant = product.color_variants?.find((variant: any) =>
+    color && (variant.color === color || variant.color_name?.toLowerCase() === color.toLowerCase())
+  );
+  const imageSources = selectedVariant?.images?.length ? selectedVariant.images : product.images;
+  const images = imageSources?.map((img: string) =>
     img.startsWith('http') ? img : `${API_MEDIA_URL}${img}`
   ) || [];
 
@@ -143,7 +147,11 @@ export default async function ProductDetailPage({
 
   const reviewData = await getProductReviews(product.id);
 
-  const images = product.images?.map((img: string) =>
+  const selectedVariant = product.color_variants?.find((variant: any) =>
+    color && (variant.color === color || variant.color_name?.toLowerCase() === color.toLowerCase())
+  );
+  const imageSources = selectedVariant?.images?.length ? selectedVariant.images : product.images;
+  const images = imageSources?.map((img: string) =>
     img.startsWith('http') ? img : `${API_MEDIA_URL}${img}`
   ) || [];
 

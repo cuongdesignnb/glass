@@ -132,9 +132,7 @@ export default function ProductDetailClient({
         if (index !== -1) {
           setSelectedColor(product.colors?.[index] || "");
           setSelectedColorName(product.color_names?.[index] || "");
-          if (product.images && product.images[index]) {
-            setMainImageIndex(index);
-          }
+          setMainImageIndex(0);
         }
       }
 
@@ -221,7 +219,7 @@ export default function ProductDetailClient({
     distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
   };
 
-  const images =
+  const galleryImages =
     product.images?.map((img: string) =>
       img.startsWith("http") ? img : `${apiMediaUrl}${img}`,
     ) || [];
@@ -232,11 +230,25 @@ export default function ProductDetailClient({
       : `${apiMediaUrl}${product.thumbnail}`
     : null;
 
-  const allImages = images.length > 0 ? images : thumbnail ? [thumbnail] : [];
+  const variantImages = useMemo(() => {
+    const variant = product.color_variants?.find(
+      (item: any) => item?.color === selectedColor,
+    );
+    return (variant?.images || []).map((img: string) =>
+      img.startsWith("http") ? img : `${apiMediaUrl}${img}`,
+    );
+  }, [apiMediaUrl, product.color_variants, selectedColor]);
+
+  const allImages = variantImages.length > 0
+    ? variantImages
+    : galleryImages.length > 0
+      ? galleryImages
+      : thumbnail ? [thumbnail] : [];
 
   const handleColorSelect = (color: string, index: number) => {
     setSelectedColor(color);
     setSelectedColorName(product.color_names?.[index] || "");
+    setMainImageIndex(0);
   };
 
   const handleAddToCart = () => {
@@ -1184,6 +1196,8 @@ export default function ProductDetailClient({
           sale_price: product.sale_price ? Number(product.sale_price) : null,
           colors: product.colors || [],
           color_names: product.color_names || [],
+          images: product.images || [],
+          color_variants: product.color_variants || [],
         }}
         selectedColor={selectedColor}
       />
