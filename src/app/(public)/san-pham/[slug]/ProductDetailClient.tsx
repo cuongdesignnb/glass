@@ -240,7 +240,7 @@ export default function ProductDetailClient({
   }, [apiMediaUrl, product.color_variants, selectedColor]);
 
   const allImages = variantImages.length > 0
-    ? variantImages
+    ? Array.from(new Set([...variantImages, ...galleryImages]))
     : galleryImages.length > 0
       ? galleryImages
       : thumbnail ? [thumbnail] : [];

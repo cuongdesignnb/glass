@@ -91,7 +91,9 @@ export async function generateMetadata({
   const selectedVariant = product.color_variants?.find((variant: any) =>
     color && (variant.color === color || variant.color_name?.toLowerCase() === color.toLowerCase())
   );
-  const imageSources = selectedVariant?.images?.length ? selectedVariant.images : product.images;
+  const imageSources = selectedVariant?.images?.length
+    ? Array.from(new Set([...(selectedVariant.images || []), ...(product.images || [])]))
+    : product.images;
   const images = imageSources?.map((img: string) =>
     img.startsWith('http') ? img : `${API_MEDIA_URL}${img}`
   ) || [];
@@ -150,7 +152,9 @@ export default async function ProductDetailPage({
   const selectedVariant = product.color_variants?.find((variant: any) =>
     color && (variant.color === color || variant.color_name?.toLowerCase() === color.toLowerCase())
   );
-  const imageSources = selectedVariant?.images?.length ? selectedVariant.images : product.images;
+  const imageSources = selectedVariant?.images?.length
+    ? Array.from(new Set([...(selectedVariant.images || []), ...(product.images || [])]))
+    : product.images;
   const images = imageSources?.map((img: string) =>
     img.startsWith('http') ? img : `${API_MEDIA_URL}${img}`
   ) || [];
