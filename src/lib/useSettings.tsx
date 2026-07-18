@@ -69,15 +69,12 @@ export function invalidateSettings() {
  */
 export function useSettings() {
   const context = useContext(SettingsContext);
-
-  if (context) {
-    return { settings: context.settings, loading: false };
-  }
-
   const [settings, setSettings] = useState<Record<string, string>>(cachedSettings || {});
   const [loading, setLoading] = useState(!cachedSettings);
 
   useEffect(() => {
+    if (context) return;
+
     if (cachedSettings) {
       setSettings(cachedSettings);
       setLoading(false);
@@ -87,7 +84,11 @@ export function useSettings() {
       setSettings(data);
       setLoading(false);
     });
-  }, []);
+  }, [context]);
+
+  if (context) {
+    return { settings: context.settings, loading: false };
+  }
 
   return { settings, loading };
 }

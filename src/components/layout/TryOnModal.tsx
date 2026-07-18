@@ -66,6 +66,7 @@ export default function TryOnModal({
   const resultCanvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     setSelectedColor(initialColor || product.colors?.[0] || "");
@@ -92,6 +93,22 @@ export default function TryOnModal({
       document.body.style.overflow = "";
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    closeButtonRef.current?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      previouslyFocused?.focus();
+    };
+  }, [isOpen, onClose]);
 
   const startCamera = async () => {
     setShowCamera(true);
@@ -380,8 +397,19 @@ export default function TryOnModal({
 
   return (
     <div className="tryon-modal__overlay" onClick={onClose}>
-      <div className="tryon-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="tryon-modal__close" onClick={onClose}>
+      <div
+        className="tryon-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tryon-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          ref={closeButtonRef}
+          className="tryon-modal__close"
+          onClick={onClose}
+          aria-label="Đóng thử kính"
+        >
           <FiX />
         </button>
 
@@ -392,7 +420,7 @@ export default function TryOnModal({
               <img src={thumbSrc} alt={product.name} />
             </div>
             <div>
-              <h3 className="tryon-modal__product-name">{product.name}</h3>
+              <h3 id="tryon-modal-title" className="tryon-modal__product-name">{product.name}</h3>
               <p className="tryon-modal__product-price">
                 {new Intl.NumberFormat("vi-VN", {
                   style: "currency",

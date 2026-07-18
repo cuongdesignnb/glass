@@ -31,7 +31,9 @@ export default function ProductListingClient() {
   const [showMobileFilter, setShowMobileFilter] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [ready, setReady] = useState(false);
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const priceMinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const priceMaxTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Filter state
   const [filters, setFilters] = useState({
@@ -143,6 +145,12 @@ export default function ProductListingClient() {
     fetchProducts();
   }, [fetchProducts]);
 
+  useEffect(() => () => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (priceMinTimerRef.current) clearTimeout(priceMinTimerRef.current);
+    if (priceMaxTimerRef.current) clearTimeout(priceMaxTimerRef.current);
+  }, []);
+
   // Sync URL with filter state
   useEffect(() => {
     if (!ready) return;
@@ -182,16 +190,16 @@ export default function ProductListingClient() {
   // Debounce price inputs
   const handlePriceMinChange = (value: string) => {
     setPriceMinInput(value);
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => {
+    if (priceMinTimerRef.current) clearTimeout(priceMinTimerRef.current);
+    priceMinTimerRef.current = setTimeout(() => {
       setFilters((prev) => ({ ...prev, price_min: value, page: "1" }));
     }, 800);
   };
 
   const handlePriceMaxChange = (value: string) => {
     setPriceMaxInput(value);
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => {
+    if (priceMaxTimerRef.current) clearTimeout(priceMaxTimerRef.current);
+    priceMaxTimerRef.current = setTimeout(() => {
       setFilters((prev) => ({ ...prev, price_max: value, page: "1" }));
     }, 800);
   };

@@ -9,6 +9,7 @@ import { useSettings } from '@/lib/useSettings';
 import { useAuth } from '@/lib/useAuth';
 import { publicApi } from '@/lib/api';
 import { formatPrice } from '@/lib/constants';
+import { useCart } from '@/lib/useCart';
 
 interface MenuItem {
   id: string | number;
@@ -29,9 +30,9 @@ export default function Header({ menus }: HeaderProps) {
   const router = useRouter();
   const { settings } = useSettings();
   const { user, logout } = useAuth();
+  const { totalItems: cartCount } = useCart();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [cartCount, setCartCount] = useState(0);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showVoucherTip, setShowVoucherTip] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -52,23 +53,6 @@ export default function Header({ menus }: HeaderProps) {
     window.addEventListener('scroll', handleScroll);
     setIsScrolled(window.scrollY > 50);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  useEffect(() => {
-    const updateCartCount = () => {
-      try {
-        const cart = JSON.parse(localStorage.getItem('glass_cart') || '[]');
-        const count = cart.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0);
-        setCartCount(count);
-      } catch { setCartCount(0); }
-    };
-    updateCartCount();
-    window.addEventListener('cart-updated', updateCartCount);
-    window.addEventListener('storage', updateCartCount);
-    return () => {
-      window.removeEventListener('cart-updated', updateCartCount);
-      window.removeEventListener('storage', updateCartCount);
-    };
   }, []);
 
   // Apply brand color from settings

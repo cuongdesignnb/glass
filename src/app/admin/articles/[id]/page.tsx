@@ -109,6 +109,7 @@ export default function ArticleFormPage() {
     try {
       const isFullArticle = mode === 'full' || mode === 'full_images';
       const withImages = mode === 'images' || mode === 'full_images';
+      const categoryId = Number(form.article_category_id);
       const basePayload = {
         topic: form.title,
         type: 'article' as const,
@@ -116,7 +117,7 @@ export default function ArticleFormPage() {
         tone: 'professional' as const,
         length: 'medium' as const,
         full_article: isFullArticle,
-        category_id: form.article_category_id || undefined,
+        category_id: Number.isInteger(categoryId) && categoryId > 0 ? categoryId : undefined,
       };
 
       let data: any;
