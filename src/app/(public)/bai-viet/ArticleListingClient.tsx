@@ -1,20 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { publicApi } from '@/lib/api';
+import { useRouter } from 'next/navigation';
+import { articleListingUrl, type ArticleListingFilters } from '@/lib/listing-params';
 import { FiSearch, FiArrowRight, FiEye, FiCalendar, FiChevronLeft, FiChevronRight, FiBookOpen, FiFileText, FiMessageSquare, FiTrendingUp, FiTool, FiBook, FiBell, FiStar, FiFile } from 'react-icons/fi';
 
-const CATEGORIES = [
-  { slug: '', label: 'Tất Cả', icon: <FiFileText /> },
-  { slug: 'tu-van', label: 'Tư Vấn Kính', icon: <FiMessageSquare /> },
-  { slug: 'xu-huong', label: 'Xu Hướng', icon: <FiTrendingUp /> },
-  { slug: 'cham-soc', label: 'Chăm Sóc Kính', icon: <FiTool /> },
-  { slug: 'kien-thuc', label: 'Kiến Thức', icon: <FiBook /> },
-  { slug: 'tin-tuc', label: 'Tin Tức', icon: <FiBell /> },
-  { slug: 'review', label: 'Đánh Giá', icon: <FiStar /> },
-];
+const CATEGORY_ICONS: Record<string, React.ReactNode> = {
+  'tu-van': <FiMessageSquare />, 'xu-huong': <FiTrendingUp />, 'cham-soc': <FiTool />,
+  'kien-thuc': <FiBook />, 'tin-tuc': <FiBell />, review: <FiStar />,
+};
 
 function formatDateVi(dateStr: string) {
   if (!dateStr) return '';
@@ -33,60 +29,60 @@ function buildImageUrl(path: string) {
   return `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${path}`;
 }
 
-export default function ArticleListingClient() {
-  const [articles, setArticles] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState<any>({});
-  const [activeCategory, setActiveCategory] = useState('');
-  const [search, setSearch] = useState('');
-  const [sort, setSort] = useState('newest');
-  const [page, setPage] = useState(1);
+type ArticleListingClientProps = {
+  initialArticles: any[];
+  initialPagination: { currentPage: number; lastPage: number; total: number };
+  initialCategories: any[];
+  initialFilters: ArticleListingFilters;
+};
 
-  const fetchArticles = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params: Record<string, string> = {
-        per_page: '9',
-        page: String(page),
-        sort,
-      };
-      if (activeCategory) params.tag = activeCategory;
-      if (search.trim()) params.search = search.trim();
+export default function ArticleListingClient({ initialArticles, initialPagination, initialCategories, initialFilters }: ArticleListingClientProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [filters, setFilters] = useState(initialFilters);
+  const filtersRef = useRef(initialFilters);
+  const [searchInput, setSearchInput] = useState(initialFilters.search);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const articles = initialArticles;
+  const pagination = initialPagination;
+  const loading = isPending;
+  const activeCategory = filters.category;
+  const search = filters.search;
+  const sort = filters.sort;
+  const page = Number(filters.page);
+  const categories = useMemo(() => [
+    { slug: '', label: 'Tất Cả', icon: <FiFileText /> },
+    ...initialCategories.map((category) => ({
+      slug: String(category.slug || ''),
+      label: String(category.name || category.slug || ''),
+      icon: CATEGORY_ICONS[String(category.slug || '')] || <FiFileText />,
+    })),
+  ], [initialCategories]);
 
-      const data = await publicApi.getArticles(params);
-      setArticles(data.data || []);
-      setPagination({
-        currentPage: data.current_page || 1,
-        lastPage: data.last_page || 1,
-        total: data.total || 0,
-      });
-    } catch (err) {
-      console.error('Failed to load articles:', err);
-      setArticles([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [activeCategory, search, sort, page]);
-
-  useEffect(() => { fetchArticles(); }, [fetchArticles]);
-
-  // Read URL params on mount
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const tag = params.get('tag');
-      if (tag) setActiveCategory(tag);
-    }
+    filtersRef.current = initialFilters;
+    setFilters(initialFilters);
+    setSearchInput(initialFilters.search);
+  }, [initialFilters]);
+
+  useEffect(() => () => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
   }, []);
 
+  const navigate = (nextFilters: ArticleListingFilters) => {
+    filtersRef.current = nextFilters;
+    setFilters(nextFilters);
+    startTransition(() => router.push(articleListingUrl(nextFilters), { scroll: false }));
+  };
+
   const handleCategory = (slug: string) => {
-    setActiveCategory(slug);
-    setPage(1);
+    navigate({ ...filtersRef.current, category: slug, page: '1' });
   };
 
   const handleSearch = (val: string) => {
-    setSearch(val);
-    setPage(1);
+    setSearchInput(val);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => navigate({ ...filtersRef.current, search: val, page: '1' }), 500);
   };
 
   const featuredArticle = articles.find((a) => a.is_featured) || articles[0];
@@ -113,7 +109,7 @@ export default function ArticleListingClient() {
       <div className="articles-categories">
         <div className="container">
           <div className="articles-categories__inner">
-            {CATEGORIES.map((cat) => (
+            {categories.map((cat) => (
               <button
                 key={cat.slug}
                 className={`articles-cat-btn ${activeCategory === cat.slug ? 'articles-cat-btn--active' : ''}`}
@@ -135,7 +131,7 @@ export default function ArticleListingClient() {
             <input
               type="text"
               placeholder="Tìm kiếm bài viết..."
-              value={search}
+              value={searchInput}
               onChange={(e) => handleSearch(e.target.value)}
             />
           </div>
@@ -145,7 +141,7 @@ export default function ArticleListingClient() {
             </span>
             <select
               value={sort}
-              onChange={(e) => { setSort(e.target.value); setPage(1); }}
+              onChange={(e) => navigate({ ...filtersRef.current, sort: e.target.value, page: '1' })}
               className="articles-toolbar__sort"
             >
               <option value="newest">Mới nhất</option>
@@ -182,7 +178,7 @@ export default function ArticleListingClient() {
             <button
               className="btn btn-primary"
               style={{ marginTop: 'var(--space-lg)' }}
-              onClick={() => { setSearch(''); handleCategory(''); }}
+              onClick={() => { setSearchInput(''); navigate({ category: '', search: '', sort: 'newest', page: '1' }); }}
             >
               Xem tất cả bài viết
             </button>
@@ -212,8 +208,8 @@ export default function ArticleListingClient() {
                 <div className="article-featured__body">
                   {featuredArticle.tags?.[0] && (
                     <span className="article-featured__tag">
-                      {CATEGORIES.find(c => c.slug === featuredArticle.tags[0])?.icon || <FiFileText />}
-                      {CATEGORIES.find(c => c.slug === featuredArticle.tags[0])?.label || featuredArticle.tags[0]}
+                      {categories.find(c => c.slug === featuredArticle.tags[0])?.icon || <FiFileText />}
+                      {categories.find(c => c.slug === featuredArticle.tags[0])?.label || featuredArticle.tags[0]}
                     </span>
                   )}
                   <h2 className="article-featured__title">{featuredArticle.title}</h2>
@@ -260,7 +256,7 @@ export default function ArticleListingClient() {
                       )}
                       {article.tags?.[0] && (
                         <span className="article-card__tag">
-                          {CATEGORIES.find(c => c.slug === article.tags[0])?.label || article.tags[0]}
+                          {categories.find(c => c.slug === article.tags[0])?.label || article.tags[0]}
                         </span>
                       )}
                     </div>
@@ -295,7 +291,7 @@ export default function ArticleListingClient() {
                 <button
                   className="articles-pagination__btn"
                   disabled={page === 1}
-                  onClick={() => setPage(p => p - 1)}
+                  onClick={() => navigate({ ...filtersRef.current, page: String(page - 1) })}
                 >
                   <FiChevronLeft /> Trước
                 </button>
@@ -312,7 +308,7 @@ export default function ArticleListingClient() {
                     <button
                       key={pageNum}
                       className={`articles-pagination__btn ${page === pageNum ? 'articles-pagination__btn--active' : ''}`}
-                      onClick={() => setPage(pageNum)}
+                      onClick={() => navigate({ ...filtersRef.current, page: String(pageNum) })}
                     >
                       {pageNum}
                     </button>
@@ -321,7 +317,7 @@ export default function ArticleListingClient() {
                 <button
                   className="articles-pagination__btn"
                   disabled={page === pagination.lastPage}
-                  onClick={() => setPage(p => p + 1)}
+                  onClick={() => navigate({ ...filtersRef.current, page: String(page + 1) })}
                 >
                   Sau <FiChevronRight />
                 </button>

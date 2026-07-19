@@ -35,9 +35,7 @@ const FONT_FALLBACK_STACK = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
 type CustomFontInfo = {
   name: string;
   url: string;
-  format: string;
   cssFormat: string;
-  mime: string;
 };
 
 function resolveCustomFont(s: Record<string, string>): CustomFontInfo | null {
@@ -49,9 +47,7 @@ function resolveCustomFont(s: Record<string, string>): CustomFontInfo | null {
   return {
     name: String(name).replace(/['\\]/g, '\\$&'),
     url: `${PUBLIC_API}/public/font-file?v=${encodeURIComponent(url)}`,
-    format,
     cssFormat: FONT_FORMAT_MAP[format] || 'truetype',
-    mime: `font/${format}`,
   };
 }
 
@@ -63,7 +59,7 @@ function buildFontStyle(font: CustomFontInfo): string {
   src: url('${font.url}') format('${font.cssFormat}');
   font-weight: 100 900;
   font-style: normal;
-  font-display: swap;
+  font-display: optional;
 }
 :root {
   --font-body: ${stack};
@@ -152,18 +148,7 @@ export default async function RootLayout({
   return (
     <html lang="vi" className={customFont ? undefined : `${inter.variable} ${playfair.variable}`}>
       <head>
-        {customFont && (
-          <>
-            <link
-              rel="preload"
-              href={customFont.url}
-              as="font"
-              type={customFont.mime}
-              crossOrigin="anonymous"
-            />
-            <style dangerouslySetInnerHTML={{ __html: fontStyle as string }} />
-          </>
-        )}
+        {customFont && <style dangerouslySetInnerHTML={{ __html: fontStyle as string }} />}
       </head>
       <body>
         {/* Global Schema: WebSite with SearchAction */}

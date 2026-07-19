@@ -9,6 +9,13 @@ import {
   type StoredCartItem,
 } from '../src/lib/cart-storage.ts';
 import { shouldRenderLayoutNewsletter } from '../src/components/layout/newsletter-visibility.ts';
+import {
+  articleListingUrl,
+  normalizeArticleSearchParams,
+  normalizeProductSearchParams,
+  productApiParams,
+  productListingUrl,
+} from '../src/lib/listing-params.ts';
 
 const read = (path: string) => readFileSync(path, 'utf8');
 
@@ -115,4 +122,41 @@ test('service worker migration unregisters legacy caches and has no fetch handle
   assert.doesNotMatch(rootLayout, /serviceWorker\.register\(/);
   assert.doesNotMatch(rootLayout, /localStorage\.(?:clear|removeItem)/);
   assert.doesNotMatch(rootLayout, /glass_cart|glass_token|admin_token/);
+});
+
+test('listing URL parameters are normalized and mapped to stable API contracts', () => {
+  const products = normalizeProductSearchParams({
+    category: ['kinh-ram', 'ignored'], face_shape: 'oval', price_min: '00100000',
+    price_max: '-1', sort: 'unsupported', page: '0', search: '  mat meo  ', unknown: 'drop-me',
+  });
+  assert.deepEqual(products, {
+    gender: '', color: '', face_shape: 'oval', frame_style: '', material: '',
+    category_slug: 'kinh-ram', price_min: '100000', price_max: '', sort: 'newest',
+    search: 'mat meo', page: '1',
+  });
+  assert.equal(productListingUrl(products), '/san-pham?category=kinh-ram&face=oval&price_min=100000&search=mat+meo');
+  assert.deepEqual(productApiParams(products), {
+    per_page: '12', page: '1', sort: 'newest', face_shape: 'oval',
+    category_slug: 'kinh-ram', price_min: '100000', search: 'mat meo',
+  });
+
+  const articles = normalizeArticleSearchParams({ tag: 'kien-thuc', sort: 'popular', page: '2', search: '  gong kinh ' });
+  assert.deepEqual(articles, { category: 'kien-thuc', search: 'gong kinh', sort: 'popular', page: '2' });
+  assert.equal(articleListingUrl(articles), '/bai-viet?category=kien-thuc&search=gong+kinh&sort=popular&page=2');
+});
+
+test('critical public listings are server seeded without mount refetches', () => {
+  const home = read('src/app/(public)/page.tsx');
+  const productPage = read('src/app/(public)/san-pham/page.tsx');
+  const productClient = read('src/app/(public)/san-pham/ProductListingClient.tsx');
+  const articlePage = read('src/app/(public)/bai-viet/page.tsx');
+  const articleClient = read('src/app/(public)/bai-viet/ArticleListingClient.tsx');
+  const chatWidget = read('src/components/layout/ChatWidget.tsx');
+
+  assert.match(home, /<HomeHero settings=\{settings\}/);
+  assert.match(productPage, /Promise\.all/);
+  assert.match(articlePage, /Promise\.all/);
+  assert.doesNotMatch(productClient, /publicApi|getProducts|getProductAttributes|getCategories/);
+  assert.doesNotMatch(articleClient, /publicApi|getArticles|getArticleCategories/);
+  assert.doesNotMatch(chatWidget, /setTimeout\(loadScript|window\.addEventListener\(['"]scroll/);
 });
