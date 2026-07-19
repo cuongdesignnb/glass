@@ -73,7 +73,7 @@ No forced dependency upgrade is included. npm reported 13 audit findings; exact 
 - `npm run analyze`
 - `npm run perf:browser`
 
-All PR1-owned gates passed locally. The requested branding gates are not present at the base SHA and belong to the separate branding task, so their implementation/tests were intentionally excluded. Browser smoke also verified modal focus/Escape behavior and service-worker/cache retirement.
+All PR1-owned gates passed locally. GitHub PR CI has now been added in `.github/workflows/pull-request-ci.yml`; the PR should not be marked ready until that remote check is green. The requested branding gates are not present at the base SHA and belong to the separate branding task, so their implementation/tests were intentionally excluded. Browser smoke also verified modal focus/Escape behavior and service-worker/cache retirement.
 
 ## Before/after
 
