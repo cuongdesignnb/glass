@@ -10,6 +10,9 @@ function readArg(name, fallback) {
 const baseUrl = readArg('base-url', 'https://mitoo.vn').replace(/\/$/, '');
 const phase = readArg('phase', 'before');
 const runs = Number(readArg('runs', '3'));
+const requestedRoutes = new Set(readArg('routes', 'home,products,product-detail,articles,article-detail').split(','));
+const requestedDevices = new Set(readArg('devices', 'desktop,mobile').split(','));
+const cacheModes = readArg('cache-modes', 'cold,warm').split(',');
 const productSlug = readArg(
   'product-slug',
   'gong-kinh-nu-mat-meo-tr98025-sieu-nhe-gong-kinh-thoi-trang-han-quoc-cao-cap',
@@ -44,7 +47,7 @@ const routes = [
   ['product-detail', `/san-pham/${productSlug}`],
   ['articles', '/bai-viet'],
   ['article-detail', `/bai-viet/${articleSlug}`],
-];
+].filter(([name]) => requestedRoutes.has(name));
 
 const devices = [
   ['desktop', 9331, ['--preset=desktop']],
@@ -57,7 +60,11 @@ const devices = [
       '--throttling-method=simulate',
     ],
   ],
-];
+].filter(([name]) => requestedDevices.has(name));
+
+if (routes.length === 0 || devices.length === 0 || cacheModes.some((mode) => !['cold', 'warm'].includes(mode))) {
+  throw new Error('Select valid --routes, --devices, and --cache-modes values');
+}
 
 const outputDirectory = resolve('.audit-evidence', 'performance', phase);
 mkdirSync(outputDirectory, { recursive: true });
@@ -137,7 +144,7 @@ for (const [device, port, deviceFlags] of devices) {
 
   try {
     for (const [routeName, pathname] of routes) {
-      for (const cacheMode of ['cold', 'warm']) {
+      for (const cacheMode of cacheModes) {
         for (let run = 1; run <= runs; run += 1) {
           const outputPath = resolve(
             outputDirectory,

@@ -977,6 +977,21 @@ h1, h2, h3, h4, h5, h6 {
   z-index: 0;
 }
 
+.hero__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.hero__container {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3xl);
+  min-height: min(85vh, 700px);
+}
+
 /* Hero background images (responsive)
    Recommended sizes:
    - PC: 1920 x 800px (tỷ lệ ~2.4:1)
@@ -1236,7 +1251,8 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: 0.12em;
   text-transform: uppercase;
   margin-bottom: var(--space-xl);
-  animation: fadeInUp 0.8s ease;
+  opacity: 1;
+  transform: none;
 }
 
 .hero__title {
@@ -1258,13 +1274,15 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--color-text-light);
   line-height: 1.8;
   margin-bottom: var(--space-2xl);
-  animation: fadeInUp 0.8s ease 0.4s both;
+  opacity: 1;
+  transform: none;
 }
 
 .hero__actions {
   display: flex;
   gap: var(--space-md);
-  animation: fadeInUp 0.8s ease 0.6s both;
+  opacity: 1;
+  transform: none;
 }
 
 .hero__image {
@@ -1324,6 +1342,17 @@ h1, h2, h3, h4, h5, h6 {
 
   .hero__actions .btn {
     width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__particle,
+  .hero__visual,
+  .hero__visual::before,
+  .hero__visual-ring,
+  .hero__visual-badge,
+  .hero__glasses-shape {
+    animation: none !important;
   }
 }
 

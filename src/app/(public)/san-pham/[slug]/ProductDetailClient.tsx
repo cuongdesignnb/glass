@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { publicApi } from "@/lib/api";
 import { formatPrice, COLORS } from "@/lib/constants";
+import { productCategoryUrl } from "@/lib/listing-params";
 import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
@@ -478,7 +479,7 @@ export default function ProductDetailClient({
         <div className="product-info">
           {product.category && (
             <Link
-              href={`/san-pham?category=${product.category.slug}`}
+              href={productCategoryUrl(product.category)}
               className="product-info__category"
             >
               {product.category.name}

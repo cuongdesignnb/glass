@@ -1,6 +1,5 @@
 "use client";
 
-import { publicApi } from "@/lib/api";
 import {
   GENDERS,
   FACE_SHAPES,
@@ -10,13 +9,17 @@ import {
   SORT_OPTIONS,
   formatPrice,
 } from "@/lib/constants";
+import { productListingUrl, type ProductListingFilters } from "@/lib/listing-params";
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, useTransition } from "react";
 import {
   FiFilter,
   FiX,
   FiChevronDown,
+  FiChevronLeft,
+  FiChevronRight,
   FiGrid,
   FiList,
   FiSearch,
@@ -24,106 +27,49 @@ import {
 import { RiGlassesLine } from "react-icons/ri";
 import "./products.css";
 
-export default function ProductListingClient() {
-  const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [pagination, setPagination] = useState<any>({});
+type ProductListingClientProps = {
+  initialProducts: any[];
+  initialPagination: { currentPage: number; lastPage: number; total: number };
+  initialCategories: any[];
+  initialAttributes: Record<string, { value: string; label: string; extra?: string }[]>;
+  initialFilters: ProductListingFilters;
+};
+
+export default function ProductListingClient({
+  initialProducts,
+  initialPagination,
+  initialCategories,
+  initialAttributes,
+  initialFilters,
+}: ProductListingClientProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const products = initialProducts;
+  const pagination = initialPagination;
+  const categories = initialCategories;
+  const attrs = initialAttributes;
+  const loading = isPending;
   const [showMobileFilter, setShowMobileFilter] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [ready, setReady] = useState(false);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const priceMinTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const priceMaxTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Filter state
-  const [filters, setFilters] = useState({
-    gender: "",
-    color: "",
-    face_shape: "",
-    frame_style: "",
-    material: "",
-    category_slug: "",
-    price_min: "",
-    price_max: "",
-    sort: "newest",
-    search: "",
-    page: "1",
-  });
+  const [filters, setFilters] = useState<ProductListingFilters>(initialFilters);
+  const filtersRef = useRef(initialFilters);
 
   // Debounced search/price text (not sent to API until debounce fires)
-  const [searchInput, setSearchInput] = useState("");
-  const [priceMinInput, setPriceMinInput] = useState("");
-  const [priceMaxInput, setPriceMaxInput] = useState("");
-
-  // Read URL params on mount (avoids useSearchParams + Suspense issue)
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const initial = {
-        gender: params.get("gender") || "",
-        color: params.get("color") || "",
-        face_shape: params.get("face") || params.get("face_shape") || "",
-        frame_style: params.get("frame_style") || "",
-        material: params.get("material") || "",
-        category_slug: params.get("category") || "",
-        price_min: params.get("price_min") || "",
-        price_max: params.get("price_max") || "",
-        sort: params.get("sort") || "newest",
-        search: params.get("search") || "",
-        page: params.get("page") || "1",
-      };
-      setFilters((prev) => ({ ...prev, ...initial }));
-      setSearchInput(initial.search);
-      setPriceMinInput(initial.price_min);
-      setPriceMaxInput(initial.price_max);
-    }
-    setReady(true);
-  }, []);
-
-  const fetchProducts = useCallback(async () => {
-    if (!ready) return;
-    setLoading(true);
-    try {
-      const params: Record<string, string> = {};
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value) params[key] = value;
-      });
-      const data = await publicApi.getProducts(params);
-      setProducts(data.data || []);
-      setPagination({
-        currentPage: data.current_page,
-        lastPage: data.last_page,
-        total: data.total,
-      });
-    } catch (err) {
-      console.error("Failed to load products:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, ready]);
-
-  // Dynamic attributes from API
-  const [attrs, setAttrs] = useState<
-    Record<string, { value: string; label: string; extra?: string }[]>
-  >({});
-  const [categories, setCategories] = useState<any[]>([]);
+  const [searchInput, setSearchInput] = useState(initialFilters.search);
+  const [priceMinInput, setPriceMinInput] = useState(initialFilters.price_min);
+  const [priceMaxInput, setPriceMaxInput] = useState(initialFilters.price_max);
 
   useEffect(() => {
-    publicApi
-      .getProductAttributes()
-      .then((data: any) => setAttrs(data))
-      .catch(() => {});
-    publicApi
-      .getCategories(false)
-      .then((data: any[]) =>
-        setCategories(
-          Array.isArray(data)
-            ? data.filter((c: any) => c.is_active !== false)
-            : [],
-        ),
-      )
-      .catch(() => {});
-  }, []);
+    filtersRef.current = initialFilters;
+    setFilters(initialFilters);
+    setSearchInput(initialFilters.search);
+    setPriceMinInput(initialFilters.price_min);
+    setPriceMaxInput(initialFilters.price_max);
+  }, [initialFilters]);
 
   // Use dynamic attrs with fallback to constants
   const genders =
@@ -141,41 +87,31 @@ export default function ProductListingClient() {
     attrs.color ||
     COLORS.map((c) => ({ value: c.value, label: c.name, extra: c.value }));
 
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
-
   useEffect(() => () => {
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     if (priceMinTimerRef.current) clearTimeout(priceMinTimerRef.current);
     if (priceMaxTimerRef.current) clearTimeout(priceMaxTimerRef.current);
   }, []);
 
-  // Sync URL with filter state
-  useEffect(() => {
-    if (!ready) return;
-    const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (!value) return;
-      if (key === "sort" && value === "newest") return;
-      if (key === "page" && value === "1") return;
-      const urlKey =
-        key === "category_slug"
-          ? "category"
-          : key === "face_shape"
-            ? "face"
-            : key;
-      params.set(urlKey, value);
-    });
-    const qs = params.toString();
-    const newUrl = qs
-      ? `${window.location.pathname}?${qs}`
-      : window.location.pathname;
-    window.history.replaceState(null, "", newUrl);
-  }, [filters, ready]);
+  const syncFilters = (nextFilters: ProductListingFilters) => {
+    filtersRef.current = nextFilters;
+    setFilters(nextFilters);
+  };
 
-  const updateFilter = (key: string, value: string) => {
-    setFilters((prev) => ({ ...prev, [key]: value, page: "1" }));
+  const navigate = (nextFilters: ProductListingFilters, mode: "push" | "replace" = "push") => {
+    syncFilters(nextFilters);
+    startTransition(() => {
+      const href = productListingUrl(nextFilters);
+      if (mode === "replace") {
+        router.replace(href, { scroll: false });
+      } else {
+        router.push(href, { scroll: false });
+      }
+    });
+  };
+
+  const updateFilter = (key: keyof ProductListingFilters, value: string) => {
+    navigate({ ...filtersRef.current, [key]: value, page: "1" });
   };
 
   // Debounce search input
@@ -183,7 +119,7 @@ export default function ProductListingClient() {
     setSearchInput(value);
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
-      setFilters((prev) => ({ ...prev, search: value, page: "1" }));
+      navigate({ ...filtersRef.current, search: value, page: "1" }, "replace");
     }, 500);
   };
 
@@ -192,7 +128,7 @@ export default function ProductListingClient() {
     setPriceMinInput(value);
     if (priceMinTimerRef.current) clearTimeout(priceMinTimerRef.current);
     priceMinTimerRef.current = setTimeout(() => {
-      setFilters((prev) => ({ ...prev, price_min: value, page: "1" }));
+      navigate({ ...filtersRef.current, price_min: value, page: "1" }, "replace");
     }, 800);
   };
 
@@ -200,12 +136,12 @@ export default function ProductListingClient() {
     setPriceMaxInput(value);
     if (priceMaxTimerRef.current) clearTimeout(priceMaxTimerRef.current);
     priceMaxTimerRef.current = setTimeout(() => {
-      setFilters((prev) => ({ ...prev, price_max: value, page: "1" }));
+      navigate({ ...filtersRef.current, price_max: value, page: "1" }, "replace");
     }, 800);
   };
 
   const clearFilters = () => {
-    setFilters({
+    const cleared: ProductListingFilters = {
       gender: "",
       color: "",
       face_shape: "",
@@ -217,10 +153,11 @@ export default function ProductListingClient() {
       sort: "newest",
       search: "",
       page: "1",
-    });
+    };
     setSearchInput("");
     setPriceMinInput("");
     setPriceMaxInput("");
+    navigate(cleared);
   };
 
   const activeFilterCount = Object.entries(filters).filter(
@@ -547,7 +484,7 @@ export default function ProductListingClient() {
                 <div
                   className={`product-grid ${viewMode === "list" ? "product-grid--list" : ""}`}
                 >
-                  {products.map((product: any) => (
+                  {products.map((product: any, index: number) => (
                     <Link
                       key={product.id}
                       href={`/san-pham/${product.slug}`}
@@ -559,6 +496,7 @@ export default function ProductListingClient() {
                             src={`${process.env.NEXT_PUBLIC_API_URL?.replace("/api", "")}${product.thumbnail}`}
                             alt={product.name}
                             fill
+                            priority={index === 0}
                             sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 250px"
                             style={{ objectFit: 'cover' }}
                           />
@@ -615,23 +553,48 @@ export default function ProductListingClient() {
                 {/* Pagination */}
                 {pagination.lastPage > 1 && (
                   <div className="pagination">
+                    {pagination.currentPage > 1 ? (
+                      <Link
+                        className="pagination__btn pagination__btn--nav"
+                        href={productListingUrl({ ...filtersRef.current, page: String(pagination.currentPage - 1) })}
+                        onClick={() => syncFilters({ ...filtersRef.current, page: String(pagination.currentPage - 1) })}
+                        aria-label="Trang trước"
+                      >
+                        <FiChevronLeft />
+                      </Link>
+                    ) : (
+                      <span className="pagination__btn pagination__btn--disabled" aria-disabled="true">
+                        <FiChevronLeft />
+                      </span>
+                    )}
                     {Array.from(
                       { length: pagination.lastPage },
                       (_, i) => i + 1,
                     ).map((page) => (
-                      <button
+                      <Link
                         key={page}
                         className={`pagination__btn ${pagination.currentPage === page ? "pagination__btn--active" : ""}`}
-                        onClick={() =>
-                          setFilters((prev) => ({
-                            ...prev,
-                            page: String(page),
-                          }))
-                        }
+                        href={productListingUrl({ ...filtersRef.current, page: String(page) })}
+                        onClick={() => syncFilters({ ...filtersRef.current, page: String(page) })}
+                        aria-current={pagination.currentPage === page ? "page" : undefined}
                       >
                         {page}
-                      </button>
+                      </Link>
                     ))}
+                    {pagination.currentPage < pagination.lastPage ? (
+                      <Link
+                        className="pagination__btn pagination__btn--nav"
+                        href={productListingUrl({ ...filtersRef.current, page: String(pagination.currentPage + 1) })}
+                        onClick={() => syncFilters({ ...filtersRef.current, page: String(pagination.currentPage + 1) })}
+                        aria-label="Trang sau"
+                      >
+                        <FiChevronRight />
+                      </Link>
+                    ) : (
+                      <span className="pagination__btn pagination__btn--disabled" aria-disabled="true">
+                        <FiChevronRight />
+                      </span>
+                    )}
                   </div>
                 )}
               </>

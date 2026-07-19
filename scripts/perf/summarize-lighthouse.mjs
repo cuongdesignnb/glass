@@ -23,7 +23,7 @@ function rounded(value, digits = 0) {
 
 const phase = readArg('phase', 'before');
 const inputDirectory = resolve('.audit-evidence', 'performance', phase);
-const outputDirectory = resolve('artifacts', 'performance', 'summary');
+const outputDirectory = resolve(readArg('output-directory', 'artifacts/performance/summary'));
 mkdirSync(outputDirectory, { recursive: true });
 
 const groups = new Map();

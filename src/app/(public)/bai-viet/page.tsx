@@ -1,9 +1,9 @@
 import { Metadata } from 'next';
 import { generateMeta, generateCollectionPageSchema, generateBreadcrumbSchema } from '@/lib/seo';
+import { publicApi } from '@/lib/api';
+import { articleApiParams, articleListingUrl, normalizeArticleSearchParams, type RawSearchParams } from '@/lib/listing-params';
 import ArticleListingClient from './ArticleListingClient';
 import './articles.css';
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 export async function generateMetadata(): Promise<Metadata> {
   return await generateMeta({
@@ -14,7 +14,24 @@ export async function generateMetadata(): Promise<Metadata> {
   });
 }
 
-export default function ArticlesPage() {
+export const revalidate = 60;
+
+export default async function ArticlesPage({ searchParams = {} }: { searchParams?: RawSearchParams }) {
+  const filters = normalizeArticleSearchParams(searchParams);
+  const [articleResponse, categoryResponse] = await Promise.all([
+    publicApi.getArticles(articleApiParams(filters)).catch(() => ({ data: [], current_page: 1, last_page: 1, total: 0 })),
+    publicApi.getArticleCategories({}).catch(() => []),
+  ]);
+  const articles = Array.isArray(articleResponse?.data) ? articleResponse.data : [];
+  const categories = Array.isArray(categoryResponse)
+    ? categoryResponse.filter((category: any) => category.is_active !== false)
+    : [];
+  const pagination = {
+    currentPage: Number(articleResponse?.current_page) || 1,
+    lastPage: Number(articleResponse?.last_page) || 1,
+    total: Number(articleResponse?.total) || 0,
+  };
+  const canonicalUrl = articleListingUrl(filters);
   const breadcrumbItems = [
     { name: 'Trang chủ', url: '/' },
     { name: 'Bài viết', url: '/bai-viet' },
@@ -38,7 +55,13 @@ export default function ArticlesPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(generateBreadcrumbSchema(breadcrumbItems)) }}
       />
-      <ArticleListingClient />
+      <ArticleListingClient
+        key={canonicalUrl}
+        initialArticles={articles}
+        initialPagination={pagination}
+        initialCategories={categories}
+        initialFilters={filters}
+      />
     </div>
   );
 }

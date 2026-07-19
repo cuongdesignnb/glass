@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { generateMeta, generateProductSchema, generateBreadcrumbSchema } from '@/lib/seo';
 import { getPublicSettings } from '@/lib/settings';
+import { productCategoryUrl } from '@/lib/listing-params';
 import Breadcrumb from '@/components/layout/Breadcrumb';
 import ProductDetailClient from './ProductDetailClient';
 
@@ -167,7 +168,7 @@ export default async function ProductDetailPage({
   if (product.category) {
     breadcrumbItems.push({
       name: product.category.name,
-      url: `/san-pham?category_id=${product.category.id}`,
+      url: productCategoryUrl(product.category),
     });
   }
   breadcrumbItems.push({ name: product.name, url: `/san-pham/${product.slug}` });

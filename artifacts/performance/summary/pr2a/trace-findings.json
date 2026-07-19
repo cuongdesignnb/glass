@@ -1,0 +1,35 @@
+{
+  "generatedAt": "2026-07-19T09:09:26.4648177+07:00",
+  "lighthouseVersion": "12.8.2",
+  "home": {
+    "before": {
+      "initialLcp": { "timeMs": 1947.96, "node": "H1.hero__title", "type": "text", "size": 36260 },
+      "finalLcp": { "timeMs": 11397.57, "node": "P.hero__desc", "type": "text", "size": 42612 },
+      "customFontRequestStartMs": 1020,
+      "customFont404ResponseMs": 11339
+    },
+    "after": {
+      "initialLcp": { "timeMs": 360.59, "node": "P.hero__desc", "type": "text", "size": 42612 },
+      "finalLcp": { "timeMs": 1177.34, "node": "IMG.hero__bg-img", "type": "image", "size": 321173 },
+      "layoutShiftEventCount": 0
+    }
+  },
+  "detailCls": {
+    "productBefore": {
+      "nodeId": 618,
+      "nodeName": "IFRAME",
+      "source": "page.widget.zalo.me",
+      "shiftScores": [0.3699717891394277, 0.04007804097783459, 0.4611985382596549],
+      "cumulativeScore": 0.8712483683769172
+    },
+    "articleBefore": {
+      "nodeId": 132,
+      "nodeName": "IFRAME",
+      "source": "page.widget.zalo.me",
+      "shiftScores": [0.3699717891394277, 0.04007804097783459, 0.4611985382596549],
+      "cumulativeScore": 0.8712483683769172
+    },
+    "productAfter": { "layoutShiftEventCount": 0, "lighthouseMobileMedian": 0 },
+    "articleAfter": { "layoutShiftEventCount": 0, "lighthouseMobileMedian": 0 }
+  }
+}

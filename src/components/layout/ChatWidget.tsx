@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSettings } from '@/lib/useSettings';
 import Image from 'next/image';
 
 export default function ChatWidget() {
   const { settings } = useSettings();
   const zaloLoaded = useRef(false);
+  const [zaloState, setZaloState] = useState<'idle' | 'loading' | 'ready' | 'failed'>('idle');
 
   const zaloOaId = settings['zalo_oa_id'];
   const zaloPhone = settings['zalo_phone'];
@@ -19,16 +20,19 @@ export default function ChatWidget() {
   const hasZalo = !!(zaloOaId || zaloPhone);
   const hasMessenger = !!messengerPageId;
 
-  // Load Zalo SDK for embedded live chat widget dynamically (deferred)
+  // The third-party iframe changes size several times while booting. Load it only
+  // after intent on the stable placeholder so those movements cannot create CLS.
   useEffect(() => {
     if (!zaloOaId) return;
-
-    let timer: NodeJS.Timeout;
+    const trigger = document.getElementById('zalo-chat-widget-trigger');
+    if (!trigger) return;
 
     const loadScript = () => {
       if (zaloLoaded.current) return;
+      setZaloState('loading');
       if (document.getElementById('zalo-sdk-script')) {
         zaloLoaded.current = true;
+        setZaloState('ready');
         return;
       }
 
@@ -37,25 +41,32 @@ export default function ChatWidget() {
       script.src = 'https://sp.zalo.me/plugins/sdk.js';
       script.async = true;
       script.defer = true;
+      script.onload = () => {
+        setZaloState('ready');
+        window.setTimeout(() => trigger.focus(), 0);
+      };
+      script.onerror = () => {
+        setZaloState('failed');
+      };
       document.body.appendChild(script);
       zaloLoaded.current = true;
       cleanup();
     };
 
-    const cleanup = () => {
-      window.removeEventListener('scroll', loadScript);
-      window.removeEventListener('mousemove', loadScript);
-      window.removeEventListener('touchstart', loadScript);
-      if (timer) clearTimeout(timer);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        loadScript();
+      }
     };
 
-    // Load after 4 seconds of page load (idle fallback)
-    timer = setTimeout(loadScript, 4000);
+    const cleanup = () => {
+      trigger.removeEventListener('pointerdown', loadScript);
+      trigger.removeEventListener('keydown', handleKeyDown);
+    };
 
-    // Or load immediately on first user interaction
-    window.addEventListener('scroll', loadScript, { passive: true });
-    window.addEventListener('mousemove', loadScript, { passive: true });
-    window.addEventListener('touchstart', loadScript, { passive: true });
+    trigger.addEventListener('pointerdown', loadScript, { passive: true });
+    trigger.addEventListener('keydown', handleKeyDown);
 
     return cleanup;
   }, [zaloOaId]);
@@ -72,6 +83,23 @@ export default function ChatWidget() {
         100% { box-shadow: 0 0 0 0 rgba(163,52,250,0); }
       }
       #zalo-chat-widget-root { z-index: 9999 !important; }
+      #zalo-chat-widget-trigger {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        z-index: 9999;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: #0068ff;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font: 700 13px/1 sans-serif;
+        cursor: pointer;
+      }
     `;
     document.head.appendChild(style);
   }, []);
@@ -92,13 +120,30 @@ export default function ChatWidget() {
       {/* Zalo OA Chat Widget — SDK creates embedded live chat */}
       {zaloOaId && (
         <div
+          id="zalo-chat-widget-trigger"
           className="zalo-chat-widget"
           data-oaid={zaloOaId}
           data-welcome-message={zaloWelcome}
           data-autopopup="0"
           data-width="350"
           data-height="420"
-        />
+          role="button"
+          tabIndex={0}
+          aria-busy={zaloState === 'loading'}
+          aria-label="Mở chat Zalo"
+        >
+          {zaloState === 'loading' ? '...' : zaloState === 'failed' ? (
+            <a
+              href={`https://zalo.me/${zaloPhone || zaloOaId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open Zalo in a new tab"
+              style={{ color: 'inherit', textDecoration: 'none' }}
+            >
+              Zalo
+            </a>
+          ) : 'Zalo'}
+        </div>
       )}
 
       {/* Messenger floating button */}
