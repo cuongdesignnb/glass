@@ -18,13 +18,16 @@ Home mobile LCP was finalized by hero description text at 11.4 seconds, both pub
 - SSR product/article initial results with normalized whitelisted URL state and parallel server fetches.
 - Use real active article categories and enforce published-only article API requests.
 - Remove listing mount refetches; use router transitions and synchronize back/forward state.
+- Use crawlable product/article pagination links with real `href` values while preserving active filters, search and canonical page-1 URLs.
+- Use canonical product category breadcrumb URLs (`/san-pham?category=<slug>`) in both UI and JSON-LD, with `/san-pham` fallback when a slug is unavailable.
+- Keep article sorting truthful: the UI is fixed to `newest` until backend sorting is implemented in PR2B.
 - Prioritize only the first product image and featured article image.
-- Gate Zalo SDK behind explicit user intent.
+- Gate Zalo SDK behind explicit user intent and show loading/fallback feedback on the first action.
 - Add trace analysis, rendering smoke and cold-only Lighthouse matrix controls.
 
 ## Boundaries
 
-No API contract, database/index, backend cache, view-counter, merge or deployment change is included.
+No API contract, database/index, backend cache, view-counter, merge or deployment change is included. Article `oldest`/`popular` sorting is intentionally deferred to PR2B because the backend currently does not apply those sorts.
 
 ## Verification
 
@@ -36,6 +39,8 @@ No API contract, database/index, backend cache, view-counter, merge or deploymen
 - Lighthouse 12.8.2, 30 cold fresh profiles: PASS (three runs for each of five routes on desktop/mobile).
 - All after CLS medians: 0–0.001; product/article detail mobile CLS: 0.871 → 0.
 - Home mobile LCP: 11,888 → 3,169 ms; performance score: 72 → 93.
+
+GitHub PR CI has been added in `.github/workflows/pull-request-ci.yml`; this PR should remain Draft until the stacked base is resolved and remote CI is green.
 
 ## Rollback
 

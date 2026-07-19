@@ -14,6 +14,7 @@ import {
   normalizeArticleSearchParams,
   normalizeProductSearchParams,
   productApiParams,
+  productCategoryUrl,
   productListingUrl,
 } from '../src/lib/listing-params.ts';
 
@@ -141,8 +142,10 @@ test('listing URL parameters are normalized and mapped to stable API contracts',
   });
 
   const articles = normalizeArticleSearchParams({ tag: 'kien-thuc', sort: 'popular', page: '2', search: '  gong kinh ' });
-  assert.deepEqual(articles, { category: 'kien-thuc', search: 'gong kinh', sort: 'popular', page: '2' });
-  assert.equal(articleListingUrl(articles), '/bai-viet?category=kien-thuc&search=gong+kinh&sort=popular&page=2');
+  assert.deepEqual(articles, { category: 'kien-thuc', search: 'gong kinh', sort: 'newest', page: '2' });
+  assert.equal(articleListingUrl(articles), '/bai-viet?category=kien-thuc&search=gong+kinh&page=2');
+  assert.equal(productCategoryUrl({ slug: 'kinh-ram' }), '/san-pham?category=kinh-ram');
+  assert.equal(productCategoryUrl({ slug: '' }), '/san-pham');
 });
 
 test('critical public listings are server seeded without mount refetches', () => {
@@ -159,4 +162,33 @@ test('critical public listings are server seeded without mount refetches', () =>
   assert.doesNotMatch(productClient, /publicApi|getProducts|getProductAttributes|getCategories/);
   assert.doesNotMatch(articleClient, /publicApi|getArticles|getArticleCategories/);
   assert.doesNotMatch(chatWidget, /setTimeout\(loadScript|window\.addEventListener\(['"]scroll/);
+});
+
+test('listing pagination and product category breadcrumbs expose crawlable canonical URLs', () => {
+  const productClient = read('src/app/(public)/san-pham/ProductListingClient.tsx');
+  const articleClient = read('src/app/(public)/bai-viet/ArticleListingClient.tsx');
+  const productDetailPage = read('src/app/(public)/san-pham/[slug]/page.tsx');
+  const productDetailClient = read('src/app/(public)/san-pham/[slug]/ProductDetailClient.tsx');
+
+  assert.match(productClient, /<Link[\s\S]*href=\{productListingUrl/);
+  assert.match(productClient, /router\.replace\(href/);
+  assert.doesNotMatch(productClient, /onClick=\{\(\) => navigate\(\{ \.\.\.filtersRef\.current, page:/);
+
+  assert.match(articleClient, /<Link[\s\S]*href=\{articleListingUrl/);
+  assert.match(articleClient, /router\.replace\(href/);
+  assert.match(articleClient, /disabled[\s\S]*Article sort is fixed to newest/);
+  assert.doesNotMatch(articleClient, /<option value="oldest"|<option value="popular"/);
+
+  assert.match(productDetailPage, /productCategoryUrl\(product\.category\)/);
+  assert.match(productDetailClient, /href=\{productCategoryUrl\(product\.category\)\}/);
+  assert.doesNotMatch(productDetailPage, /category_id=/);
+  assert.doesNotMatch(productDetailClient, /category_id=/);
+});
+
+test('zalo chat loads only after explicit intent and provides first-action feedback', () => {
+  const chatWidget = read('src/components/layout/ChatWidget.tsx');
+  assert.match(chatWidget, /zaloState === 'loading'/);
+  assert.match(chatWidget, /script\.onerror/);
+  assert.match(chatWidget, /https:\/\/zalo\.me/);
+  assert.doesNotMatch(chatWidget, /pointerenter|addEventListener\(['"]focus/);
 });

@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSettings } from '@/lib/useSettings';
 import Image from 'next/image';
 
 export default function ChatWidget() {
   const { settings } = useSettings();
   const zaloLoaded = useRef(false);
+  const [zaloState, setZaloState] = useState<'idle' | 'loading' | 'ready' | 'failed'>('idle');
 
   const zaloOaId = settings['zalo_oa_id'];
   const zaloPhone = settings['zalo_phone'];
@@ -28,8 +29,10 @@ export default function ChatWidget() {
 
     const loadScript = () => {
       if (zaloLoaded.current) return;
+      setZaloState('loading');
       if (document.getElementById('zalo-sdk-script')) {
         zaloLoaded.current = true;
+        setZaloState('ready');
         return;
       }
 
@@ -38,6 +41,13 @@ export default function ChatWidget() {
       script.src = 'https://sp.zalo.me/plugins/sdk.js';
       script.async = true;
       script.defer = true;
+      script.onload = () => {
+        setZaloState('ready');
+        window.setTimeout(() => trigger.focus(), 0);
+      };
+      script.onerror = () => {
+        setZaloState('failed');
+      };
       document.body.appendChild(script);
       zaloLoaded.current = true;
       cleanup();
@@ -51,15 +61,11 @@ export default function ChatWidget() {
     };
 
     const cleanup = () => {
-      trigger.removeEventListener('pointerenter', loadScript);
       trigger.removeEventListener('pointerdown', loadScript);
-      trigger.removeEventListener('focus', loadScript);
       trigger.removeEventListener('keydown', handleKeyDown);
     };
 
-    trigger.addEventListener('pointerenter', loadScript, { passive: true });
     trigger.addEventListener('pointerdown', loadScript, { passive: true });
-    trigger.addEventListener('focus', loadScript, { passive: true });
     trigger.addEventListener('keydown', handleKeyDown);
 
     return cleanup;
@@ -123,9 +129,20 @@ export default function ChatWidget() {
           data-height="420"
           role="button"
           tabIndex={0}
+          aria-busy={zaloState === 'loading'}
           aria-label="Mở chat Zalo"
         >
-          Zalo
+          {zaloState === 'loading' ? '...' : zaloState === 'failed' ? (
+            <a
+              href={`https://zalo.me/${zaloPhone || zaloOaId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Open Zalo in a new tab"
+              style={{ color: 'inherit', textDecoration: 'none' }}
+            >
+              Zalo
+            </a>
+          ) : 'Zalo'}
         </div>
       )}
 

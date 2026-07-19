@@ -86,6 +86,7 @@
   font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
+  text-decoration: none;
   transition: all var(--transition-base);
   flex-shrink: 0;
 }
@@ -570,6 +571,7 @@
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
+  text-decoration: none;
   transition: all var(--transition-base);
   display: flex;
   align-items: center;
@@ -589,9 +591,11 @@
   font-weight: 700;
 }
 
-.articles-pagination__btn:disabled {
+.articles-pagination__btn:disabled,
+.articles-pagination__btn--disabled {
   opacity: 0.4;
   cursor: not-allowed;
+  pointer-events: none;
 }
 
 /* ============================================

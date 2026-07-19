@@ -50,6 +50,10 @@ The before phase used the production origin while the after phase used a local p
 - `/san-pham`: 12 product cards in initial HTML; categories, products and attributes are fetched in parallel on the server; no initial skeleton or mount refetch.
 - `/bai-viet`: five cards and real active API categories in initial HTML; `published_only=1` is always sent; no initial skeleton or mount refetch.
 - URL parameters are normalized through a whitelist. Product filters, prices, search, sort and page are URL-owned. Article category, search, sort and page are URL-owned.
+- Product and article pagination render real links, so page navigation remains crawlable and works without JavaScript. Page 1 is canonicalized without `?page=1`.
+- Debounced text/price search uses history replacement; deliberate category, sort and pagination actions use push-style navigation.
+- Product category breadcrumbs use canonical slug URLs in both UI and JSON-LD. Missing category slugs fall back to `/san-pham`.
+- Article `oldest` and `popular` sorts remain deferred to PR2B; PR2A does not expose non-working sort choices.
 - Client navigation uses Next router transitions. Pending navigation shows the existing skeleton and old responses cannot overwrite newer state because the browser does not issue independent listing fetches.
 - Back/forward restores server props and synchronizes controls.
 - Only the first product image and the featured article image receive high fetch priority.

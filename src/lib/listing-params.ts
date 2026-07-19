@@ -22,7 +22,7 @@ export type ArticleListingFilters = {
 };
 
 const PRODUCT_SORTS = new Set(['newest', 'price-asc', 'price-desc', 'popular', 'bestselling']);
-const ARTICLE_SORTS = new Set(['newest', 'oldest', 'popular']);
+const ARTICLE_SORTS = new Set(['newest']);
 
 function firstValue(value: string | string[] | undefined): string {
   return (Array.isArray(value) ? value[0] : value || '').trim();
@@ -94,6 +94,23 @@ export function productListingUrl(filters: ProductListingFilters): string {
   }
   const query = params.toString();
   return query ? `/san-pham?${query}` : '/san-pham';
+}
+
+export function productCategoryUrl(category: { slug?: unknown } | null | undefined): string {
+  const slug = token(String(category?.slug || ''));
+  return slug ? productListingUrl({
+    gender: '',
+    color: '',
+    face_shape: '',
+    frame_style: '',
+    material: '',
+    category_slug: slug,
+    price_min: '',
+    price_max: '',
+    sort: 'newest',
+    search: '',
+    page: '1',
+  }) : '/san-pham';
 }
 
 export function normalizeArticleSearchParams(raw: RawSearchParams = {}): ArticleListingFilters {

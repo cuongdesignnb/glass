@@ -18,6 +18,8 @@ import {
   FiFilter,
   FiX,
   FiChevronDown,
+  FiChevronLeft,
+  FiChevronRight,
   FiGrid,
   FiList,
   FiSearch,
@@ -91,10 +93,21 @@ export default function ProductListingClient({
     if (priceMaxTimerRef.current) clearTimeout(priceMaxTimerRef.current);
   }, []);
 
-  const navigate = (nextFilters: ProductListingFilters) => {
+  const syncFilters = (nextFilters: ProductListingFilters) => {
     filtersRef.current = nextFilters;
     setFilters(nextFilters);
-    startTransition(() => router.push(productListingUrl(nextFilters), { scroll: false }));
+  };
+
+  const navigate = (nextFilters: ProductListingFilters, mode: "push" | "replace" = "push") => {
+    syncFilters(nextFilters);
+    startTransition(() => {
+      const href = productListingUrl(nextFilters);
+      if (mode === "replace") {
+        router.replace(href, { scroll: false });
+      } else {
+        router.push(href, { scroll: false });
+      }
+    });
   };
 
   const updateFilter = (key: keyof ProductListingFilters, value: string) => {
@@ -106,7 +119,7 @@ export default function ProductListingClient({
     setSearchInput(value);
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => {
-      navigate({ ...filtersRef.current, search: value, page: "1" });
+      navigate({ ...filtersRef.current, search: value, page: "1" }, "replace");
     }, 500);
   };
 
@@ -115,7 +128,7 @@ export default function ProductListingClient({
     setPriceMinInput(value);
     if (priceMinTimerRef.current) clearTimeout(priceMinTimerRef.current);
     priceMinTimerRef.current = setTimeout(() => {
-      navigate({ ...filtersRef.current, price_min: value, page: "1" });
+      navigate({ ...filtersRef.current, price_min: value, page: "1" }, "replace");
     }, 800);
   };
 
@@ -123,7 +136,7 @@ export default function ProductListingClient({
     setPriceMaxInput(value);
     if (priceMaxTimerRef.current) clearTimeout(priceMaxTimerRef.current);
     priceMaxTimerRef.current = setTimeout(() => {
-      navigate({ ...filtersRef.current, price_max: value, page: "1" });
+      navigate({ ...filtersRef.current, price_max: value, page: "1" }, "replace");
     }, 800);
   };
 
@@ -540,18 +553,48 @@ export default function ProductListingClient({
                 {/* Pagination */}
                 {pagination.lastPage > 1 && (
                   <div className="pagination">
+                    {pagination.currentPage > 1 ? (
+                      <Link
+                        className="pagination__btn pagination__btn--nav"
+                        href={productListingUrl({ ...filtersRef.current, page: String(pagination.currentPage - 1) })}
+                        onClick={() => syncFilters({ ...filtersRef.current, page: String(pagination.currentPage - 1) })}
+                        aria-label="Trang trước"
+                      >
+                        <FiChevronLeft />
+                      </Link>
+                    ) : (
+                      <span className="pagination__btn pagination__btn--disabled" aria-disabled="true">
+                        <FiChevronLeft />
+                      </span>
+                    )}
                     {Array.from(
                       { length: pagination.lastPage },
                       (_, i) => i + 1,
                     ).map((page) => (
-                      <button
+                      <Link
                         key={page}
                         className={`pagination__btn ${pagination.currentPage === page ? "pagination__btn--active" : ""}`}
-                        onClick={() => navigate({ ...filtersRef.current, page: String(page) })}
+                        href={productListingUrl({ ...filtersRef.current, page: String(page) })}
+                        onClick={() => syncFilters({ ...filtersRef.current, page: String(page) })}
+                        aria-current={pagination.currentPage === page ? "page" : undefined}
                       >
                         {page}
-                      </button>
+                      </Link>
                     ))}
+                    {pagination.currentPage < pagination.lastPage ? (
+                      <Link
+                        className="pagination__btn pagination__btn--nav"
+                        href={productListingUrl({ ...filtersRef.current, page: String(pagination.currentPage + 1) })}
+                        onClick={() => syncFilters({ ...filtersRef.current, page: String(pagination.currentPage + 1) })}
+                        aria-label="Trang sau"
+                      >
+                        <FiChevronRight />
+                      </Link>
+                    ) : (
+                      <span className="pagination__btn pagination__btn--disabled" aria-disabled="true">
+                        <FiChevronRight />
+                      </span>
+                    )}
                   </div>
                 )}
               </>

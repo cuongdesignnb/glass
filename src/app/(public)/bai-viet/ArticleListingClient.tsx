@@ -17,7 +17,6 @@ function formatDateVi(dateStr: string) {
   const date = new Date(dateStr);
   return date.toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', year: 'numeric' });
 }
-
 function getInitials(name: string) {
   if (!name) return 'G';
   return name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase();
@@ -51,7 +50,7 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
   const sort = filters.sort;
   const page = Number(filters.page);
   const categories = useMemo(() => [
-    { slug: '', label: 'Tất Cả', icon: <FiFileText /> },
+    { slug: '', label: 'Táº¥t Cáº£', icon: <FiFileText /> },
     ...initialCategories.map((category) => ({
       slug: String(category.slug || ''),
       label: String(category.name || category.slug || ''),
@@ -69,20 +68,27 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
   }, []);
 
-  const navigate = (nextFilters: ArticleListingFilters) => {
+  const syncFilters = (nextFilters: ArticleListingFilters) => {
     filtersRef.current = nextFilters;
     setFilters(nextFilters);
-    startTransition(() => router.push(articleListingUrl(nextFilters), { scroll: false }));
   };
 
-  const handleCategory = (slug: string) => {
-    navigate({ ...filtersRef.current, category: slug, page: '1' });
+  const navigate = (nextFilters: ArticleListingFilters, mode: 'push' | 'replace' = 'push') => {
+    syncFilters(nextFilters);
+    startTransition(() => {
+      const href = articleListingUrl(nextFilters);
+      if (mode === 'replace') {
+        router.replace(href, { scroll: false });
+      } else {
+        router.push(href, { scroll: false });
+      }
+    });
   };
 
   const handleSearch = (val: string) => {
     setSearchInput(val);
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => navigate({ ...filtersRef.current, search: val, page: '1' }), 500);
+    searchTimerRef.current = setTimeout(() => navigate({ ...filtersRef.current, search: val, page: '1' }, 'replace'), 500);
   };
 
   const featuredArticle = articles.find((a) => a.is_featured) || articles[0];
@@ -96,11 +102,11 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
       <div className="articles-header">
         <div className="container">
           <div className="articles-header__label">
-            <FiBookOpen /> Nhật Ký Kính Mắt
+            <FiBookOpen /> Nháº­t KÃ½ KÃ­nh Máº¯t
           </div>
-          <h1 className="articles-header__title">Bài Viết & Kiến Thức</h1>
+          <h1 className="articles-header__title">BÃ i Viáº¿t & Kiáº¿n Thá»©c</h1>
           <p className="articles-header__sub">
-            Khám phá xu hướng mới nhất, mẹo chăm sóc và kiến thức về kính mắt từ các chuyên gia
+            KhÃ¡m phÃ¡ xu hÆ°á»›ng má»›i nháº¥t, máº¹o chÄƒm sÃ³c vÃ  kiáº¿n thá»©c vá» kÃ­nh máº¯t tá»« cÃ¡c chuyÃªn gia
           </p>
         </div>
       </div>
@@ -109,16 +115,21 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
       <div className="articles-categories">
         <div className="container">
           <div className="articles-categories__inner">
-            {categories.map((cat) => (
-              <button
-                key={cat.slug}
-                className={`articles-cat-btn ${activeCategory === cat.slug ? 'articles-cat-btn--active' : ''}`}
-                onClick={() => handleCategory(cat.slug)}
-              >
-                <span>{cat.icon}</span>
-                {cat.label}
-              </button>
-            ))}
+            {categories.map((cat) => {
+              const nextFilters = { ...filtersRef.current, category: cat.slug, page: '1' };
+              return (
+                <Link
+                  key={cat.slug}
+                  className={`articles-cat-btn ${activeCategory === cat.slug ? 'articles-cat-btn--active' : ''}`}
+                  href={articleListingUrl(nextFilters)}
+                  onClick={() => syncFilters(nextFilters)}
+                  aria-current={activeCategory === cat.slug ? 'page' : undefined}
+                >
+                  <span>{cat.icon}</span>
+                  {cat.label}
+                </Link>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -130,23 +141,23 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
             <FiSearch />
             <input
               type="text"
-              placeholder="Tìm kiếm bài viết..."
+              placeholder="TÃ¬m kiáº¿m bÃ i viáº¿t..."
               value={searchInput}
               onChange={(e) => handleSearch(e.target.value)}
             />
           </div>
           <div className="articles-toolbar__right">
             <span className="articles-toolbar__count">
-              {loading ? '...' : `${pagination.total || 0} bài viết`}
+              {loading ? '...' : `${pagination.total || 0} bÃ i viáº¿t`}
             </span>
             <select
               value={sort}
               onChange={(e) => navigate({ ...filtersRef.current, sort: e.target.value, page: '1' })}
               className="articles-toolbar__sort"
+              disabled
+              aria-label="Article sort is fixed to newest until backend sort is implemented"
             >
-              <option value="newest">Mới nhất</option>
-              <option value="oldest">Cũ nhất</option>
-              <option value="popular">Nhiều lượt xem</option>
+              <option value="newest">Má»›i nháº¥t</option>
             </select>
           </div>
         </div>
@@ -173,14 +184,14 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
         ) : articles.length === 0 ? (
           <div className="articles-empty">
             <div className="articles-empty__icon"><FiFile /></div>
-            <h3>Không tìm thấy bài viết</h3>
-            <p>Thử chọn danh mục khác hoặc thay đổi từ khóa tìm kiếm</p>
+            <h3>KhÃ´ng tÃ¬m tháº¥y bÃ i viáº¿t</h3>
+            <p>Thá»­ chá»n danh má»¥c khÃ¡c hoáº·c thay Ä‘á»•i tá»« khÃ³a tÃ¬m kiáº¿m</p>
             <button
               className="btn btn-primary"
               style={{ marginTop: 'var(--space-lg)' }}
               onClick={() => { setSearchInput(''); navigate({ category: '', search: '', sort: 'newest', page: '1' }); }}
             >
-              Xem tất cả bài viết
+              Xem táº¥t cáº£ bÃ i viáº¿t
             </button>
           </div>
         ) : (
@@ -202,7 +213,7 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
                     <div className="article-featured__placeholder"><FiFileText /></div>
                   )}
                   {featuredArticle.is_featured && (
-                    <span className="article-featured__badge"><FiStar /> Bài nổi bật</span>
+                    <span className="article-featured__badge"><FiStar /> BÃ i ná»•i báº­t</span>
                   )}
                 </div>
                 <div className="article-featured__body">
@@ -226,12 +237,12 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
                     </div>
                     {featuredArticle.views > 0 && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', color: 'var(--color-gray-500)' }}>
-                        <FiEye /> {featuredArticle.views.toLocaleString()} lượt xem
+                        <FiEye /> {featuredArticle.views.toLocaleString()} lÆ°á»£t xem
                       </div>
                     )}
                   </div>
                   <span className="article-featured__cta">
-                    Đọc bài viết <FiArrowRight />
+                    Äá»c bÃ i viáº¿t <FiArrowRight />
                   </span>
                 </div>
               </Link>
@@ -288,13 +299,20 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
             {/* Pagination */}
             {pagination.lastPage > 1 && (
               <div className="articles-pagination">
-                <button
-                  className="articles-pagination__btn"
-                  disabled={page === 1}
-                  onClick={() => navigate({ ...filtersRef.current, page: String(page - 1) })}
-                >
-                  <FiChevronLeft /> Trước
-                </button>
+                {page > 1 ? (
+                  <Link
+                    className="articles-pagination__btn"
+                    href={articleListingUrl({ ...filtersRef.current, page: String(page - 1) })}
+                    onClick={() => syncFilters({ ...filtersRef.current, page: String(page - 1) })}
+                    aria-label="Previous page"
+                  >
+                    <FiChevronLeft /> Previous
+                  </Link>
+                ) : (
+                  <span className="articles-pagination__btn articles-pagination__btn--disabled" aria-disabled="true">
+                    <FiChevronLeft /> Previous
+                  </span>
+                )}
                 {Array.from({ length: Math.min(pagination.lastPage, 7) }, (_, i) => {
                   const pageNum = pagination.lastPage <= 7
                     ? i + 1
@@ -305,22 +323,31 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
                         : page - 3 + i;
                   if (pageNum < 1 || pageNum > pagination.lastPage) return null;
                   return (
-                    <button
+                    <Link
                       key={pageNum}
                       className={`articles-pagination__btn ${page === pageNum ? 'articles-pagination__btn--active' : ''}`}
-                      onClick={() => navigate({ ...filtersRef.current, page: String(pageNum) })}
+                      href={articleListingUrl({ ...filtersRef.current, page: String(pageNum) })}
+                      onClick={() => syncFilters({ ...filtersRef.current, page: String(pageNum) })}
+                      aria-current={page === pageNum ? 'page' : undefined}
                     >
                       {pageNum}
-                    </button>
+                    </Link>
                   );
                 })}
-                <button
-                  className="articles-pagination__btn"
-                  disabled={page === pagination.lastPage}
-                  onClick={() => navigate({ ...filtersRef.current, page: String(page + 1) })}
-                >
-                  Sau <FiChevronRight />
-                </button>
+                {page < pagination.lastPage ? (
+                  <Link
+                    className="articles-pagination__btn"
+                    href={articleListingUrl({ ...filtersRef.current, page: String(page + 1) })}
+                    onClick={() => syncFilters({ ...filtersRef.current, page: String(page + 1) })}
+                    aria-label="Next page"
+                  >
+                    Next <FiChevronRight />
+                  </Link>
+                ) : (
+                  <span className="articles-pagination__btn articles-pagination__btn--disabled" aria-disabled="true">
+                    Next <FiChevronRight />
+                  </span>
+                )}
               </div>
             )}
           </>

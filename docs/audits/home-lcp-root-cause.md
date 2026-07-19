@@ -30,6 +30,8 @@ The hero settings were consumed through a Client Component (`DynamicHero` and `u
 - The untrusted dynamic custom font is no longer preloaded. It uses `font-display: optional`, so a slow or stale admin URL cannot replace already-painted critical text late in the navigation.
 - Admin-controlled hero copy, colors, overlay and desktop/mobile images remain supported.
 
+`font-display: optional` is an interim mitigation. It avoids late critical-text replacement but may use the fallback font on a first slow visit. WOFF2 conversion/subsetting is deferred to PR3.
+
 ## Verification
 
 - View Source contains `.hero__title` and `.hero__desc` with real text.
