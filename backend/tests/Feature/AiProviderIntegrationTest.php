@@ -195,6 +195,50 @@ class AiProviderIntegrationTest extends TestCase
         });
     }
 
+    public function test_chat_completions_shaped_gateway_response_is_supported(): void
+    {
+        Setting::setValue('openai_api_key', 'test-key', 'api');
+
+        Http::fake([
+            'https://modelapi.vn/v1/responses' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => '<h2>Gateway compatible</h2><p>Noi dung.</p>',
+                    ],
+                ]],
+                'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 20],
+            ]),
+        ]);
+
+        $response = (new AiController)->generateContent(Request::create('/ai/content', 'POST', [
+            'topic' => 'Gateway response',
+        ]));
+
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertStringContainsString('Gateway compatible', $response->getData(true)['content']);
+    }
+
+    public function test_provider_gateway_error_remains_json_and_exposes_original_status(): void
+    {
+        Setting::setValue('openai_api_key', 'test-key', 'api');
+
+        Http::fake([
+            'https://modelapi.vn/v1/responses' => Http::response([
+                'error' => ['message' => 'Model is not available'],
+            ], 502),
+        ]);
+
+        $response = (new AiController)->generateContent(Request::create('/ai/content', 'POST', [
+            'topic' => 'Provider error',
+        ]));
+
+        $payload = $response->getData(true);
+        $this->assertSame(424, $response->getStatusCode());
+        $this->assertSame(502, $payload['provider_status']);
+        $this->assertSame('Model is not available', $payload['message']);
+    }
+
     public function test_invalid_base_url_is_rejected_before_an_http_request(): void
     {
         Setting::setValue('openai_api_key', 'test-key', 'api');

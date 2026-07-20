@@ -40,10 +40,22 @@ async function fetchApi(endpoint: string, options: FetchOptions = {}) {
   });
 
   if (!response.ok) {
-    const error = await response
-      .json()
-      .catch(() => ({ message: "Request failed" }));
-    throw new Error(error.message || `HTTP ${response.status}`);
+    const responseText = await response.text();
+    let error: any = null;
+
+    try {
+      error = responseText ? JSON.parse(responseText) : null;
+    } catch {
+      // Nginx and upstream gateways may return an HTML error page.
+    }
+
+    const message =
+      error?.message ||
+      (typeof error?.error === "string" ? error.error : error?.error?.message) ||
+      (responseText && !/^\s*</.test(responseText) ? responseText.slice(0, 500) : "") ||
+      `HTTP ${response.status}${response.statusText ? ` ${response.statusText}` : ""}`;
+
+    throw new Error(message);
   }
 
   return response.json();

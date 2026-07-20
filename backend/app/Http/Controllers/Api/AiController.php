@@ -377,14 +377,16 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             $result = $response->json() ?: [];
 
             if ($response->failed()) {
-                $errorMsg = $this->extractProviderError($result, 'AI provider API error');
-                return response()->json(['error' => $errorMsg, 'message' => $errorMsg], $response->status());
+                return $this->providerFailureResponse($response, $result, 'AI provider API error');
             }
 
             $rawContent = $this->extractResponsesText($result);
             if ($rawContent === '') {
-                $errorMsg = $this->extractProviderError($result, 'AI provider khong tra ve noi dung.');
-                return response()->json(['error' => $errorMsg, 'message' => $errorMsg], 502);
+                return $this->providerFailureResponse(
+                    $response,
+                    $result,
+                    'AI provider khong tra ve noi dung theo cau truc duoc ho tro.'
+                );
             }
 
             if ($fullArticle) {
@@ -546,14 +548,16 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             $result = $response->json() ?: [];
 
             if ($response->failed()) {
-                $errorMsg = $this->extractProviderError($result, 'AI provider API error');
-                return response()->json(['error' => $errorMsg, 'message' => $errorMsg], $response->status());
+                return $this->providerFailureResponse($response, $result, 'AI provider API error');
             }
 
             $rawContent = $this->extractResponsesText($result);
             if ($rawContent === '') {
-                $errorMsg = $this->extractProviderError($result, 'AI provider khong tra ve noi dung.');
-                return response()->json(['error' => $errorMsg, 'message' => $errorMsg], 502);
+                return $this->providerFailureResponse(
+                    $response,
+                    $result,
+                    'AI provider khong tra ve noi dung theo cau truc duoc ho tro.'
+                );
             }
             $articleMeta = null;
 
@@ -724,6 +728,39 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             return trim($result['output_text']);
         }
 
+        foreach ([
+            $result['response']['output_text'] ?? null,
+            $result['data']['output_text'] ?? null,
+            $result['choices'][0]['message']['content'] ?? null,
+            $result['choices'][0]['text'] ?? null,
+        ] as $candidate) {
+            if (is_string($candidate) && trim($candidate) !== '') {
+                return trim($candidate);
+            }
+
+            if (is_array($candidate)) {
+                $candidateTexts = [];
+                foreach ($candidate as $contentItem) {
+                    if (!is_array($contentItem)) {
+                        continue;
+                    }
+
+                    $text = $contentItem['text'] ?? null;
+                    if (is_array($text)) {
+                        $text = $text['value'] ?? null;
+                    }
+
+                    if (is_string($text) && trim($text) !== '') {
+                        $candidateTexts[] = trim($text);
+                    }
+                }
+
+                if ($candidateTexts !== []) {
+                    return implode("\n", $candidateTexts);
+                }
+            }
+        }
+
         $texts = [];
         foreach (($result['output'] ?? []) as $outputItem) {
             if (!is_array($outputItem)) {
@@ -747,11 +784,38 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
         return trim(implode("\n", $texts));
     }
 
+    private function providerFailureResponse($response, array $result, string $fallback)
+    {
+        $errorMsg = $this->extractProviderError($result, $fallback);
+        $providerStatus = $response->status();
+
+        \Log::warning('AI Provider Response Failure', [
+            'provider_status' => $providerStatus,
+            'content_type' => $response->header('Content-Type'),
+            'response_keys' => array_keys($result),
+            'error' => $errorMsg,
+        ]);
+
+        // 424 keeps the provider's JSON error visible instead of allowing the
+        // web server's custom 502 page to replace it with HTML.
+        return response()->json([
+            'error' => $errorMsg,
+            'message' => $errorMsg,
+            'provider_status' => $providerStatus,
+        ], 424);
+    }
+
     private function extractProviderError(array $result, string $fallback): string
     {
-        $message = $result['error']['message'] ?? null;
-        if (is_string($message) && trim($message) !== '') {
-            return trim($message);
+        foreach ([
+            $result['error']['message'] ?? null,
+            $result['error'] ?? null,
+            $result['message'] ?? null,
+            $result['detail'] ?? null,
+        ] as $message) {
+            if (is_string($message) && trim($message) !== '') {
+                return trim($message);
+            }
         }
 
         $incompleteReason = $result['incomplete_details']['reason'] ?? null;
