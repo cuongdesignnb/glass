@@ -278,7 +278,7 @@ Generate ONE realistic photo of this person wearing these exact glasses.
      */
     public function generateContent(Request $request)
     {
-        set_time_limit(120);
+        set_time_limit(240);
         ini_set('memory_limit', '256M');
 
         $request->validate([
@@ -290,13 +290,17 @@ Generate ONE realistic photo of this person wearing these exact glasses.
             'full_article' => 'nullable|boolean',
         ]);
 
-        $apiKey = Setting::getValue('openai_api_key') ?: env('OPENAI_API_KEY');
+        try {
+            $openAiConfig = $this->resolveOpenAiConfig();
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+
+        $apiKey = $openAiConfig['api_key'];
         if (!$apiKey || trim($apiKey) === '') {
             return response()->json(['error' => 'OpenAI API key chưa được cấu hình.'], 500);
         }
 
-        $model = Setting::getValue('openai_model') ?: 'gpt-4o-mini';
-        $maxTokens = (int)(Setting::getValue('openai_max_tokens') ?: 4096);
         $fullArticle = $request->boolean('full_article', false);
 
         $type = $request->get('type', 'article');
@@ -349,45 +353,38 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
 
         try {
             $requestBody = [
-                'model'    => $model,
-                'messages' => [
-                    ['role' => 'system', 'content' => $systemPrompt],
-                    ['role' => 'user',   'content' => $userPrompt],
+                'model' => $openAiConfig['model'],
+                'instructions' => $systemPrompt,
+                'input' => $userPrompt,
+                'reasoning' => [
+                    'effort' => $openAiConfig['reasoning_effort'],
                 ],
-                'max_completion_tokens' => $maxTokens,
+                'max_output_tokens' => $openAiConfig['max_tokens'],
+                'store' => false,
             ];
 
             if ($fullArticle) {
-                $requestBody['response_format'] = ['type' => 'json_object'];
+                $requestBody['text'] = ['format' => ['type' => 'json_object']];
             }
 
-            $response = Http::timeout(90)->withoutVerifying()
-                ->withHeaders([
-                    'Authorization' => "Bearer {$apiKey}",
-                    'Content-Type' => 'application/json',
-                ])->post('https://api.openai.com/v1/chat/completions', $requestBody);
+            $response = Http::timeout(180)
+                ->withToken($apiKey)
+                ->acceptJson()
+                ->asJson()
+                ->post($openAiConfig['base_url'] . '/responses', $requestBody);
 
-            $result = $response->json();
-
-            if ($response->status() === 400
-                && str_contains($result['error']['message'] ?? '', 'max_completion_tokens')
-            ) {
-                unset($requestBody['max_completion_tokens']);
-                $requestBody['max_tokens'] = $maxTokens;
-                $response = Http::timeout(90)->withoutVerifying()
-                    ->withHeaders([
-                        'Authorization' => "Bearer {$apiKey}",
-                        'Content-Type' => 'application/json',
-                    ])->post('https://api.openai.com/v1/chat/completions', $requestBody);
-                $result = $response->json();
-            }
+            $result = $response->json() ?: [];
 
             if ($response->failed()) {
-                $errorMsg = $result['error']['message'] ?? 'OpenAI API error';
+                $errorMsg = $this->extractProviderError($result, 'AI provider API error');
                 return response()->json(['error' => $errorMsg, 'message' => $errorMsg], $response->status());
             }
 
-            $rawContent = $result['choices'][0]['message']['content'] ?? '';
+            $rawContent = $this->extractResponsesText($result);
+            if ($rawContent === '') {
+                $errorMsg = $this->extractProviderError($result, 'AI provider khong tra ve noi dung.');
+                return response()->json(['error' => $errorMsg, 'message' => $errorMsg], 502);
+            }
 
             if ($fullArticle) {
                 // Parse JSON response
@@ -451,27 +448,31 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             'category_id' => 'nullable|integer|exists:article_categories,id',
         ]);
 
-        $openaiKey = Setting::getValue('openai_api_key') ?: env('OPENAI_API_KEY');
+        try {
+            $openAiConfig = $this->resolveOpenAiConfig();
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+
+        $openaiKey = $openAiConfig['api_key'];
         if (!$openaiKey || trim($openaiKey) === '') {
             return response()->json([
                 'error' => 'OpenAI API key chua duoc cau hinh. AI dang bai can OpenAI de sinh noi dung va hinh anh.'
             ], 500);
         }
 
-        $openaiImageModel = Setting::getValue('openai_image_model') ?: env('OPENAI_IMAGE_MODEL', 'gpt-image-2');
-        $openaiImageQuality = Setting::getValue('openai_image_quality') ?: env('OPENAI_IMAGE_QUALITY', 'medium');
+        $openaiImageModel = $openAiConfig['image_model'];
+        $openaiImageQuality = $openAiConfig['image_quality'];
         $imageCount = max(0, min((int) $request->get('image_count', 2), 10));
 
         \Log::info('AI Article Image Config', [
-            'provider' => 'openai',
+            'provider_host' => parse_url($openAiConfig['base_url'], PHP_URL_HOST),
             'image_model' => $openaiImageModel,
             'image_quality' => $openaiImageQuality,
             'image_count' => $imageCount,
             'has_openai_key' => !empty($openaiKey),
         ]);
 
-        $model = Setting::getValue('openai_model') ?: env('OPENAI_MODEL', 'gpt-4o-mini');
-        $maxTokens = (int) (Setting::getValue('openai_max_tokens') ?: env('OPENAI_MAX_TOKENS', 4096));
         $fullArticle = $request->boolean('full_article', false);
 
         $type = $request->get('type', 'article');
@@ -520,43 +521,38 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
 
         try {
             $requestBody = [
-                'model' => $model,
-                'messages' => [
-                    ['role' => 'system', 'content' => $systemPrompt],
-                    ['role' => 'user', 'content' => $userPrompt],
+                'model' => $openAiConfig['model'],
+                'instructions' => $systemPrompt,
+                'input' => $userPrompt,
+                'reasoning' => [
+                    'effort' => $openAiConfig['reasoning_effort'],
                 ],
-                'max_completion_tokens' => $maxTokens,
+                'max_output_tokens' => $openAiConfig['max_tokens'],
+                'store' => false,
             ];
 
             if ($fullArticle) {
-                $requestBody['response_format'] = ['type' => 'json_object'];
+                $requestBody['text'] = ['format' => ['type' => 'json_object']];
             }
 
-            $response = Http::timeout(90)->withoutVerifying()
-                ->withHeaders([
-                    'Authorization' => "Bearer {$openaiKey}",
-                    'Content-Type' => 'application/json',
-                ])->post('https://api.openai.com/v1/chat/completions', $requestBody);
+            $response = Http::timeout(180)
+                ->withToken($openaiKey)
+                ->acceptJson()
+                ->asJson()
+                ->post($openAiConfig['base_url'] . '/responses', $requestBody);
 
-            $result = $response->json();
-
-            if ($response->status() === 400 && str_contains($result['error']['message'] ?? '', 'max_completion_tokens')) {
-                unset($requestBody['max_completion_tokens']);
-                $requestBody['max_tokens'] = $maxTokens;
-                $response = Http::timeout(90)->withoutVerifying()
-                    ->withHeaders([
-                        'Authorization' => "Bearer {$openaiKey}",
-                        'Content-Type' => 'application/json',
-                    ])->post('https://api.openai.com/v1/chat/completions', $requestBody);
-                $result = $response->json();
-            }
+            $result = $response->json() ?: [];
 
             if ($response->failed()) {
-                $errorMsg = $result['error']['message'] ?? 'OpenAI API error';
+                $errorMsg = $this->extractProviderError($result, 'AI provider API error');
                 return response()->json(['error' => $errorMsg, 'message' => $errorMsg], $response->status());
             }
 
-            $rawContent = $result['choices'][0]['message']['content'] ?? '';
+            $rawContent = $this->extractResponsesText($result);
+            if ($rawContent === '') {
+                $errorMsg = $this->extractProviderError($result, 'AI provider khong tra ve noi dung.');
+                return response()->json(['error' => $errorMsg, 'message' => $errorMsg], 502);
+            }
             $articleMeta = null;
 
             if ($fullArticle) {
@@ -587,7 +583,9 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             $titleForImage = $h1Heading['text'] ?? $articleMeta['title'] ?? $request->topic;
             $thumbnailUrl = $this->generateAndSaveImageOpenAI(
                 apiKey: $openaiKey,
+                baseUrl: $openAiConfig['base_url'],
                 preferredModel: $openaiImageModel,
+                imageQuality: $openaiImageQuality,
                 description: $this->buildArticleImagePrompt($titleForImage, $titleForImage, 'thumbnail', 'h1'),
                 slug: \Illuminate\Support\Str::slug($titleForImage . '-thumbnail') ?: 'ai-thumbnail',
                 idx: 0,
@@ -607,7 +605,9 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                 $headingTag = $heading['tag'];
                 $imageUrl = $this->generateAndSaveImageOpenAI(
                     apiKey: $openaiKey,
+                    baseUrl: $openAiConfig['base_url'],
                     preferredModel: $openaiImageModel,
+                    imageQuality: $openaiImageQuality,
                     description: $this->buildArticleImagePrompt($headingText, $titleForImage, 'inline', $headingTag),
                     slug: \Illuminate\Support\Str::slug($headingText) ?: 'ai-image',
                     idx: $idx + 1,
@@ -664,6 +664,100 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             \Log::error('AI Content+Images Exception: ' . $e->getMessage());
             return response()->json(['error' => 'Loi tao noi dung: ' . $e->getMessage()], 500);
         }
+    }
+
+    private function resolveOpenAiConfig(): array
+    {
+        $baseUrl = rtrim($this->resolveOpenAiSetting(
+            'openai_base_url',
+            'base_url',
+            'https://modelapi.vn/v1'
+        ), '/');
+
+        $scheme = strtolower((string) parse_url($baseUrl, PHP_URL_SCHEME));
+        $host = parse_url($baseUrl, PHP_URL_HOST);
+        if (!filter_var($baseUrl, FILTER_VALIDATE_URL) || $scheme !== 'https' || !$host) {
+            throw new \InvalidArgumentException('OpenAI Base URL phai la dia chi HTTPS hop le.');
+        }
+
+        $reasoningEffort = strtolower($this->resolveOpenAiSetting(
+            'openai_reasoning_effort',
+            'reasoning_effort',
+            'xhigh'
+        ));
+        if (!in_array($reasoningEffort, ['none', 'low', 'medium', 'high', 'xhigh', 'max'], true)) {
+            throw new \InvalidArgumentException('OpenAI reasoning effort khong hop le.');
+        }
+
+        $maxTokens = (int) $this->resolveOpenAiSetting('openai_max_tokens', 'max_tokens', '4096');
+        if ($maxTokens < 1 || $maxTokens > 128000) {
+            throw new \InvalidArgumentException('OpenAI max output tokens phai nam trong khoang 1-128000.');
+        }
+
+        return [
+            'api_key' => $this->resolveOpenAiSetting('openai_api_key', 'api_key', ''),
+            'base_url' => $baseUrl,
+            'model' => $this->resolveOpenAiSetting('openai_model', 'model', 'gpt-5.6-sol'),
+            'reasoning_effort' => $reasoningEffort,
+            'max_tokens' => $maxTokens,
+            'image_model' => $this->resolveOpenAiSetting('openai_image_model', 'image_model', 'gpt-image-2'),
+            'image_quality' => $this->resolveOpenAiSetting('openai_image_quality', 'image_quality', 'medium'),
+        ];
+    }
+
+    private function resolveOpenAiSetting(string $settingKey, string $configKey, string $default): string
+    {
+        $databaseValue = trim((string) Setting::getValue($settingKey, ''));
+        if ($databaseValue !== '') {
+            return $databaseValue;
+        }
+
+        $configValue = trim((string) config("services.openai.{$configKey}", $default));
+        return $configValue !== '' ? $configValue : $default;
+    }
+
+    private function extractResponsesText(array $result): string
+    {
+        if (isset($result['output_text']) && is_string($result['output_text'])) {
+            return trim($result['output_text']);
+        }
+
+        $texts = [];
+        foreach (($result['output'] ?? []) as $outputItem) {
+            if (!is_array($outputItem)) {
+                continue;
+            }
+
+            foreach (($outputItem['content'] ?? []) as $contentItem) {
+                if (!is_array($contentItem)) {
+                    continue;
+                }
+
+                if (in_array($contentItem['type'] ?? '', ['output_text', 'text'], true)
+                    && isset($contentItem['text'])
+                    && is_string($contentItem['text'])
+                ) {
+                    $texts[] = $contentItem['text'];
+                }
+            }
+        }
+
+        return trim(implode("\n", $texts));
+    }
+
+    private function extractProviderError(array $result, string $fallback): string
+    {
+        $message = $result['error']['message'] ?? null;
+        if (is_string($message) && trim($message) !== '') {
+            return trim($message);
+        }
+
+        $incompleteReason = $result['incomplete_details']['reason'] ?? null;
+        if (is_string($incompleteReason) && trim($incompleteReason) !== '') {
+            return 'AI provider response incomplete: ' . trim($incompleteReason);
+        }
+
+        return $fallback;
     }
 
     private function extractArticleHeadings(string $html, ?string $fallbackTitle = null): array
@@ -799,7 +893,16 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
     /**
      * Generate image via OpenAI ChatGPT Image 2 (gpt-image-2) and save to Media library.
      */
-    private function generateAndSaveImageOpenAI(string $apiKey, string $preferredModel, string $description, string $slug, int $idx, array &$warnings = []): ?string
+    private function generateAndSaveImageOpenAI(
+        string $apiKey,
+        string $baseUrl,
+        string $preferredModel,
+        string $imageQuality,
+        string $description,
+        string $slug,
+        int $idx,
+        array &$warnings = []
+    ): ?string
     {
         $modelsToTry = array_values(array_unique(array_filter([
             $preferredModel,
@@ -818,7 +921,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
 
                 if (str_starts_with($model, 'gpt-image')) {
                     $payload['size'] = '1536x1024';
-                    $payload['quality'] = Setting::getValue('openai_image_quality') ?: env('OPENAI_IMAGE_QUALITY', 'medium');
+                    $payload['quality'] = $imageQuality;
                     $payload['output_format'] = 'png';
                 } elseif ($model === 'dall-e-3') {
                     $payload['size'] = '1792x1024';
@@ -836,12 +939,10 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                 ]);
 
                 $response = Http::timeout(120)
-                    ->withoutVerifying()
-                    ->withHeaders([
-                        'Authorization' => "Bearer {$apiKey}",
-                        'Content-Type' => 'application/json',
-                    ])
-                    ->post('https://api.openai.com/v1/images/generations', $payload);
+                    ->withToken($apiKey)
+                    ->acceptJson()
+                    ->asJson()
+                    ->post($baseUrl . '/images/generations', $payload);
 
                 $result = $response->json();
 
@@ -861,7 +962,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                 $base64Data = $result['data'][0]['b64_json'] ?? null;
 
                 if (!$base64Data && !empty($result['data'][0]['url'])) {
-                    $imageResponse = Http::timeout(60)->withoutVerifying()->get($result['data'][0]['url']);
+                    $imageResponse = Http::timeout(60)->get($result['data'][0]['url']);
                     if ($imageResponse->successful()) {
                         $base64Data = base64_encode($imageResponse->body());
                     }

@@ -6,6 +6,7 @@
 
 # testing
 /coverage
+/backend/.phpunit.result.cache
 
 # next.js
 /.next/

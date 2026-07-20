@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\ValidationException;
 
 class SettingController extends Controller
 {
@@ -105,6 +106,8 @@ class SettingController extends Controller
         ]);
 
         foreach ($request->settings as $setting) {
+            $this->validateOpenAiSetting($setting['key'], $setting['value'] ?? '');
+
             Setting::setValue(
                 $setting['key'],
                 $setting['value'] ?? '',
@@ -118,6 +121,42 @@ class SettingController extends Controller
             'message' => 'Cập nhật cài đặt thành công',
             'data' => Setting::getAllSettings(),
         ]);
+    }
+
+    private function validateOpenAiSetting(string $key, string $value): void
+    {
+        $value = trim($value);
+
+        if ($value === '') {
+            return;
+        }
+
+        if ($key === 'openai_base_url') {
+            $scheme = strtolower((string) parse_url($value, PHP_URL_SCHEME));
+            $host = parse_url($value, PHP_URL_HOST);
+
+            if (!filter_var($value, FILTER_VALIDATE_URL) || $scheme !== 'https' || !$host) {
+                throw ValidationException::withMessages([
+                    'settings' => ['OpenAI Base URL phai la dia chi HTTPS hop le.'],
+                ]);
+            }
+        }
+
+        if ($key === 'openai_reasoning_effort'
+            && !in_array($value, ['none', 'low', 'medium', 'high', 'xhigh', 'max'], true)
+        ) {
+            throw ValidationException::withMessages([
+                'settings' => ['Reasoning effort khong hop le.'],
+            ]);
+        }
+
+        if ($key === 'openai_max_tokens'
+            && (!ctype_digit($value) || (int) $value < 1 || (int) $value > 128000)
+        ) {
+            throw ValidationException::withMessages([
+                'settings' => ['Max output tokens phai nam trong khoang 1-128000.'],
+            ]);
+        }
     }
 
     /**

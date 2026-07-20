@@ -470,23 +470,35 @@ export default function AdminSettingsPage() {
       // OpenAI
       {
         key: "openai_api_key",
-        label: "OpenAI API Key",
-        placeholder: "sk-proj-...",
+        label: "AI Provider API Key",
+        placeholder: "Dán API key của modelapi.vn",
         isPassword: true,
-        section: "OpenAI - AI dang bai",
-        hint: "Dung cho AI dang bai: sinh noi dung, thumbnail va anh inline trong bai viet.",
+        section: "AI Provider - AI đăng bài",
+        hint: "Dùng chung cho sinh nội dung, thumbnail và ảnh inline. API key được che khi nhập.",
+      },
+      {
+        key: "openai_base_url",
+        label: "AI Provider Base URL",
+        placeholder: "https://modelapi.vn/v1",
+        hint: "Để trống sẽ dùng https://modelapi.vn/v1. Chỉ chấp nhận địa chỉ HTTPS.",
       },
       {
         key: "openai_model",
-        label: "OpenAI Model",
-        placeholder: "gpt-4o-mini",
-        hint: "Gợi ý: gpt-4o-mini (rẻ, nhanh) | gpt-4o (chất lượng cao) | gpt-3.5-turbo (cũ, rẻ nhất)",
+        label: "Model sinh nội dung",
+        placeholder: "gpt-5.6-sol",
+        hint: "Để trống sẽ dùng gpt-5.6-sol.",
+      },
+      {
+        key: "openai_reasoning_effort",
+        label: "Reasoning Effort",
+        placeholder: "xhigh",
+        hint: "Các giá trị hợp lệ: none, low, medium, high, xhigh, max. Mặc định: xhigh.",
       },
       {
         key: "openai_max_tokens",
-        label: "Max Tokens mỗi request",
+        label: "Max Output Tokens",
         placeholder: "4096",
-        hint: "Giới hạn độ dài output. 1 token ≈ 3/4 từ tiếng Anh. Tối đa tuỳ model.",
+        hint: "Giới hạn độ dài output, từ 1 đến 128000. Mặc định: 4096.",
       },
       {
         key: "image_generator",
@@ -496,15 +508,15 @@ export default function AdminSettingsPage() {
       },
       {
         key: "openai_image_model",
-        label: "OpenAI Image Model (ChatGPT Image 2)",
+        label: "Model sinh ảnh",
         placeholder: "gpt-image-2",
-        hint: "Mã model sinh ảnh của OpenAI. Nhập: gpt-image-2 (khuyên dùng) hoặc dall-e-2, dall-e-3.",
+        hint: "Tên model ảnh mà AI Provider hỗ trợ. Mặc định: gpt-image-2.",
       },
       {
         key: "openai_image_quality",
-        label: "OpenAI Image Quality",
+        label: "Chất lượng ảnh",
         placeholder: "medium",
-        hint: "Goi y mac dinh: medium.",
+        hint: "Mặc định: medium.",
       },
 
       // Google

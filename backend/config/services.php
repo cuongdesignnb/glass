@@ -31,6 +31,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | OpenAI-compatible article provider
+    |--------------------------------------------------------------------------
+    */
+    'openai' => [
+        'api_key'          => env('OPENAI_API_KEY', ''),
+        'base_url'         => env('OPENAI_BASE_URL', 'https://modelapi.vn/v1'),
+        'model'            => env('OPENAI_MODEL', 'gpt-5.6-sol'),
+        'reasoning_effort' => env('OPENAI_REASONING_EFFORT', 'xhigh'),
+        'max_tokens'       => (int) env('OPENAI_MAX_TOKENS', 4096),
+        'image_model'      => env('OPENAI_IMAGE_MODEL', 'gpt-image-2'),
+        'image_quality'    => env('OPENAI_IMAGE_QUALITY', 'medium'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | SePay
     |--------------------------------------------------------------------------
     | API Key lấy từ dashboard SePay → Webhooks → Cấu hình chứng thực
