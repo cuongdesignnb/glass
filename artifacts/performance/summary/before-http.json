@@ -1,0 +1,3449 @@
+{
+  "generatedAt": "2026-07-18T15:04:28.764Z",
+  "baseUrl": "https://mitoo.vn",
+  "phase": "before",
+  "summary": [
+    {
+      "name": "about",
+      "pathname": "/gioi-thieu",
+      "cacheMode": "cold",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": 0.4,
+        "connectMs": 6.2,
+        "tlsMs": 18.1,
+        "ttfbMs": 52.3,
+        "totalMs": 52.6,
+        "bytes": 15229
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=60, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "about",
+      "pathname": "/gioi-thieu",
+      "cacheMode": "warm",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": null,
+        "connectMs": null,
+        "tlsMs": null,
+        "ttfbMs": 7.7,
+        "totalMs": 7.9,
+        "bytes": 15229
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=60, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "admin-login",
+      "pathname": "/admin/login",
+      "cacheMode": "cold",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": 0.3,
+        "connectMs": 8.6,
+        "tlsMs": 18,
+        "ttfbMs": 31.6,
+        "totalMs": 31.9,
+        "bytes": 5335
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "admin-login",
+      "pathname": "/admin/login",
+      "cacheMode": "warm",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": null,
+        "connectMs": null,
+        "tlsMs": null,
+        "ttfbMs": 7.1,
+        "totalMs": 7.3,
+        "bytes": 5335
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "article-detail-api",
+      "pathname": "/api/public/articles/mat-tron-deo-kinh-mat-meo-co-hop-khong-loi-khuyen-tu-chuyen-gia-chon-kinh",
+      "cacheMode": "cold",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": 0.7,
+        "connectMs": 7.4,
+        "tlsMs": 20.8,
+        "ttfbMs": 187.3,
+        "totalMs": 187.6,
+        "bytes": 5480
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "article-detail-api",
+      "pathname": "/api/public/articles/mat-tron-deo-kinh-mat-meo-co-hop-khong-loi-khuyen-tu-chuyen-gia-chon-kinh",
+      "cacheMode": "warm",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": null,
+        "connectMs": null,
+        "tlsMs": null,
+        "ttfbMs": 159.8,
+        "totalMs": 159.9,
+        "bytes": 5481
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "article-detail-page",
+      "pathname": "/bai-viet/mat-tron-deo-kinh-mat-meo-co-hop-khong-loi-khuyen-tu-chuyen-gia-chon-kinh",
+      "cacheMode": "cold",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": 0.4,
+        "connectMs": 8.6,
+        "tlsMs": 20.9,
+        "ttfbMs": 413.5,
+        "totalMs": 654.7,
+        "bytes": 32420
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "article-detail-page",
+      "pathname": "/bai-viet/mat-tron-deo-kinh-mat-meo-co-hop-khong-loi-khuyen-tu-chuyen-gia-chon-kinh",
+      "cacheMode": "warm",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": null,
+        "connectMs": null,
+        "tlsMs": null,
+        "ttfbMs": 385.7,
+        "totalMs": 716,
+        "bytes": 32420
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "articles-api",
+      "pathname": "/api/public/articles?per_page=12",
+      "cacheMode": "cold",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": 0.4,
+        "connectMs": 10.4,
+        "tlsMs": 23.8,
+        "ttfbMs": 227.2,
+        "totalMs": 228.5,
+        "bytes": 31813
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "articles-api",
+      "pathname": "/api/public/articles?per_page=12",
+      "cacheMode": "warm",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": null,
+        "connectMs": null,
+        "tlsMs": null,
+        "ttfbMs": 177.6,
+        "totalMs": 181.3,
+        "bytes": 31813
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "articles-page",
+      "pathname": "/bai-viet",
+      "cacheMode": "cold",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": 0.4,
+        "connectMs": 7.6,
+        "tlsMs": 18.3,
+        "ttfbMs": 39.7,
+        "totalMs": 39.9,
+        "bytes": 14905
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "articles-page",
+      "pathname": "/bai-viet",
+      "cacheMode": "warm",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": null,
+        "connectMs": null,
+        "tlsMs": null,
+        "ttfbMs": 11.1,
+        "totalMs": 11.3,
+        "bytes": 14905
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "attributes-api",
+      "pathname": "/api/public/product-attributes",
+      "cacheMode": "cold",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": 0.6,
+        "connectMs": 8.6,
+        "tlsMs": 17.6,
+        "ttfbMs": 146.5,
+        "totalMs": 146.7,
+        "bytes": 671
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "attributes-api",
+      "pathname": "/api/public/product-attributes",
+      "cacheMode": "warm",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": null,
+        "connectMs": null,
+        "tlsMs": null,
+        "ttfbMs": 141.6,
+        "totalMs": 141.8,
+        "bytes": 671
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "cart",
+      "pathname": "/gio-hang",
+      "cacheMode": "cold",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": 0.4,
+        "connectMs": 9.4,
+        "tlsMs": 20,
+        "ttfbMs": 607.4,
+        "totalMs": 607.5,
+        "bytes": 13956
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "cart",
+      "pathname": "/gio-hang",
+      "cacheMode": "warm",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": null,
+        "connectMs": null,
+        "tlsMs": null,
+        "ttfbMs": 7.9,
+        "totalMs": 8.1,
+        "bytes": 13956
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "categories-api",
+      "pathname": "/api/public/categories?tree=false",
+      "cacheMode": "cold",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": 0.4,
+        "connectMs": 9.6,
+        "tlsMs": 20.5,
+        "ttfbMs": 169.1,
+        "totalMs": 169.3,
+        "bytes": 402
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "categories-api",
+      "pathname": "/api/public/categories?tree=false",
+      "cacheMode": "warm",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": null,
+        "connectMs": null,
+        "tlsMs": null,
+        "ttfbMs": 132.5,
+        "totalMs": 132.7,
+        "bytes": 402
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "faq",
+      "pathname": "/faq",
+      "cacheMode": "cold",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": 0.4,
+        "connectMs": 11.8,
+        "tlsMs": 22,
+        "ttfbMs": 36.4,
+        "totalMs": 36.6,
+        "bytes": 14341
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "faq",
+      "pathname": "/faq",
+      "cacheMode": "warm",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": null,
+        "connectMs": null,
+        "tlsMs": null,
+        "ttfbMs": 7.9,
+        "totalMs": 8,
+        "bytes": 14341
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "home",
+      "pathname": "/",
+      "cacheMode": "cold",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": 1.5,
+        "connectMs": 9.1,
+        "tlsMs": 19.9,
+        "ttfbMs": 36.6,
+        "totalMs": 37.8,
+        "bytes": 32020
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=60, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "home",
+      "pathname": "/",
+      "cacheMode": "warm",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": 0.3,
+        "connectMs": 5.7,
+        "tlsMs": 16,
+        "ttfbMs": 9.8,
+        "totalMs": 11.2,
+        "bytes": 32020
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=60, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "login",
+      "pathname": "/dang-nhap",
+      "cacheMode": "cold",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": 0.4,
+        "connectMs": 8.1,
+        "tlsMs": 18.7,
+        "ttfbMs": 46.6,
+        "totalMs": 46.8,
+        "bytes": 13932
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "login",
+      "pathname": "/dang-nhap",
+      "cacheMode": "warm",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": null,
+        "connectMs": null,
+        "tlsMs": null,
+        "ttfbMs": 6.7,
+        "totalMs": 6.9,
+        "bytes": 13932
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "menus-api",
+      "pathname": "/api/public/menus?position=header",
+      "cacheMode": "cold",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": 0.5,
+        "connectMs": 7.2,
+        "tlsMs": 17.7,
+        "ttfbMs": 211.4,
+        "totalMs": 211.6,
+        "bytes": 533
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "menus-api",
+      "pathname": "/api/public/menus?position=header",
+      "cacheMode": "warm",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": null,
+        "connectMs": null,
+        "tlsMs": null,
+        "ttfbMs": 163.2,
+        "totalMs": 163.4,
+        "bytes": 533
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "product-detail-api",
+      "pathname": "/api/public/products/gong-kinh-nu-mat-meo-tr98025-sieu-nhe-gong-kinh-thoi-trang-han-quoc-cao-cap",
+      "cacheMode": "cold",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": 0.5,
+        "connectMs": 7.5,
+        "tlsMs": 18.1,
+        "ttfbMs": 214,
+        "totalMs": 214.1,
+        "bytes": 3735
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "product-detail-api",
+      "pathname": "/api/public/products/gong-kinh-nu-mat-meo-tr98025-sieu-nhe-gong-kinh-thoi-trang-han-quoc-cao-cap",
+      "cacheMode": "warm",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": null,
+        "connectMs": null,
+        "tlsMs": null,
+        "ttfbMs": 187.1,
+        "totalMs": 187.2,
+        "bytes": 3735
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "product-detail-page",
+      "pathname": "/san-pham/gong-kinh-nu-mat-meo-tr98025-sieu-nhe-gong-kinh-thoi-trang-han-quoc-cao-cap",
+      "cacheMode": "cold",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": 0.4,
+        "connectMs": 8.5,
+        "tlsMs": 19.5,
+        "ttfbMs": 760.8,
+        "totalMs": 946.8,
+        "bytes": 26512
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "product-detail-page",
+      "pathname": "/san-pham/gong-kinh-nu-mat-meo-tr98025-sieu-nhe-gong-kinh-thoi-trang-han-quoc-cao-cap",
+      "cacheMode": "warm",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": null,
+        "connectMs": null,
+        "tlsMs": null,
+        "ttfbMs": 568.1,
+        "totalMs": 839.7,
+        "bytes": 26512
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "products-api",
+      "pathname": "/api/public/products?per_page=12",
+      "cacheMode": "cold",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": 0.4,
+        "connectMs": 6.8,
+        "tlsMs": 17.2,
+        "ttfbMs": 164.5,
+        "totalMs": 164.8,
+        "bytes": 20828
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "products-api",
+      "pathname": "/api/public/products?per_page=12",
+      "cacheMode": "warm",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": null,
+        "connectMs": null,
+        "tlsMs": null,
+        "ttfbMs": 124,
+        "totalMs": 124.3,
+        "bytes": 20828
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "products-page",
+      "pathname": "/san-pham",
+      "cacheMode": "cold",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": 0.4,
+        "connectMs": 6.8,
+        "tlsMs": 17.2,
+        "ttfbMs": 31.6,
+        "totalMs": 31.8,
+        "bytes": 15900
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "products-page",
+      "pathname": "/san-pham",
+      "cacheMode": "warm",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": null,
+        "connectMs": null,
+        "tlsMs": null,
+        "ttfbMs": 9,
+        "totalMs": 9.1,
+        "bytes": 15900
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "settings-api",
+      "pathname": "/api/public/settings",
+      "cacheMode": "cold",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": 0.4,
+        "connectMs": 7.7,
+        "tlsMs": 18.6,
+        "ttfbMs": 135,
+        "totalMs": 135.2,
+        "bytes": 4431
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "settings-api",
+      "pathname": "/api/public/settings",
+      "cacheMode": "warm",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": null,
+        "connectMs": null,
+        "tlsMs": null,
+        "ttfbMs": 161.9,
+        "totalMs": 162.1,
+        "bytes": 4431
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "try-on",
+      "pathname": "/thu-kinh-ao",
+      "cacheMode": "cold",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": 0.3,
+        "connectMs": 7.1,
+        "tlsMs": 17.5,
+        "ttfbMs": 31.9,
+        "totalMs": 32,
+        "bytes": 14995
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "try-on",
+      "pathname": "/thu-kinh-ao",
+      "cacheMode": "warm",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": null,
+        "connectMs": null,
+        "tlsMs": null,
+        "ttfbMs": 11.9,
+        "totalMs": 12.1,
+        "bytes": 14995
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "voucher",
+      "pathname": "/voucher",
+      "cacheMode": "cold",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": 0.3,
+        "connectMs": 5.8,
+        "tlsMs": 17,
+        "ttfbMs": 35.8,
+        "totalMs": 35.9,
+        "bytes": 13912
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "voucher",
+      "pathname": "/voucher",
+      "cacheMode": "warm",
+      "runCount": 3,
+      "status": 200,
+      "redirects": 0,
+      "median": {
+        "dnsMs": null,
+        "connectMs": null,
+        "tlsMs": null,
+        "ttfbMs": 8.7,
+        "totalMs": 8.7,
+        "bytes": 13912
+      },
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    }
+  ],
+  "raw": [
+    {
+      "name": "home",
+      "pathname": "/",
+      "cacheMode": "cold",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 39.31330000000003,
+      "connectMs": 47.8177,
+      "tlsMs": 69.52990000000005,
+      "ttfbMs": 372.3624,
+      "totalMs": 549.7048,
+      "bytes": 32020,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=60, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "home",
+      "pathname": "/",
+      "cacheMode": "cold",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 1.485400000000027,
+      "connectMs": 7.310500000000047,
+      "tlsMs": 19.904499999999985,
+      "ttfbMs": 36.571500000000015,
+      "totalMs": 37.83929999999998,
+      "bytes": 32020,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=60, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "home",
+      "pathname": "/",
+      "cacheMode": "cold",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.417699999999968,
+      "connectMs": 9.145800000000008,
+      "tlsMs": 19.889400000000023,
+      "ttfbMs": 34.36559999999997,
+      "totalMs": 35.57730000000004,
+      "bytes": 32020,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=60, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "home",
+      "pathname": "/",
+      "cacheMode": "warm",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.33939999999995507,
+      "connectMs": 5.68629999999996,
+      "tlsMs": 16.049999999999955,
+      "ttfbMs": 30.8048,
+      "totalMs": 32.233999999999924,
+      "bytes": 32020,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=60, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "home",
+      "pathname": "/",
+      "cacheMode": "warm",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 7.224900000000048,
+      "totalMs": 8.541699999999992,
+      "bytes": 32020,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=60, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "home",
+      "pathname": "/",
+      "cacheMode": "warm",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 9.841599999999971,
+      "totalMs": 11.156299999999987,
+      "bytes": 32020,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=60, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "products-page",
+      "pathname": "/san-pham",
+      "cacheMode": "cold",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.31780000000003383,
+      "connectMs": 8.73599999999999,
+      "tlsMs": 18.88110000000006,
+      "ttfbMs": 666.4617999999999,
+      "totalMs": 666.737,
+      "bytes": 15900,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "products-page",
+      "pathname": "/san-pham",
+      "cacheMode": "cold",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.35730000000012296,
+      "connectMs": 6.760099999999966,
+      "tlsMs": 17.02800000000002,
+      "ttfbMs": 31.56490000000008,
+      "totalMs": 31.838500000000067,
+      "bytes": 15900,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "products-page",
+      "pathname": "/san-pham",
+      "cacheMode": "cold",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.6761000000001332,
+      "connectMs": 6.406100000000151,
+      "tlsMs": 17.243799999999965,
+      "ttfbMs": 31.456699999999955,
+      "totalMs": 31.724299999999857,
+      "bytes": 15900,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "products-page",
+      "pathname": "/san-pham",
+      "cacheMode": "warm",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 15.134900000000016,
+      "totalMs": 15.345199999999977,
+      "bytes": 15900,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "products-page",
+      "pathname": "/san-pham",
+      "cacheMode": "warm",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 8.960299999999961,
+      "totalMs": 9.131399999999985,
+      "bytes": 15900,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "products-page",
+      "pathname": "/san-pham",
+      "cacheMode": "warm",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 7.838999999999942,
+      "totalMs": 8.10089999999991,
+      "bytes": 15900,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "product-detail-page",
+      "pathname": "/san-pham/gong-kinh-nu-mat-meo-tr98025-sieu-nhe-gong-kinh-thoi-trang-han-quoc-cao-cap",
+      "cacheMode": "cold",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 1.9890000000000327,
+      "connectMs": 9.337800000000016,
+      "tlsMs": 23.650499999999965,
+      "ttfbMs": 837.7070000000001,
+      "totalMs": 946.7809999999997,
+      "bytes": 26662,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "product-detail-page",
+      "pathname": "/san-pham/gong-kinh-nu-mat-meo-tr98025-sieu-nhe-gong-kinh-thoi-trang-han-quoc-cao-cap",
+      "cacheMode": "cold",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.30189999999993233,
+      "connectMs": 5.999699999999848,
+      "tlsMs": 16.30219999999963,
+      "ttfbMs": 389.1268,
+      "totalMs": 602.6811000000002,
+      "bytes": 26512,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "product-detail-page",
+      "pathname": "/san-pham/gong-kinh-nu-mat-meo-tr98025-sieu-nhe-gong-kinh-thoi-trang-han-quoc-cao-cap",
+      "cacheMode": "cold",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.44669999999996435,
+      "connectMs": 8.533300000000054,
+      "tlsMs": 19.53769999999986,
+      "ttfbMs": 760.7673999999997,
+      "totalMs": 1056.4433,
+      "bytes": 26512,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "product-detail-page",
+      "pathname": "/san-pham/gong-kinh-nu-mat-meo-tr98025-sieu-nhe-gong-kinh-thoi-trang-han-quoc-cao-cap",
+      "cacheMode": "warm",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 550.8319000000001,
+      "totalMs": 824.4705999999996,
+      "bytes": 26512,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "product-detail-page",
+      "pathname": "/san-pham/gong-kinh-nu-mat-meo-tr98025-sieu-nhe-gong-kinh-thoi-trang-han-quoc-cao-cap",
+      "cacheMode": "warm",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 568.0715,
+      "totalMs": 839.6538,
+      "bytes": 26512,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "product-detail-page",
+      "pathname": "/san-pham/gong-kinh-nu-mat-meo-tr98025-sieu-nhe-gong-kinh-thoi-trang-han-quoc-cao-cap",
+      "cacheMode": "warm",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 704.0865000000003,
+      "totalMs": 1002.2016000000003,
+      "bytes": 26512,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "articles-page",
+      "pathname": "/bai-viet",
+      "cacheMode": "cold",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.4029000000000451,
+      "connectMs": 5.782600000000457,
+      "tlsMs": 16.03650000000016,
+      "ttfbMs": 220.98340000000007,
+      "totalMs": 221.27530000000024,
+      "bytes": 14905,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "articles-page",
+      "pathname": "/bai-viet",
+      "cacheMode": "cold",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.33439999999973224,
+      "connectMs": 8.662800000000061,
+      "tlsMs": 19.23369999999977,
+      "ttfbMs": 33.27599999999984,
+      "totalMs": 33.4404999999997,
+      "bytes": 14905,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "articles-page",
+      "pathname": "/bai-viet",
+      "cacheMode": "cold",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 1.1909999999998035,
+      "connectMs": 7.649599999999737,
+      "tlsMs": 18.26879999999983,
+      "ttfbMs": 39.718299999999545,
+      "totalMs": 39.94809999999961,
+      "bytes": 14905,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "articles-page",
+      "pathname": "/bai-viet",
+      "cacheMode": "warm",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 13.792399999999361,
+      "totalMs": 13.962300000000141,
+      "bytes": 14905,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "articles-page",
+      "pathname": "/bai-viet",
+      "cacheMode": "warm",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 9.07380000000012,
+      "totalMs": 9.211600000000544,
+      "bytes": 14905,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "articles-page",
+      "pathname": "/bai-viet",
+      "cacheMode": "warm",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 11.099900000000162,
+      "totalMs": 11.263600000000224,
+      "bytes": 14905,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "article-detail-page",
+      "pathname": "/bai-viet/mat-tron-deo-kinh-mat-meo-co-hop-khong-loi-khuyen-tu-chuyen-gia-chon-kinh",
+      "cacheMode": "cold",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.3666000000002896,
+      "connectMs": 6.581300000000738,
+      "tlsMs": 17.188200000000506,
+      "ttfbMs": 347.9531999999999,
+      "totalMs": 624.6089999999995,
+      "bytes": 32420,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "article-detail-page",
+      "pathname": "/bai-viet/mat-tron-deo-kinh-mat-meo-co-hop-khong-loi-khuyen-tu-chuyen-gia-chon-kinh",
+      "cacheMode": "cold",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.3716999999996915,
+      "connectMs": 18.09810000000016,
+      "tlsMs": 35.84510000000046,
+      "ttfbMs": 413.5491000000002,
+      "totalMs": 1041.5190999999995,
+      "bytes": 32420,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "article-detail-page",
+      "pathname": "/bai-viet/mat-tron-deo-kinh-mat-meo-co-hop-khong-loi-khuyen-tu-chuyen-gia-chon-kinh",
+      "cacheMode": "cold",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.3922000000002299,
+      "connectMs": 8.581600000001345,
+      "tlsMs": 20.869700000001103,
+      "ttfbMs": 427.59850000000006,
+      "totalMs": 654.6713,
+      "bytes": 32420,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "article-detail-page",
+      "pathname": "/bai-viet/mat-tron-deo-kinh-mat-meo-co-hop-khong-loi-khuyen-tu-chuyen-gia-chon-kinh",
+      "cacheMode": "warm",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 320.64960000000065,
+      "totalMs": 608.3140000000003,
+      "bytes": 32420,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "article-detail-page",
+      "pathname": "/bai-viet/mat-tron-deo-kinh-mat-meo-co-hop-khong-loi-khuyen-tu-chuyen-gia-chon-kinh",
+      "cacheMode": "warm",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 385.709499999999,
+      "totalMs": 750.3972999999987,
+      "bytes": 32420,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "article-detail-page",
+      "pathname": "/bai-viet/mat-tron-deo-kinh-mat-meo-co-hop-khong-loi-khuyen-tu-chuyen-gia-chon-kinh",
+      "cacheMode": "warm",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 426.3533000000007,
+      "totalMs": 716.0416000000005,
+      "bytes": 32420,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "private, no-cache, no-store, max-age=0, must-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "about",
+      "pathname": "/gioi-thieu",
+      "cacheMode": "cold",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.2778999999991356,
+      "connectMs": 5.909700000000157,
+      "tlsMs": 18.085399999999936,
+      "ttfbMs": 77.49759999999878,
+      "totalMs": 77.71869999999944,
+      "bytes": 15229,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=60, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "about",
+      "pathname": "/gioi-thieu",
+      "cacheMode": "cold",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.38470000000052096,
+      "connectMs": 6.216800000000148,
+      "tlsMs": 16.658900000000358,
+      "ttfbMs": 30.681700000001,
+      "totalMs": 30.949399999999514,
+      "bytes": 15229,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=60, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "about",
+      "pathname": "/gioi-thieu",
+      "cacheMode": "cold",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.36820000000079744,
+      "connectMs": 14.41820000000007,
+      "tlsMs": 39.687299999999595,
+      "ttfbMs": 52.34989999999925,
+      "totalMs": 52.55919999999969,
+      "bytes": 15229,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=60, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "about",
+      "pathname": "/gioi-thieu",
+      "cacheMode": "warm",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 8.20260000000053,
+      "totalMs": 8.397100000000137,
+      "bytes": 15229,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=60, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "about",
+      "pathname": "/gioi-thieu",
+      "cacheMode": "warm",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 7.42370000000119,
+      "totalMs": 7.599200000000565,
+      "bytes": 15229,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=60, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "about",
+      "pathname": "/gioi-thieu",
+      "cacheMode": "warm",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 7.670000000000073,
+      "totalMs": 7.945700000000215,
+      "bytes": 15229,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=60, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "faq",
+      "pathname": "/faq",
+      "cacheMode": "cold",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.4452000000001135,
+      "connectMs": 13.837999999999738,
+      "tlsMs": 24.014900000000125,
+      "ttfbMs": 273.28089999999975,
+      "totalMs": 273.48759999999857,
+      "bytes": 14341,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "faq",
+      "pathname": "/faq",
+      "cacheMode": "cold",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.37410000000090804,
+      "connectMs": 11.78530000000137,
+      "tlsMs": 22.030500000000757,
+      "ttfbMs": 36.421299999999974,
+      "totalMs": 36.58899999999994,
+      "bytes": 14341,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "faq",
+      "pathname": "/faq",
+      "cacheMode": "cold",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.49209999999948195,
+      "connectMs": 7.0174000000006345,
+      "tlsMs": 17.438599999999497,
+      "ttfbMs": 35.8101000000006,
+      "totalMs": 35.95590000000084,
+      "bytes": 14341,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "faq",
+      "pathname": "/faq",
+      "cacheMode": "warm",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 8.590900000001056,
+      "totalMs": 8.681099999999788,
+      "bytes": 14341,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "faq",
+      "pathname": "/faq",
+      "cacheMode": "warm",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 7.897399999999834,
+      "totalMs": 8.001499999998487,
+      "bytes": 14341,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "faq",
+      "pathname": "/faq",
+      "cacheMode": "warm",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 7.772900000001755,
+      "totalMs": 7.9122000000006665,
+      "bytes": 14341,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "voucher",
+      "pathname": "/voucher",
+      "cacheMode": "cold",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.3294000000005326,
+      "connectMs": 5.778299999999945,
+      "tlsMs": 16.958699999999226,
+      "ttfbMs": 428.41679999999906,
+      "totalMs": 428.59499999999935,
+      "bytes": 13912,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "voucher",
+      "pathname": "/voucher",
+      "cacheMode": "cold",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.3474999999998545,
+      "connectMs": 5.167199999999866,
+      "tlsMs": 15.550699999999779,
+      "ttfbMs": 29.972200000000157,
+      "totalMs": 30.099099999999453,
+      "bytes": 13912,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "voucher",
+      "pathname": "/voucher",
+      "cacheMode": "cold",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.35720000000037544,
+      "connectMs": 7.132300000001123,
+      "tlsMs": 18.82719999999972,
+      "ttfbMs": 35.76219999999921,
+      "totalMs": 35.90059999999903,
+      "bytes": 13912,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "voucher",
+      "pathname": "/voucher",
+      "cacheMode": "warm",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 8.683899999999994,
+      "totalMs": 8.747600000000602,
+      "bytes": 13912,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "voucher",
+      "pathname": "/voucher",
+      "cacheMode": "warm",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 11.99040000000059,
+      "totalMs": 12.076399999999921,
+      "bytes": 13912,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "voucher",
+      "pathname": "/voucher",
+      "cacheMode": "warm",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 7.7062000000005355,
+      "totalMs": 7.768000000000029,
+      "bytes": 13912,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "try-on",
+      "pathname": "/thu-kinh-ao",
+      "cacheMode": "cold",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.30169999999998254,
+      "connectMs": 6.362300000000687,
+      "tlsMs": 17.444100000000617,
+      "ttfbMs": 414.91610000000037,
+      "totalMs": 415.0758000000005,
+      "bytes": 14995,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "try-on",
+      "pathname": "/thu-kinh-ao",
+      "cacheMode": "cold",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.31640000000152213,
+      "connectMs": 7.215600000001359,
+      "tlsMs": 17.502700000000914,
+      "ttfbMs": 31.90099999999984,
+      "totalMs": 32.042999999999665,
+      "bytes": 14995,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "try-on",
+      "pathname": "/thu-kinh-ao",
+      "cacheMode": "cold",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.3265000000010332,
+      "connectMs": 7.079100000000835,
+      "tlsMs": 17.464500000000044,
+      "ttfbMs": 31.823300000000017,
+      "totalMs": 31.973799999999756,
+      "bytes": 14995,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "try-on",
+      "pathname": "/thu-kinh-ao",
+      "cacheMode": "warm",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 15.207700000000841,
+      "totalMs": 15.30619999999908,
+      "bytes": 14995,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "try-on",
+      "pathname": "/thu-kinh-ao",
+      "cacheMode": "warm",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 9.248600000000806,
+      "totalMs": 9.384099999999307,
+      "bytes": 14995,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "try-on",
+      "pathname": "/thu-kinh-ao",
+      "cacheMode": "warm",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 11.911799999999857,
+      "totalMs": 12.098899999999048,
+      "bytes": 14995,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "cart",
+      "pathname": "/gio-hang",
+      "cacheMode": "cold",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.4032999999999447,
+      "connectMs": 9.40599999999904,
+      "tlsMs": 19.979999999999563,
+      "ttfbMs": 607.3544000000002,
+      "totalMs": 607.5109000000011,
+      "bytes": 13956,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "cart",
+      "pathname": "/gio-hang",
+      "cacheMode": "cold",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.3731999999999971,
+      "connectMs": 1016.1053999999986,
+      "tlsMs": 1025.9272,
+      "ttfbMs": 1039.109699999999,
+      "totalMs": 1039.291799999999,
+      "bytes": 13956,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "cart",
+      "pathname": "/gio-hang",
+      "cacheMode": "cold",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.3421999999991385,
+      "connectMs": 6.759399999999005,
+      "tlsMs": 17.243899999999485,
+      "ttfbMs": 31.530900000001566,
+      "totalMs": 31.787000000000262,
+      "bytes": 13956,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "cart",
+      "pathname": "/gio-hang",
+      "cacheMode": "warm",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 8.23660000000018,
+      "totalMs": 8.350699999999051,
+      "bytes": 13956,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "cart",
+      "pathname": "/gio-hang",
+      "cacheMode": "warm",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 7.921800000000076,
+      "totalMs": 8.054799999999886,
+      "bytes": 13956,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "cart",
+      "pathname": "/gio-hang",
+      "cacheMode": "warm",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 7.698899999999412,
+      "totalMs": 7.804699999998775,
+      "bytes": 13956,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "login",
+      "pathname": "/dang-nhap",
+      "cacheMode": "cold",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.3444999999992433,
+      "connectMs": 6.256199999999808,
+      "tlsMs": 17.349099999999453,
+      "ttfbMs": 275.46030000000064,
+      "totalMs": 275.73099999999977,
+      "bytes": 13932,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "login",
+      "pathname": "/dang-nhap",
+      "cacheMode": "cold",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.430899999999383,
+      "connectMs": 16.214399999998932,
+      "tlsMs": 26.75799999999981,
+      "ttfbMs": 46.64800000000105,
+      "totalMs": 46.83150000000023,
+      "bytes": 13932,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "login",
+      "pathname": "/dang-nhap",
+      "cacheMode": "cold",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.8832000000002154,
+      "connectMs": 8.08350000000064,
+      "tlsMs": 18.749700000000303,
+      "ttfbMs": 29.767400000000634,
+      "totalMs": 30.05069999999978,
+      "bytes": 13932,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "login",
+      "pathname": "/dang-nhap",
+      "cacheMode": "warm",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 6.855000000001382,
+      "totalMs": 6.982500000000073,
+      "bytes": 13932,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "login",
+      "pathname": "/dang-nhap",
+      "cacheMode": "warm",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 6.720799999999144,
+      "totalMs": 6.850599999999758,
+      "bytes": 13932,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "login",
+      "pathname": "/dang-nhap",
+      "cacheMode": "warm",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 6.518599999999424,
+      "totalMs": 6.607399999998961,
+      "bytes": 13932,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "admin-login",
+      "pathname": "/admin/login",
+      "cacheMode": "cold",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.32810000000063155,
+      "connectMs": 5.206500000000233,
+      "tlsMs": 15.41910000000098,
+      "ttfbMs": 398.52139999999963,
+      "totalMs": 398.76980000000003,
+      "bytes": 5335,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "admin-login",
+      "pathname": "/admin/login",
+      "cacheMode": "cold",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.3125,
+      "connectMs": 8.553600000001097,
+      "tlsMs": 17.96349999999984,
+      "ttfbMs": 24.08430000000044,
+      "totalMs": 24.237499999999272,
+      "bytes": 5335,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "admin-login",
+      "pathname": "/admin/login",
+      "cacheMode": "cold",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.4794000000001688,
+      "connectMs": 16.347799999999552,
+      "tlsMs": 25.379499999999098,
+      "ttfbMs": 31.592099999999846,
+      "totalMs": 31.868599999999788,
+      "bytes": 5335,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "admin-login",
+      "pathname": "/admin/login",
+      "cacheMode": "warm",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 6.208000000000538,
+      "totalMs": 6.408900000000358,
+      "bytes": 5335,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "admin-login",
+      "pathname": "/admin/login",
+      "cacheMode": "warm",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 7.116299999999683,
+      "totalMs": 7.311900000000605,
+      "bytes": 5335,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "admin-login",
+      "pathname": "/admin/login",
+      "cacheMode": "warm",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 7.362499999999272,
+      "totalMs": 7.564800000000105,
+      "bytes": 5335,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "s-maxage=300, stale-while-revalidate",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "settings-api",
+      "pathname": "/api/public/settings",
+      "cacheMode": "cold",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.3857000000007247,
+      "connectMs": 6.609700000000885,
+      "tlsMs": 17.31590000000142,
+      "ttfbMs": 135.01600000000144,
+      "totalMs": 135.17619999999988,
+      "bytes": 4431,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "settings-api",
+      "pathname": "/api/public/settings",
+      "cacheMode": "cold",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.3636000000005879,
+      "connectMs": 8.486399999999776,
+      "tlsMs": 18.911599999999453,
+      "ttfbMs": 131.92089999999916,
+      "totalMs": 132.08840000000055,
+      "bytes": 4431,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "settings-api",
+      "pathname": "/api/public/settings",
+      "cacheMode": "cold",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.41859999999905995,
+      "connectMs": 7.744199999999182,
+      "tlsMs": 18.63539999999921,
+      "ttfbMs": 149.59039999999914,
+      "totalMs": 149.77800000000025,
+      "bytes": 4431,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "settings-api",
+      "pathname": "/api/public/settings",
+      "cacheMode": "warm",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 148.1275999999998,
+      "totalMs": 148.26740000000063,
+      "bytes": 4431,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "settings-api",
+      "pathname": "/api/public/settings",
+      "cacheMode": "warm",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 163.78299999999945,
+      "totalMs": 164.02030000000013,
+      "bytes": 4431,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "settings-api",
+      "pathname": "/api/public/settings",
+      "cacheMode": "warm",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 161.9480999999978,
+      "totalMs": 162.05119999999806,
+      "bytes": 4431,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "menus-api",
+      "pathname": "/api/public/menus?position=header",
+      "cacheMode": "cold",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.45709999999962747,
+      "connectMs": 7.191799999996874,
+      "tlsMs": 17.72320000000036,
+      "ttfbMs": 172.66860000000088,
+      "totalMs": 172.9207000000024,
+      "bytes": 533,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "menus-api",
+      "pathname": "/api/public/menus?position=header",
+      "cacheMode": "cold",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.33210000000326545,
+      "connectMs": 7.228900000001886,
+      "tlsMs": 23.376800000001822,
+      "ttfbMs": 211.41990000000078,
+      "totalMs": 211.59979999999996,
+      "bytes": 533,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "menus-api",
+      "pathname": "/api/public/menus?position=header",
+      "cacheMode": "cold",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.5499000000017986,
+      "connectMs": 6.691999999999098,
+      "tlsMs": 17.654200000000856,
+      "ttfbMs": 212.9932000000008,
+      "totalMs": 213.2432000000008,
+      "bytes": 533,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "menus-api",
+      "pathname": "/api/public/menus?position=header",
+      "cacheMode": "warm",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 176.9987000000001,
+      "totalMs": 177.09870000000228,
+      "bytes": 533,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "menus-api",
+      "pathname": "/api/public/menus?position=header",
+      "cacheMode": "warm",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 163.21630000000005,
+      "totalMs": 163.37840000000142,
+      "bytes": 533,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "menus-api",
+      "pathname": "/api/public/menus?position=header",
+      "cacheMode": "warm",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 154.53039999999964,
+      "totalMs": 154.64190000000235,
+      "bytes": 533,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "products-api",
+      "pathname": "/api/public/products?per_page=12",
+      "cacheMode": "cold",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.2875999999996566,
+      "connectMs": 12.462599999998929,
+      "tlsMs": 21.55329999999958,
+      "ttfbMs": 213.34110000000146,
+      "totalMs": 213.72019999999975,
+      "bytes": 20828,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "products-api",
+      "pathname": "/api/public/products?per_page=12",
+      "cacheMode": "cold",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.7891000000017812,
+      "connectMs": 6.736500000002707,
+      "tlsMs": 17.076200000003155,
+      "ttfbMs": 164.5196999999971,
+      "totalMs": 164.8409999999967,
+      "bytes": 20828,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "products-api",
+      "pathname": "/api/public/products?per_page=12",
+      "cacheMode": "cold",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.37329999999928987,
+      "connectMs": 6.765400000000227,
+      "tlsMs": 17.18329999999696,
+      "ttfbMs": 139.3917999999976,
+      "totalMs": 139.73339999999735,
+      "bytes": 20828,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "products-api",
+      "pathname": "/api/public/products?per_page=12",
+      "cacheMode": "warm",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 181.43730000000141,
+      "totalMs": 181.6798000000017,
+      "bytes": 20828,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "products-api",
+      "pathname": "/api/public/products?per_page=12",
+      "cacheMode": "warm",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 124.01740000000063,
+      "totalMs": 124.28759999999966,
+      "bytes": 20828,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "products-api",
+      "pathname": "/api/public/products?per_page=12",
+      "cacheMode": "warm",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 119.49439999999959,
+      "totalMs": 119.7934000000023,
+      "bytes": 20828,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "product-detail-api",
+      "pathname": "/api/public/products/gong-kinh-nu-mat-meo-tr98025-sieu-nhe-gong-kinh-thoi-trang-han-quoc-cao-cap",
+      "cacheMode": "cold",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 1.5702000000019325,
+      "connectMs": 7.463900000002468,
+      "tlsMs": 18.139000000002852,
+      "ttfbMs": 218.7466999999997,
+      "totalMs": 218.90439999999944,
+      "bytes": 3735,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "product-detail-api",
+      "pathname": "/api/public/products/gong-kinh-nu-mat-meo-tr98025-sieu-nhe-gong-kinh-thoi-trang-han-quoc-cao-cap",
+      "cacheMode": "cold",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.5109000000011292,
+      "connectMs": 8.88379999999961,
+      "tlsMs": 19.45969999999943,
+      "ttfbMs": 174.21630000000005,
+      "totalMs": 174.40370000000257,
+      "bytes": 3735,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "product-detail-api",
+      "pathname": "/api/public/products/gong-kinh-nu-mat-meo-tr98025-sieu-nhe-gong-kinh-thoi-trang-han-quoc-cao-cap",
+      "cacheMode": "cold",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.347700000002078,
+      "connectMs": 6.545600000001286,
+      "tlsMs": 16.985000000000582,
+      "ttfbMs": 213.96320000000196,
+      "totalMs": 214.1231000000007,
+      "bytes": 3735,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "product-detail-api",
+      "pathname": "/api/public/products/gong-kinh-nu-mat-meo-tr98025-sieu-nhe-gong-kinh-thoi-trang-han-quoc-cao-cap",
+      "cacheMode": "warm",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 153.36339999999836,
+      "totalMs": 153.53849999999875,
+      "bytes": 3735,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "product-detail-api",
+      "pathname": "/api/public/products/gong-kinh-nu-mat-meo-tr98025-sieu-nhe-gong-kinh-thoi-trang-han-quoc-cao-cap",
+      "cacheMode": "warm",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 208.20650000000023,
+      "totalMs": 208.3705000000009,
+      "bytes": 3735,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "product-detail-api",
+      "pathname": "/api/public/products/gong-kinh-nu-mat-meo-tr98025-sieu-nhe-gong-kinh-thoi-trang-han-quoc-cao-cap",
+      "cacheMode": "warm",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 187.10310000000027,
+      "totalMs": 187.22969999999987,
+      "bytes": 3735,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "attributes-api",
+      "pathname": "/api/public/product-attributes",
+      "cacheMode": "cold",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.4081999999980326,
+      "connectMs": 9.518000000000029,
+      "tlsMs": 20.00890000000072,
+      "ttfbMs": 154.4462999999996,
+      "totalMs": 154.59649999999965,
+      "bytes": 671,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "attributes-api",
+      "pathname": "/api/public/product-attributes",
+      "cacheMode": "cold",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.8604000000013912,
+      "connectMs": 6.955900000000838,
+      "tlsMs": 15.836699999999837,
+      "ttfbMs": 146.4572999999982,
+      "totalMs": 146.7492999999995,
+      "bytes": 671,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "attributes-api",
+      "pathname": "/api/public/product-attributes",
+      "cacheMode": "cold",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.6322000000000116,
+      "connectMs": 8.619999999998981,
+      "tlsMs": 17.597999999998137,
+      "ttfbMs": 145.42829999999958,
+      "totalMs": 145.67129999999815,
+      "bytes": 671,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "attributes-api",
+      "pathname": "/api/public/product-attributes",
+      "cacheMode": "warm",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 141.51690000000235,
+      "totalMs": 141.77070000000094,
+      "bytes": 671,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "attributes-api",
+      "pathname": "/api/public/product-attributes",
+      "cacheMode": "warm",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 141.5731999999989,
+      "totalMs": 141.7606999999989,
+      "bytes": 671,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "attributes-api",
+      "pathname": "/api/public/product-attributes",
+      "cacheMode": "warm",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 152.26980000000185,
+      "totalMs": 152.46029999999882,
+      "bytes": 671,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "categories-api",
+      "pathname": "/api/public/categories?tree=false",
+      "cacheMode": "cold",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.3712000000014086,
+      "connectMs": 7.213300000003073,
+      "tlsMs": 22.055700000000797,
+      "ttfbMs": 177.42999999999665,
+      "totalMs": 177.59059999999954,
+      "bytes": 402,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "categories-api",
+      "pathname": "/api/public/categories?tree=false",
+      "cacheMode": "cold",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.46749999999883585,
+      "connectMs": 10.477399999999761,
+      "tlsMs": 20.13130000000092,
+      "ttfbMs": 169.11499999999796,
+      "totalMs": 169.28570000000036,
+      "bytes": 402,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "categories-api",
+      "pathname": "/api/public/categories?tree=false",
+      "cacheMode": "cold",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.38540000000284635,
+      "connectMs": 9.5625,
+      "tlsMs": 20.538700000000972,
+      "ttfbMs": 146.58990000000267,
+      "totalMs": 146.75780000000304,
+      "bytes": 402,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "categories-api",
+      "pathname": "/api/public/categories?tree=false",
+      "cacheMode": "warm",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 132.53060000000187,
+      "totalMs": 132.6768000000011,
+      "bytes": 402,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "categories-api",
+      "pathname": "/api/public/categories?tree=false",
+      "cacheMode": "warm",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 140.39660000000003,
+      "totalMs": 140.50530000000072,
+      "bytes": 402,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "categories-api",
+      "pathname": "/api/public/categories?tree=false",
+      "cacheMode": "warm",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 122.32949999999983,
+      "totalMs": 122.56229999999778,
+      "bytes": 402,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "articles-api",
+      "pathname": "/api/public/articles?per_page=12",
+      "cacheMode": "cold",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.8315000000002328,
+      "connectMs": 16.80619999999908,
+      "tlsMs": 32.93600000000151,
+      "ttfbMs": 227.22839999999997,
+      "totalMs": 228.45379999999932,
+      "bytes": 31813,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "articles-api",
+      "pathname": "/api/public/articles?per_page=12",
+      "cacheMode": "cold",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.4474000000009255,
+      "connectMs": 10.3778999999995,
+      "tlsMs": 23.806800000002113,
+      "ttfbMs": 262.3394999999982,
+      "totalMs": 263.5555999999997,
+      "bytes": 31813,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "articles-api",
+      "pathname": "/api/public/articles?per_page=12",
+      "cacheMode": "cold",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.334500000000844,
+      "connectMs": 6.4135000000023865,
+      "tlsMs": 16.727300000002288,
+      "ttfbMs": 196.64949999999953,
+      "totalMs": 197.90240000000267,
+      "bytes": 31813,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "articles-api",
+      "pathname": "/api/public/articles?per_page=12",
+      "cacheMode": "warm",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 177.61379999999917,
+      "totalMs": 181.33919999999853,
+      "bytes": 31813,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "articles-api",
+      "pathname": "/api/public/articles?per_page=12",
+      "cacheMode": "warm",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 147.42929999999978,
+      "totalMs": 148.72309999999925,
+      "bytes": 31813,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "articles-api",
+      "pathname": "/api/public/articles?per_page=12",
+      "cacheMode": "warm",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 199.92540000000008,
+      "totalMs": 201.09020000000237,
+      "bytes": 31813,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "article-detail-api",
+      "pathname": "/api/public/articles/mat-tron-deo-kinh-mat-meo-co-hop-khong-loi-khuyen-tu-chuyen-gia-chon-kinh",
+      "cacheMode": "cold",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 2.406299999998737,
+      "connectMs": 12.64259999999922,
+      "tlsMs": 27.69670000000042,
+      "ttfbMs": 187.31459999999788,
+      "totalMs": 187.58020000000033,
+      "bytes": 5480,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "article-detail-api",
+      "pathname": "/api/public/articles/mat-tron-deo-kinh-mat-meo-co-hop-khong-loi-khuyen-tu-chuyen-gia-chon-kinh",
+      "cacheMode": "cold",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.4988999999986845,
+      "connectMs": 7.41530000000057,
+      "tlsMs": 18.613900000000285,
+      "ttfbMs": 218.8732999999993,
+      "totalMs": 219.21689999999944,
+      "bytes": 5481,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "article-detail-api",
+      "pathname": "/api/public/articles/mat-tron-deo-kinh-mat-meo-co-hop-khong-loi-khuyen-tu-chuyen-gia-chon-kinh",
+      "cacheMode": "cold",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": 0.7271999999975378,
+      "connectMs": 6.777299999997922,
+      "tlsMs": 20.767299999999523,
+      "ttfbMs": 186.29339999999866,
+      "totalMs": 186.52509999999893,
+      "bytes": 5480,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "article-detail-api",
+      "pathname": "/api/public/articles/mat-tron-deo-kinh-mat-meo-co-hop-khong-loi-khuyen-tu-chuyen-gia-chon-kinh",
+      "cacheMode": "warm",
+      "run": 1,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 138.35410000000047,
+      "totalMs": 138.5097999999998,
+      "bytes": 5481,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "article-detail-api",
+      "pathname": "/api/public/articles/mat-tron-deo-kinh-mat-meo-co-hop-khong-loi-khuyen-tu-chuyen-gia-chon-kinh",
+      "cacheMode": "warm",
+      "run": 2,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 159.77690000000075,
+      "totalMs": 159.9213000000018,
+      "bytes": 5480,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    },
+    {
+      "name": "article-detail-api",
+      "pathname": "/api/public/articles/mat-tron-deo-kinh-mat-meo-co-hop-khong-loi-khuyen-tu-chuyen-gia-chon-kinh",
+      "cacheMode": "warm",
+      "run": 3,
+      "status": 200,
+      "redirects": 0,
+      "dnsMs": null,
+      "connectMs": null,
+      "tlsMs": null,
+      "ttfbMs": 177.08199999999852,
+      "totalMs": 177.1912999999986,
+      "bytes": 5481,
+      "headers": {
+        "server": "nginx",
+        "cacheControl": "no-cache, private",
+        "cacheStatus": null,
+        "contentEncoding": "gzip",
+        "protocol": "HTTP/1.1"
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import Newsletter from '@/components/layout/Newsletter';
+import NewsletterSlot from '@/components/layout/NewsletterSlot';
 import ChatWidget from '@/components/layout/ChatWidget';
 import { CartProvider } from '@/lib/useCart';
 import { AuthProvider } from '@/lib/useAuth';
@@ -27,7 +27,7 @@ export default async function PublicLayout({
         <CartProvider>
           <Header menus={menus} />
           <main>{children}</main>
-          <Newsletter />
+          <NewsletterSlot />
           <Footer />
           <ChatWidget />
         </CartProvider>

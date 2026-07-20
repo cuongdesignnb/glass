@@ -1,0 +1,698 @@
+{
+  "generatedAt": "2026-07-18T15:41:50.008Z",
+  "label": "after",
+  "routes": [
+    {
+      "route": "home",
+      "rawJavaScriptBytes": 458189,
+      "chunkCount": 13,
+      "markerChunks": {
+        "tryOn": [],
+        "adminEditor": []
+      },
+      "files": [
+        {
+          "file": "static/chunks/webpack-5d17a5cd73e57df7.js",
+          "bytes": 5136,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/fd9d1056-6399bf3ede81a980.js",
+          "bytes": 172835,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/2117-82f4292662f8f575.js",
+          "bytes": 124365,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/main-app-6df2061f4dd20480.js",
+          "bytes": 464,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/app/layout-69cdd3e6c2d0e33c.js",
+          "bytes": 674,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/ee560e2c-348c6d09b5e6fd24.js",
+          "bytes": 38042,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/94730671-b55fb4cc8058c16d.js",
+          "bytes": 4190,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/30a37ab2-86c852b4842f48ae.js",
+          "bytes": 873,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/2972-fe2fd81d8b1b0398.js",
+          "bytes": 26067,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/9157-24f9dba46df8e6e6.js",
+          "bytes": 16521,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/1837-694a6bfe08729b0a.js",
+          "bytes": 15055,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/app/(public)/layout-ef5ed440b48fa48d.js",
+          "bytes": 32311,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/app/(public)/page-cf5e998e36006983.js",
+          "bytes": 21656,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        }
+      ]
+    },
+    {
+      "route": "products",
+      "rawJavaScriptBytes": 453204,
+      "chunkCount": 13,
+      "markerChunks": {
+        "tryOn": [],
+        "adminEditor": []
+      },
+      "files": [
+        {
+          "file": "static/chunks/webpack-5d17a5cd73e57df7.js",
+          "bytes": 5136,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/fd9d1056-6399bf3ede81a980.js",
+          "bytes": 172835,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/2117-82f4292662f8f575.js",
+          "bytes": 124365,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/main-app-6df2061f4dd20480.js",
+          "bytes": 464,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/app/layout-69cdd3e6c2d0e33c.js",
+          "bytes": 674,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/ee560e2c-348c6d09b5e6fd24.js",
+          "bytes": 38042,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/94730671-b55fb4cc8058c16d.js",
+          "bytes": 4190,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/30a37ab2-86c852b4842f48ae.js",
+          "bytes": 873,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/2972-fe2fd81d8b1b0398.js",
+          "bytes": 26067,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/9157-24f9dba46df8e6e6.js",
+          "bytes": 16521,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/1837-694a6bfe08729b0a.js",
+          "bytes": 15055,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/app/(public)/layout-ef5ed440b48fa48d.js",
+          "bytes": 32311,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/app/(public)/san-pham/page-049db91c3836d496.js",
+          "bytes": 16671,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        }
+      ]
+    },
+    {
+      "route": "product-detail",
+      "rawJavaScriptBytes": 468519,
+      "chunkCount": 13,
+      "markerChunks": {
+        "tryOn": [],
+        "adminEditor": []
+      },
+      "files": [
+        {
+          "file": "static/chunks/webpack-5d17a5cd73e57df7.js",
+          "bytes": 5136,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/fd9d1056-6399bf3ede81a980.js",
+          "bytes": 172835,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/2117-82f4292662f8f575.js",
+          "bytes": 124365,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/main-app-6df2061f4dd20480.js",
+          "bytes": 464,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/app/layout-69cdd3e6c2d0e33c.js",
+          "bytes": 674,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/ee560e2c-348c6d09b5e6fd24.js",
+          "bytes": 38042,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/94730671-b55fb4cc8058c16d.js",
+          "bytes": 4190,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/30a37ab2-86c852b4842f48ae.js",
+          "bytes": 873,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/2972-fe2fd81d8b1b0398.js",
+          "bytes": 26067,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/9157-24f9dba46df8e6e6.js",
+          "bytes": 16521,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/1837-694a6bfe08729b0a.js",
+          "bytes": 15055,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/app/(public)/layout-ef5ed440b48fa48d.js",
+          "bytes": 32311,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/app/(public)/san-pham/[slug]/page-59c09e263b23bea9.js",
+          "bytes": 31986,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        }
+      ]
+    },
+    {
+      "route": "articles",
+      "rawJavaScriptBytes": 447616,
+      "chunkCount": 13,
+      "markerChunks": {
+        "tryOn": [],
+        "adminEditor": []
+      },
+      "files": [
+        {
+          "file": "static/chunks/webpack-5d17a5cd73e57df7.js",
+          "bytes": 5136,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/fd9d1056-6399bf3ede81a980.js",
+          "bytes": 172835,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/2117-82f4292662f8f575.js",
+          "bytes": 124365,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/main-app-6df2061f4dd20480.js",
+          "bytes": 464,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/app/layout-69cdd3e6c2d0e33c.js",
+          "bytes": 674,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/ee560e2c-348c6d09b5e6fd24.js",
+          "bytes": 38042,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/94730671-b55fb4cc8058c16d.js",
+          "bytes": 4190,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/30a37ab2-86c852b4842f48ae.js",
+          "bytes": 873,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/2972-fe2fd81d8b1b0398.js",
+          "bytes": 26067,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/9157-24f9dba46df8e6e6.js",
+          "bytes": 16521,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/1837-694a6bfe08729b0a.js",
+          "bytes": 15055,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/app/(public)/layout-ef5ed440b48fa48d.js",
+          "bytes": 32311,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/app/(public)/bai-viet/page-66280fd33cab8cb3.js",
+          "bytes": 11083,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        }
+      ]
+    },
+    {
+      "route": "article-detail",
+      "rawJavaScriptBytes": 446515,
+      "chunkCount": 13,
+      "markerChunks": {
+        "tryOn": [],
+        "adminEditor": []
+      },
+      "files": [
+        {
+          "file": "static/chunks/webpack-5d17a5cd73e57df7.js",
+          "bytes": 5136,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/fd9d1056-6399bf3ede81a980.js",
+          "bytes": 172835,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/2117-82f4292662f8f575.js",
+          "bytes": 124365,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/main-app-6df2061f4dd20480.js",
+          "bytes": 464,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/app/layout-69cdd3e6c2d0e33c.js",
+          "bytes": 674,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/ee560e2c-348c6d09b5e6fd24.js",
+          "bytes": 38042,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/94730671-b55fb4cc8058c16d.js",
+          "bytes": 4190,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/30a37ab2-86c852b4842f48ae.js",
+          "bytes": 873,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/2972-fe2fd81d8b1b0398.js",
+          "bytes": 26067,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/9157-24f9dba46df8e6e6.js",
+          "bytes": 16521,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/1837-694a6bfe08729b0a.js",
+          "bytes": 15055,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/app/(public)/layout-ef5ed440b48fa48d.js",
+          "bytes": 32311,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/app/(public)/bai-viet/[slug]/page-9eac8e063a64ed1c.js",
+          "bytes": 9982,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        }
+      ]
+    },
+    {
+      "route": "try-on",
+      "rawJavaScriptBytes": 461543,
+      "chunkCount": 13,
+      "markerChunks": {
+        "tryOn": [
+          "static/chunks/app/(public)/thu-kinh-ao/page-ce5006050d81da3e.js"
+        ],
+        "adminEditor": []
+      },
+      "files": [
+        {
+          "file": "static/chunks/webpack-5d17a5cd73e57df7.js",
+          "bytes": 5136,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/fd9d1056-6399bf3ede81a980.js",
+          "bytes": 172835,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/2117-82f4292662f8f575.js",
+          "bytes": 124365,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/main-app-6df2061f4dd20480.js",
+          "bytes": 464,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/app/layout-69cdd3e6c2d0e33c.js",
+          "bytes": 674,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/ee560e2c-348c6d09b5e6fd24.js",
+          "bytes": 38042,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/94730671-b55fb4cc8058c16d.js",
+          "bytes": 4190,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/30a37ab2-86c852b4842f48ae.js",
+          "bytes": 873,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/2972-fe2fd81d8b1b0398.js",
+          "bytes": 26067,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/9157-24f9dba46df8e6e6.js",
+          "bytes": 16521,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/1837-694a6bfe08729b0a.js",
+          "bytes": 15055,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/app/(public)/layout-ef5ed440b48fa48d.js",
+          "bytes": 32311,
+          "markers": {
+            "tryOn": false,
+            "adminEditor": false
+          }
+        },
+        {
+          "file": "static/chunks/app/(public)/thu-kinh-ao/page-ce5006050d81da3e.js",
+          "bytes": 25010,
+          "markers": {
+            "tryOn": true,
+            "adminEditor": false
+          }
+        }
+      ]
+    }
+  ]
+}

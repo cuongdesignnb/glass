@@ -1,26 +1,21 @@
 'use client';
 
 import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react';
+import {
+  cartItemIdentity,
+  mergeCartItem,
+  parseStoredCart,
+  type CartAddon,
+  type StoredCartItem,
+} from './cart-storage';
 
-export interface CartItem {
-  productId: number;
-  name: string;
-  slug: string;
-  image: string;
-  price: number;
-  salePrice: number | null;
-  quantity: number;
-  color: string;
-  colorName: string;
-  addons?: { groupName: string; optionName: string; price: number }[];
-  addonTotal?: number;
-}
+export type CartItem = StoredCartItem;
 
 interface CartContextType {
   items: CartItem[];
   addItem: (item: CartItem) => void;
-  removeItem: (productId: number, color: string) => void;
-  updateQuantity: (productId: number, color: string, quantity: number) => void;
+  removeItem: (productId: number, color: string, addons?: CartAddon[]) => void;
+  updateQuantity: (productId: number, color: string, quantity: number, addons?: CartAddon[]) => void;
   clearCart: () => void;
   totalItems: number;
   subtotal: number;
@@ -40,11 +35,7 @@ const CART_KEY = 'glass_cart';
 
 function getStoredCart(): CartItem[] {
   if (typeof window === 'undefined') return [];
-  try {
-    return JSON.parse(localStorage.getItem(CART_KEY) || '[]');
-  } catch {
-    return [];
-  }
+  return parseStoredCart(localStorage.getItem(CART_KEY));
 }
 
 function saveCart(items: CartItem[]) {
@@ -68,30 +59,24 @@ export function CartProvider({ children }: { children: ReactNode }): JSX.Element
   }, []);
 
   const addItem = useCallback((item: CartItem) => {
-    const cart = getStoredCart();
-    const existingIndex = cart.findIndex(
-      (i) => i.productId === item.productId && i.color === item.color
-    );
-    if (existingIndex >= 0) {
-      cart[existingIndex].quantity += item.quantity;
-    } else {
-      cart.push(item);
-    }
+    const cart = mergeCartItem(getStoredCart(), item);
     saveCart(cart);
-    setItems([...cart]);
+    setItems(cart);
   }, []);
 
-  const removeItem = useCallback((productId: number, color: string) => {
+  const removeItem = useCallback((productId: number, color: string, addons: CartAddon[] = []) => {
+    const targetIdentity = cartItemIdentity({ productId, color, addons });
     const cart = getStoredCart().filter(
-      (i) => !(i.productId === productId && i.color === color)
+      (item) => cartItemIdentity(item) !== targetIdentity,
     );
     saveCart(cart);
     setItems(cart);
   }, []);
 
-  const updateQuantity = useCallback((productId: number, color: string, quantity: number) => {
+  const updateQuantity = useCallback((productId: number, color: string, quantity: number, addons: CartAddon[] = []) => {
     const cart = getStoredCart();
-    const item = cart.find((i) => i.productId === productId && i.color === color);
+    const targetIdentity = cartItemIdentity({ productId, color, addons });
+    const item = cart.find((candidate) => cartItemIdentity(candidate) === targetIdentity);
     if (item) {
       item.quantity = Math.max(1, quantity);
       saveCart(cart);

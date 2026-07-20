@@ -5,6 +5,7 @@ import { publicApi } from "@/lib/api";
 import { formatPrice, COLORS } from "@/lib/constants";
 import Link from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import {
   FiStar,
   FiShoppingBag,
@@ -22,8 +23,13 @@ import {
   FiArrowRight,
 } from "react-icons/fi";
 import { RiGlassesLine } from "react-icons/ri";
-import TryOnModal from "@/components/layout/TryOnModal";
+import { useCart } from "@/lib/useCart";
 import "./product-detail.css";
+
+const TryOnModal = dynamic(
+  () => import("@/components/layout/TryOnModal"),
+  { ssr: false, loading: () => null },
+);
 
 interface ProductDetailClientProps {
   product: any;
@@ -79,6 +85,7 @@ export default function ProductDetailClient({
   reviewData,
   apiMediaUrl,
 }: ProductDetailClientProps) {
+  const { addItem } = useCart();
   const [selectedColor, setSelectedColor] = useState<string>(
     product.colors?.[0] || "",
   );
@@ -345,33 +352,7 @@ export default function ProductDetailClient({
       addonTotal,
     };
 
-    // Get existing cart
-    const cart = JSON.parse(localStorage.getItem("glass_cart") || "[]");
-    // Match by product + color + same addons
-    const addonKey = JSON.stringify(
-      addonDetails.map((a) => `${a.groupName}:${a.optionName}`).sort(),
-    );
-    const existingIndex = cart.findIndex((item: any) => {
-      const itemAddonKey = JSON.stringify(
-        (item.addons || [])
-          .map((a: any) => `${a.groupName}:${a.optionName}`)
-          .sort(),
-      );
-      return (
-        item.productId === cartItem.productId &&
-        item.color === cartItem.color &&
-        itemAddonKey === addonKey
-      );
-    });
-
-    if (existingIndex >= 0) {
-      cart[existingIndex].quantity += quantity;
-    } else {
-      cart.push(cartItem);
-    }
-
-    localStorage.setItem("glass_cart", JSON.stringify(cart));
-    window.dispatchEvent(new Event("cart-updated"));
+    addItem(cartItem);
     alert(`Đã thêm ${product.name} vào giỏ hàng!`);
   };
 
@@ -1185,22 +1166,24 @@ export default function ProductDetailClient({
       </div>
 
       {/* Try-On Modal */}
-      <TryOnModal
-        isOpen={showTryOn}
-        onClose={() => setShowTryOn(false)}
-        product={{
-          id: product.id,
-          name: product.name,
-          thumbnail: allImages[0] || "",
-          price: Number(product.price),
-          sale_price: product.sale_price ? Number(product.sale_price) : null,
-          colors: product.colors || [],
-          color_names: product.color_names || [],
-          images: product.images || [],
-          color_variants: product.color_variants || [],
-        }}
-        selectedColor={selectedColor}
-      />
+      {showTryOn && (
+        <TryOnModal
+          isOpen
+          onClose={() => setShowTryOn(false)}
+          product={{
+            id: product.id,
+            name: product.name,
+            thumbnail: allImages[0] || "",
+            price: Number(product.price),
+            sale_price: product.sale_price ? Number(product.sale_price) : null,
+            colors: product.colors || [],
+            color_names: product.color_names || [],
+            images: product.images || [],
+            color_variants: product.color_variants || [],
+          }}
+          selectedColor={selectedColor}
+        />
+      )}
 
       {/* Related Products */}
       <RelatedProducts

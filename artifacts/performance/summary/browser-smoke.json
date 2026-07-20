@@ -1,0 +1,52 @@
+{
+  "generatedAt": "2026-07-18T16:50:13.346Z",
+  "baseUrl": "http://localhost:3101",
+  "browser": "Chrome/150.0.7871.127",
+  "pass": true,
+  "failures": [],
+  "results": {
+    "home": {
+      "title": "Glass Eyewear - Kính Mắt Thời Trang Cao Cấp",
+      "bodyTextLength": 3199,
+      "errorOverlay": false,
+      "newsletterCount": 1,
+      "newsletterPlaceholders": [
+        "Nhập địa chỉ email của bạn"
+      ],
+      "serviceWorkerRegistrations": 0,
+      "legacyCaches": [],
+      "consoleErrors": [],
+      "networkIdle": true,
+      "unexpectedErrors": []
+    },
+    "productDetail": {
+      "title": "Gọng kính nữ mắt mèo TR98025 siêu nhẹ – Gọng kính thời trang Hàn Quốc cao cấp | Kính Mắt MITOO | Gọng Kính Thời Trang & Tròng Kính Chính Hãng | Kính Mắt MITOO | Gọng Kính Thời Trang & Tròng Kính Chính Hãng",
+      "bodyTextLength": 4867,
+      "errorOverlay": false,
+      "newsletterCount": 1,
+      "modalVisible": true,
+      "tryOnButton": true,
+      "clicked": true,
+      "closeButtonVisible": true,
+      "activeElement": "tryon-modal__close",
+      "initialScriptCount": 19,
+      "scriptsLoadedAfterClick": [
+        "http://localhost:3101/_next/static/chunks/7372.ba2fd50d4347f049.js"
+      ],
+      "consoleErrors": [
+        "Uncaught TypeError: Converting circular structure to JSON\n    --> starting at object with constructor 'HTMLDivElement'\n    |     property '__reactFiber$qeryu1ujxr' -> object with constructor 'iw'\n    --- property 'stateNode' closes the circle\nt.exports (https://sp.zalo.me/plugins/sdk.js:2) <- value (https://sp.zalo.me/plugins/sdk.js:2) <- <anonymous> (https://sp.zalo.me/plugins/sdk.js:2)",
+        "Uncaught TypeError: Converting circular structure to JSON\n    --> starting at object with constructor 'HTMLDivElement'\n    |     property '__reactFiber$qeryu1ujxr' -> object with constructor 'iw'\n    --- property 'stateNode' closes the circle\nt.exports (https://sp.zalo.me/plugins/sdk.js:2) <- value (https://sp.zalo.me/plugins/sdk.js:2) <- <anonymous> (https://sp.zalo.me/plugins/sdk.js:2)",
+        "Console: Access to font at 'https://mitoo.vn/api/public/font-file?v=%2Ffonts%2Fcustom-font-1775581171.ttf' from origin 'http://localhost:3101' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.",
+        "Network: net::ERR_FAILED",
+        "Console: Failed to load resource: net::ERR_FAILED",
+        "Uncaught TypeError: Converting circular structure to JSON\n    --> starting at object with constructor 'HTMLDivElement'\n    |     property '__reactFiber$qeryu1ujxr' -> object with constructor 'iw'\n    --- property 'stateNode' closes the circle\nt.exports (https://sp.zalo.me/plugins/sdk.js:2) <- value (https://sp.zalo.me/plugins/sdk.js:2) <- <anonymous> (https://sp.zalo.me/plugins/sdk.js:2)",
+        "Uncaught TypeError: Converting circular structure to JSON\n    --> starting at object with constructor 'HTMLDivElement'\n    |     property '__reactFiber$qeryu1ujxr' -> object with constructor 'iw'\n    --- property 'stateNode' closes the circle\nt.exports (https://sp.zalo.me/plugins/sdk.js:2) <- value (https://sp.zalo.me/plugins/sdk.js:2) <- <anonymous> (https://sp.zalo.me/plugins/sdk.js:2)",
+        "Network: net::ERR_BLOCKED_BY_ORB",
+        "Uncaught TypeError: Converting circular structure to JSON\n    --> starting at object with constructor 'HTMLDivElement'\n    |     property '__reactFiber$qeryu1ujxr' -> object with constructor 'iw'\n    --- property 'stateNode' closes the circle\nt.exports (https://sp.zalo.me/plugins/sdk.js:2) <- value (https://sp.zalo.me/plugins/sdk.js:2) <- <anonymous> (https://sp.zalo.me/plugins/sdk.js:2)"
+      ],
+      "modalClosedWithEscape": true,
+      "networkIdleBeforeClick": false,
+      "unexpectedErrors": []
+    }
+  }
+}

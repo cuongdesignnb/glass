@@ -214,9 +214,49 @@ export default async function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `
-              if ('serviceWorker' in navigator) {
+              if ('serviceWorker' in navigator || 'caches' in window) {
                 window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js');
+                  var migrationKey = 'mitoo-sw-retirement-v1';
+                  var migrationComplete = false;
+                  try {
+                    migrationComplete = window.localStorage.getItem(migrationKey) === 'done';
+                  } catch (error) {
+                    // Storage can be blocked. The bounded cleanup below remains the fallback.
+                  }
+
+                  if (migrationComplete) return;
+
+                  var workerCleanup = 'serviceWorker' in navigator
+                    ? navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                        return Promise.all(registrations
+                          .filter(function(registration) {
+                            return [registration.installing, registration.waiting, registration.active]
+                              .filter(Boolean)
+                              .some(function(worker) {
+                                return new URL(worker.scriptURL).pathname === '/sw.js';
+                              });
+                          })
+                          .map(function(registration) { return registration.unregister(); }));
+                      })
+                    : Promise.resolve();
+
+                  var cacheCleanup = 'caches' in window
+                    ? caches.keys().then(function(cacheNames) {
+                        return Promise.all(cacheNames
+                          .filter(function(name) {
+                            return name.indexOf('glass-eyewear-') === 0 || name.indexOf('mitoo-store-') === 0;
+                          })
+                          .map(function(name) { return caches.delete(name); }));
+                      })
+                    : Promise.resolve();
+
+                  Promise.allSettled([workerCleanup, cacheCleanup]).then(function() {
+                    try {
+                      window.localStorage.setItem(migrationKey, 'done');
+                    } catch (error) {
+                      // A blocked storage API keeps the bounded cleanup as a safe fallback.
+                    }
+                  });
                 });
               }
             `,

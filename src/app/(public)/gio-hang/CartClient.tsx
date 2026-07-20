@@ -82,11 +82,11 @@ export default function CartPage() {
                   </div>
                 </div>
                 <div className="cart-item__quantity">
-                  <button onClick={() => updateQuantity(item.productId, item.color, item.quantity - 1)}>
+                  <button onClick={() => updateQuantity(item.productId, item.color, item.quantity - 1, item.addons)}>
                     <FiMinus />
                   </button>
                   <span>{item.quantity}</span>
-                  <button onClick={() => updateQuantity(item.productId, item.color, item.quantity + 1)}>
+                  <button onClick={() => updateQuantity(item.productId, item.color, item.quantity + 1, item.addons)}>
                     <FiPlus />
                   </button>
                 </div>
@@ -98,7 +98,7 @@ export default function CartPage() {
                     </div>
                   )}
                 </div>
-                <button className="cart-item__remove" onClick={() => removeItem(item.productId, item.color)}>
+                <button className="cart-item__remove" onClick={() => removeItem(item.productId, item.color, item.addons)}>
                   <FiTrash2 />
                 </button>
               </div>
