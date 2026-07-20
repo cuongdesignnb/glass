@@ -259,6 +259,7 @@
   border: 1px solid var(--color-gray-200);
   background: var(--color-white);
   color: var(--color-text);
+  text-decoration: none;
   transition: all var(--transition-fast);
 }
 
@@ -271,6 +272,12 @@
   background: var(--color-brand);
   color: var(--color-text-on-brand);
   border-color: var(--color-brand);
+}
+
+.pagination__btn--disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 /* Skeleton */

@@ -4,7 +4,9 @@ import Link from 'next/link';
 import { FiArrowRight, FiTruck, FiShield, FiRefreshCw, FiAward, FiEye, FiCamera, FiPhone, FiCircle, FiSquare, FiHeart, FiMaximize } from 'react-icons/fi';
 import { RiGlassesLine, RiSunLine, RiVipCrownLine, RiPriceTag3Line } from 'react-icons/ri';
 import { publicApi } from '@/lib/api';
-import { DynamicCategories, DynamicProducts, DynamicCollections, DynamicVouchers, DynamicHero, DynamicStats, DynamicConsultButton } from './HomeClient';
+import { getPublicSettings } from '@/lib/settings';
+import { DynamicCategories, DynamicProducts, DynamicCollections, DynamicVouchers, DynamicStats, DynamicConsultButton } from './HomeClient';
+import HomeHero from './HomeHero';
 import Newsletter from '@/components/layout/Newsletter';
 import './home.css';
 
@@ -40,7 +42,7 @@ const testimonials = [
 ];
 
 export default async function HomePage() {
-  const [categoriesRes, productsRes, collectionsRes, vouchersRes] = await Promise.all([
+  const [categoriesRes, productsRes, collectionsRes, vouchersRes, settings] = await Promise.all([
     publicApi.getCategories(false).catch(() => []),
     publicApi.getProducts({ per_page: '8', featured: '1' })
       .then(async (res) => {
@@ -55,6 +57,7 @@ export default async function HomePage() {
       .catch(() => []),
     publicApi.getCollections().catch(() => []),
     publicApi.getVouchers().catch(() => []),
+    getPublicSettings(),
   ]);
 
   const categories = Array.isArray(categoriesRes) ? categoriesRes.filter((c: any) => c.is_active !== false) : [];
@@ -64,8 +67,8 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* Hero Section (reads from admin settings) */}
-      <DynamicHero />
+      {/* Critical hero copy and settings are emitted in the server response. */}
+      <HomeHero settings={settings} />
 
       {/* Trust Badges */}
       <section className="trust-badges">

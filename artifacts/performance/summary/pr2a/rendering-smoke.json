@@ -1,0 +1,50 @@
+{
+  "generatedAt": "2026-07-19T02:13:50.908Z",
+  "baseUrl": "http://127.0.0.1:3102",
+  "browser": "Chrome/150.0.7871.127",
+  "pass": true,
+  "failures": [],
+  "results": {
+    "home": {
+      "title": "Gọng Kính Thời Trang & Tròng Kính Chính Hãng",
+      "description": "Khám phá bộ sưu tập kính mắt cao cấp với công nghệ AI thử kính ảo. Tìm kiếm chiếc kính hoàn hảo cho phong cách riêng của bạn.",
+      "errorOverlay": false,
+      "zaloPlaceholder": true,
+      "layoutShift": 0.0005197692816422212,
+      "zaloSdkRequestsBeforeIntent": 0,
+      "errors": []
+    },
+    "productsInitial": {
+      "cards": 12,
+      "skeletons": 0,
+      "firstImagePriority": "high",
+      "sort": "newest"
+    },
+    "productsFilterNavigation": true,
+    "productsBackNavigation": true,
+    "productsAfterBack": {
+      "cards": 12,
+      "sort": "newest"
+    },
+    "articlesInitial": {
+      "cards": 5,
+      "categories": 7,
+      "skeletons": 0,
+      "featuredPriority": "high"
+    },
+    "articlesCategoryNavigation": true,
+    "articlesBackNavigation": true,
+    "noScriptHome": {
+      "title": "Gọng Kính Thời Trang & Tròng Kính Chính Hãng",
+      "description": "Khám phá bộ sưu tập kính mắt cao cấp với công nghệ AI thử kính ảo. Tìm kiếm chiếc kính hoàn hảo cho phong cách riêng của bạn."
+    },
+    "noScriptProducts": {
+      "cards": 12,
+      "skeletons": 0
+    },
+    "noScriptArticles": {
+      "cards": 5,
+      "categories": 7
+    }
+  }
+}

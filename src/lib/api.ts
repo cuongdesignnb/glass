@@ -79,15 +79,15 @@ export const publicApi = {
 
   // Articles
   getArticles: (params?: Record<string, string>) => {
-    const query = params ? "?" + new URLSearchParams(params).toString() : "";
-    return fetchApi(`/public/articles${query}&published_only=1`);
+    const query = new URLSearchParams({ ...(params || {}), published_only: "1" });
+    return fetchApi(`/public/articles?${query.toString()}`);
   },
   getArticle: (slug: string) => fetchApi(`/public/articles/${slug}`),
 
   // Article Categories
   getArticleCategories: (params?: Record<string, string>) => {
-    const query = params ? "?" + new URLSearchParams(params).toString() : "";
-    return fetchApi(`/public/article-categories${query}&active_only=1`);
+    const query = new URLSearchParams({ ...(params || {}), active_only: "1" });
+    return fetchApi(`/public/article-categories?${query.toString()}`);
   },
 
   // Pages
