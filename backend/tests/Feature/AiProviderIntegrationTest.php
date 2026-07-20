@@ -174,6 +174,9 @@ class AiProviderIntegrationTest extends TestCase
         $response = (new AiController)->generateContent(Request::create('/ai/content', 'POST', [
             'topic' => 'Bai viet day du',
             'full_article' => true,
+            'keywords' => null,
+            'tone' => null,
+            'length' => null,
         ]));
 
         $payload = $response->getData(true);
@@ -229,6 +232,10 @@ class AiProviderIntegrationTest extends TestCase
         $response = (new AiController)->generateContentWithImages(Request::create('/ai/content-with-images', 'POST', [
             'topic' => 'Kinh mat co anh',
             'image_count' => 1,
+            'keywords' => null,
+            'tone' => null,
+            'length' => null,
+            'category_id' => null,
         ]));
 
         $payload = $response->getData(true);

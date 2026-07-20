@@ -303,10 +303,10 @@ Generate ONE realistic photo of this person wearing these exact glasses.
 
         $fullArticle = $request->boolean('full_article', false);
 
-        $type = $request->get('type', 'article');
-        $tone = $request->get('tone', 'professional');
-        $length = $request->get('length', 'medium');
-        $keywords = $request->get('keywords', '');
+        $type = (string) ($request->input('type') ?? 'article');
+        $tone = (string) ($request->input('tone') ?? 'professional');
+        $length = (string) ($request->input('length') ?? 'medium');
+        $keywords = (string) ($request->input('keywords') ?? '');
 
         $lengthGuide = match($length) {
             'short' => '500-800 từ',
@@ -315,7 +315,8 @@ Generate ONE realistic photo of this person wearing these exact glasses.
         };
 
         // Build random SEO anchor opportunities from articles and products.
-        $categoryId = $request->get('category_id');
+        $categoryIdValue = $request->input('category_id');
+        $categoryId = $categoryIdValue === null ? null : (int) $categoryIdValue;
         $linkInstruction = $this->buildSeoAnchorInstruction($categoryId, $length, $request->topic, $keywords);
 
         if ($fullArticle) {
@@ -475,10 +476,10 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
 
         $fullArticle = $request->boolean('full_article', false);
 
-        $type = $request->get('type', 'article');
-        $tone = $request->get('tone', 'professional');
-        $length = $request->get('length', 'medium');
-        $keywords = $request->get('keywords', '');
+        $type = (string) ($request->input('type') ?? 'article');
+        $tone = (string) ($request->input('tone') ?? 'professional');
+        $length = (string) ($request->input('length') ?? 'medium');
+        $keywords = (string) ($request->input('keywords') ?? '');
 
         $lengthGuide = match ($length) {
             'short' => '500-800 tu',
@@ -486,7 +487,8 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             default => '1000-1500 tu',
         };
 
-        $categoryId = $request->get('category_id');
+        $categoryIdValue = $request->input('category_id');
+        $categoryId = $categoryIdValue === null ? null : (int) $categoryIdValue;
         $linkInstruction = $this->buildSeoAnchorInstruction($categoryId, $length, $request->topic, $keywords);
 
         if ($fullArticle) {
