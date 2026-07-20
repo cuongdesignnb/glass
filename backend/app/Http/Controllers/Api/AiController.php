@@ -353,26 +353,18 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             : "Viết nội dung về chủ đề: {$request->topic}" . ($keywords ? "\nTừ khóa cần tích hợp: {$keywords}" : "");
 
         try {
-            $requestBody = [
-                'model' => $openAiConfig['model'],
-                'instructions' => $systemPrompt,
-                'input' => $userPrompt,
-                'reasoning' => [
-                    'effort' => $openAiConfig['reasoning_effort'],
-                ],
-                'max_output_tokens' => $openAiConfig['max_tokens'],
-                'store' => false,
-            ];
-
-            if ($fullArticle) {
-                $requestBody['text'] = ['format' => ['type' => 'json_object']];
-            }
+            [$contentEndpoint, $requestBody] = $this->buildProviderContentRequest(
+                $openAiConfig,
+                $systemPrompt,
+                $userPrompt,
+                $fullArticle
+            );
 
             $response = Http::timeout(180)
                 ->withToken($apiKey)
                 ->acceptJson()
                 ->asJson()
-                ->post($openAiConfig['base_url'] . '/responses', $requestBody);
+                ->post($contentEndpoint, $requestBody);
 
             $result = $response->json() ?: [];
 
@@ -380,7 +372,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                 return $this->providerFailureResponse($response, $result, 'AI provider API error');
             }
 
-            $rawContent = $this->extractResponsesText($result);
+            $rawContent = $this->extractProviderText($result);
             if ($rawContent === '') {
                 return $this->providerFailureResponse(
                     $response,
@@ -524,26 +516,18 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             : "Viet noi dung ve chu de: {$request->topic}" . ($keywords ? "\nTu khoa can tich hop: {$keywords}" : '');
 
         try {
-            $requestBody = [
-                'model' => $openAiConfig['model'],
-                'instructions' => $systemPrompt,
-                'input' => $userPrompt,
-                'reasoning' => [
-                    'effort' => $openAiConfig['reasoning_effort'],
-                ],
-                'max_output_tokens' => $openAiConfig['max_tokens'],
-                'store' => false,
-            ];
-
-            if ($fullArticle) {
-                $requestBody['text'] = ['format' => ['type' => 'json_object']];
-            }
+            [$contentEndpoint, $requestBody] = $this->buildProviderContentRequest(
+                $openAiConfig,
+                $systemPrompt,
+                $userPrompt,
+                $fullArticle
+            );
 
             $response = Http::timeout(180)
                 ->withToken($openaiKey)
                 ->acceptJson()
                 ->asJson()
-                ->post($openAiConfig['base_url'] . '/responses', $requestBody);
+                ->post($contentEndpoint, $requestBody);
 
             $result = $response->json() ?: [];
 
@@ -551,7 +535,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                 return $this->providerFailureResponse($response, $result, 'AI provider API error');
             }
 
-            $rawContent = $this->extractResponsesText($result);
+            $rawContent = $this->extractProviderText($result);
             if ($rawContent === '') {
                 return $this->providerFailureResponse(
                     $response,
@@ -689,7 +673,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
         $reasoningEffort = strtolower($this->resolveOpenAiSetting(
             'openai_reasoning_effort',
             'reasoning_effort',
-            'xhigh'
+            'high'
         ));
         if (!in_array($reasoningEffort, ['none', 'low', 'medium', 'high', 'xhigh', 'max'], true)) {
             throw new \InvalidArgumentException('OpenAI reasoning effort khong hop le.');
@@ -700,10 +684,20 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             throw new \InvalidArgumentException('OpenAI max output tokens phai nam trong khoang 1-128000.');
         }
 
+        $wireApi = strtolower($this->resolveOpenAiSetting(
+            'openai_wire_api',
+            'wire_api',
+            'chat_completions'
+        ));
+        if (!in_array($wireApi, ['chat_completions', 'responses'], true)) {
+            throw new \InvalidArgumentException('OpenAI wire API khong hop le.');
+        }
+
         return [
             'api_key' => $this->resolveOpenAiSetting('openai_api_key', 'api_key', ''),
             'base_url' => $baseUrl,
-            'model' => $this->resolveOpenAiSetting('openai_model', 'model', 'gpt-5.6-sol'),
+            'wire_api' => $wireApi,
+            'model' => $this->resolveOpenAiSetting('openai_model', 'model', 'gpt-5.5'),
             'reasoning_effort' => $reasoningEffort,
             'max_tokens' => $maxTokens,
             'image_model' => $this->resolveOpenAiSetting('openai_image_model', 'image_model', 'gpt-image-2'),
@@ -722,7 +716,45 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
         return $configValue !== '' ? $configValue : $default;
     }
 
-    private function extractResponsesText(array $result): string
+    private function buildProviderContentRequest(
+        array $openAiConfig,
+        string $systemPrompt,
+        string $userPrompt,
+        bool $fullArticle
+    ): array {
+        if ($openAiConfig['wire_api'] === 'chat_completions') {
+            return [
+                $openAiConfig['base_url'] . '/chat/completions',
+                [
+                    'model' => $openAiConfig['model'],
+                    'messages' => [
+                        ['role' => 'system', 'content' => $systemPrompt],
+                        ['role' => 'user', 'content' => $userPrompt],
+                    ],
+                    'max_tokens' => $openAiConfig['max_tokens'],
+                ],
+            ];
+        }
+
+        $requestBody = [
+            'model' => $openAiConfig['model'],
+            'instructions' => $systemPrompt,
+            'input' => $userPrompt,
+            'reasoning' => [
+                'effort' => $openAiConfig['reasoning_effort'],
+            ],
+            'max_output_tokens' => $openAiConfig['max_tokens'],
+            'store' => false,
+        ];
+
+        if ($fullArticle) {
+            $requestBody['text'] = ['format' => ['type' => 'json_object']];
+        }
+
+        return [$openAiConfig['base_url'] . '/responses', $requestBody];
+    }
+
+    private function extractProviderText(array $result): string
     {
         if (isset($result['output_text']) && is_string($result['output_text'])) {
             return trim($result['output_text']);

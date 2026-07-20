@@ -71,8 +71,9 @@ class AiProviderIntegrationTest extends TestCase
         config()->set('services.openai', [
             'api_key' => '',
             'base_url' => 'https://modelapi.vn/v1',
-            'model' => 'gpt-5.6-sol',
-            'reasoning_effort' => 'xhigh',
+            'wire_api' => 'chat_completions',
+            'model' => 'gpt-5.5',
+            'reasoning_effort' => 'high',
             'max_tokens' => 4096,
             'image_model' => 'gpt-image-2',
             'image_quality' => 'medium',
@@ -92,21 +93,19 @@ class AiProviderIntegrationTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_only_api_key_is_required_for_default_responses_request(): void
+    public function test_only_api_key_is_required_for_default_chat_completions_request(): void
     {
         Setting::setValue('openai_api_key', 'test-provider-key', 'api');
 
         Http::fake([
-            'https://modelapi.vn/v1/responses' => Http::response([
-                'status' => 'completed',
-                'output' => [[
-                    'type' => 'message',
-                    'content' => [[
-                        'type' => 'output_text',
-                        'text' => '<h2>Noi dung thu nghiem</h2><p>Thanh cong.</p>',
-                    ]],
+            'https://modelapi.vn/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => '<h2>Noi dung thu nghiem</h2><p>Thanh cong.</p>',
+                    ],
                 ]],
-                'usage' => ['input_tokens' => 100, 'output_tokens' => 40],
+                'usage' => ['prompt_tokens' => 100, 'completion_tokens' => 40],
             ]),
         ]);
 
@@ -121,13 +120,13 @@ class AiProviderIntegrationTest extends TestCase
         $this->assertStringContainsString('Noi dung thu nghiem', $payload['content']);
 
         Http::assertSent(function (HttpRequest $request) {
-            return $request->url() === 'https://modelapi.vn/v1/responses'
+            return $request->url() === 'https://modelapi.vn/v1/chat/completions'
                 && $request->hasHeader('Authorization', 'Bearer test-provider-key')
-                && $request['model'] === 'gpt-5.6-sol'
-                && $request['reasoning']['effort'] === 'xhigh'
-                && $request['max_output_tokens'] === 4096
-                && $request['store'] === false
-                && isset($request['instructions'], $request['input']);
+                && $request['model'] === 'gpt-5.5'
+                && $request['max_tokens'] === 4096
+                && $request['messages'][0]['role'] === 'system'
+                && $request['messages'][1]['role'] === 'user'
+                && !isset($request['reasoning'], $request['store'], $request['instructions']);
         });
     }
 
@@ -136,6 +135,7 @@ class AiProviderIntegrationTest extends TestCase
         config()->set('services.openai', [
             'api_key' => 'env-key',
             'base_url' => 'https://env-provider.example/v1',
+            'wire_api' => 'chat_completions',
             'model' => 'env-model',
             'reasoning_effort' => 'medium',
             'max_tokens' => 2048,
@@ -146,6 +146,7 @@ class AiProviderIntegrationTest extends TestCase
         foreach ([
             'openai_api_key' => 'database-key',
             'openai_base_url' => 'https://database-provider.example/v1/',
+            'openai_wire_api' => 'responses',
             'openai_model' => 'database-model',
             'openai_reasoning_effort' => 'high',
             'openai_max_tokens' => '8192',
@@ -198,6 +199,7 @@ class AiProviderIntegrationTest extends TestCase
     public function test_chat_completions_shaped_gateway_response_is_supported(): void
     {
         Setting::setValue('openai_api_key', 'test-key', 'api');
+        Setting::setValue('openai_wire_api', 'responses', 'api');
 
         Http::fake([
             'https://modelapi.vn/v1/responses' => Http::response([
@@ -224,7 +226,7 @@ class AiProviderIntegrationTest extends TestCase
         Setting::setValue('openai_api_key', 'test-key', 'api');
 
         Http::fake([
-            'https://modelapi.vn/v1/responses' => Http::response([
+            'https://modelapi.vn/v1/chat/completions' => Http::response([
                 'error' => ['message' => 'Model is not available'],
             ], 502),
         ]);
@@ -258,7 +260,7 @@ class AiProviderIntegrationTest extends TestCase
         Setting::setValue('openai_api_key', 'test-key', 'api');
 
         Http::fake(function (HttpRequest $request) {
-            if ($request->url() === 'https://modelapi.vn/v1/responses') {
+            if ($request->url() === 'https://modelapi.vn/v1/chat/completions') {
                 return Http::response([
                     'status' => 'completed',
                     'output_text' => '<h2>Gong kinh</h2><p>Noi dung bai viet.</p>',
@@ -299,7 +301,7 @@ class AiProviderIntegrationTest extends TestCase
         $png = $this->tinyPng();
 
         Http::fake(function (HttpRequest $request) use ($png) {
-            if ($request->url() === 'https://modelapi.vn/v1/responses') {
+            if ($request->url() === 'https://modelapi.vn/v1/chat/completions') {
                 return Http::response(['status' => 'completed', 'output_text' => '<h2>Base64</h2><p>Test.</p>']);
             }
 
@@ -328,7 +330,7 @@ class AiProviderIntegrationTest extends TestCase
         $png = $this->tinyPng();
 
         Http::fake(function (HttpRequest $request) use ($png) {
-            if ($request->url() === 'https://modelapi.vn/v1/responses') {
+            if ($request->url() === 'https://modelapi.vn/v1/chat/completions') {
                 return Http::response(['status' => 'completed', 'output_text' => '<h2>URL</h2><p>Test.</p>']);
             }
 

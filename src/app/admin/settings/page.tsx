@@ -483,16 +483,22 @@ export default function AdminSettingsPage() {
         hint: "Để trống sẽ dùng https://modelapi.vn/v1. Chỉ chấp nhận địa chỉ HTTPS.",
       },
       {
+        key: "openai_wire_api",
+        label: "Wire API",
+        placeholder: "chat_completions",
+        hint: "modelapi.vn dùng chat_completions. Chỉ chọn responses khi nhà cung cấp hỗ trợ Responses API.",
+      },
+      {
         key: "openai_model",
         label: "Model sinh nội dung",
-        placeholder: "gpt-5.6-sol",
-        hint: "Để trống sẽ dùng gpt-5.6-sol.",
+        placeholder: "gpt-5.5",
+        hint: "Để trống sẽ dùng gpt-5.5, model có endpoint openai trên modelapi.vn.",
       },
       {
         key: "openai_reasoning_effort",
         label: "Reasoning Effort",
-        placeholder: "xhigh",
-        hint: "Các giá trị hợp lệ: none, low, medium, high, xhigh, max. Mặc định: xhigh.",
+        placeholder: "high",
+        hint: "Dùng cho Responses API: none, low, medium, high, xhigh, max. Chat Completions để gateway tự quyết định. Mặc định: high.",
       },
       {
         key: "openai_max_tokens",

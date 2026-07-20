@@ -37,8 +37,9 @@ return [
     'openai' => [
         'api_key'          => env('OPENAI_API_KEY', ''),
         'base_url'         => env('OPENAI_BASE_URL', 'https://modelapi.vn/v1'),
-        'model'            => env('OPENAI_MODEL', 'gpt-5.6-sol'),
-        'reasoning_effort' => env('OPENAI_REASONING_EFFORT', 'xhigh'),
+        'wire_api'         => env('OPENAI_WIRE_API', 'chat_completions'),
+        'model'            => env('OPENAI_MODEL', 'gpt-5.5'),
+        'reasoning_effort' => env('OPENAI_REASONING_EFFORT', 'high'),
         'max_tokens'       => (int) env('OPENAI_MAX_TOKENS', 4096),
         'image_model'      => env('OPENAI_IMAGE_MODEL', 'gpt-image-2'),
         'image_quality'    => env('OPENAI_IMAGE_QUALITY', 'medium'),

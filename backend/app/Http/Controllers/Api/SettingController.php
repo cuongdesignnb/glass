@@ -150,6 +150,14 @@ class SettingController extends Controller
             ]);
         }
 
+        if ($key === 'openai_wire_api'
+            && !in_array($value, ['chat_completions', 'responses'], true)
+        ) {
+            throw ValidationException::withMessages([
+                'settings' => ['Wire API phai la chat_completions hoac responses.'],
+            ]);
+        }
+
         if ($key === 'openai_max_tokens'
             && (!ctype_digit($value) || (int) $value < 1 || (int) $value > 128000)
         ) {
