@@ -131,7 +131,7 @@ class SettingController extends Controller
             return;
         }
 
-        if ($key === 'openai_base_url') {
+        if (in_array($key, ['openai_base_url', 'openai_image_base_url'], true)) {
             $scheme = strtolower((string) parse_url($value, PHP_URL_SCHEME));
             $host = parse_url($value, PHP_URL_HOST);
 
@@ -163,6 +163,14 @@ class SettingController extends Controller
         ) {
             throw ValidationException::withMessages([
                 'settings' => ['Max output tokens phai nam trong khoang 1-128000.'],
+            ]);
+        }
+
+        if ($key === 'openai_image_quality'
+            && !in_array($value, ['low', 'medium', 'high', 'auto'], true)
+        ) {
+            throw ValidationException::withMessages([
+                'settings' => ['OpenAI image quality khong hop le.'],
             ]);
         }
     }

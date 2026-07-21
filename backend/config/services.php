@@ -41,6 +41,8 @@ return [
         'model'            => env('OPENAI_MODEL', 'gpt-5.5'),
         'reasoning_effort' => env('OPENAI_REASONING_EFFORT', 'high'),
         'max_tokens'       => (int) env('OPENAI_MAX_TOKENS', 4096),
+        'image_api_key'    => env('OPENAI_IMAGE_API_KEY', ''),
+        'image_base_url'   => env('OPENAI_IMAGE_BASE_URL', 'https://api.openai.com/v1'),
         'image_model'      => env('OPENAI_IMAGE_MODEL', 'gpt-image-2'),
         'image_quality'    => env('OPENAI_IMAGE_QUALITY', 'medium'),
     ],

@@ -445,6 +445,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
 
         try {
             $openAiConfig = $this->resolveOpenAiConfig();
+            $openAiImageConfig = $this->resolveOpenAiImageConfig();
         } catch (\InvalidArgumentException $e) {
             return response()->json(['error' => $e->getMessage()], 422);
         }
@@ -452,20 +453,25 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
         $openaiKey = $openAiConfig['api_key'];
         if (!$openaiKey || trim($openaiKey) === '') {
             return response()->json([
-                'error' => 'OpenAI API key chua duoc cau hinh. AI dang bai can OpenAI de sinh noi dung va hinh anh.'
+                'error' => 'AI provider API key chua duoc cau hinh de sinh noi dung.'
             ], 500);
         }
 
-        $openaiImageModel = $openAiConfig['image_model'];
-        $openaiImageQuality = $openAiConfig['image_quality'];
+        $openaiImageKey = $openAiImageConfig['api_key'];
+        $openaiImageModel = $openAiImageConfig['model'];
+        $openaiImageQuality = $openAiImageConfig['quality'];
         $imageCount = max(0, min((int) $request->get('image_count', 2), 10));
 
+        if ($openaiImageKey === '') {
+            $warnings[] = 'OpenAI Image API key chinh hang chua duoc cau hinh. Bai viet van duoc tao nhung bo qua sinh anh.';
+        }
+
         \Log::info('AI Article Image Config', [
-            'provider_host' => parse_url($openAiConfig['base_url'], PHP_URL_HOST),
+            'provider_host' => parse_url($openAiImageConfig['base_url'], PHP_URL_HOST),
             'image_model' => $openaiImageModel,
             'image_quality' => $openaiImageQuality,
             'image_count' => $imageCount,
-            'has_openai_key' => !empty($openaiKey),
+            'has_openai_image_key' => $openaiImageKey !== '',
         ]);
 
         $fullArticle = $request->boolean('full_article', false);
@@ -571,21 +577,26 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             }
 
             $titleForImage = $h1Heading['text'] ?? $articleMeta['title'] ?? $request->topic;
-            $thumbnailUrl = $this->generateAndSaveImageOpenAI(
-                apiKey: $openaiKey,
-                baseUrl: $openAiConfig['base_url'],
-                preferredModel: $openaiImageModel,
-                imageQuality: $openaiImageQuality,
-                description: $this->buildArticleImagePrompt($titleForImage, $titleForImage, 'thumbnail', 'h1'),
-                slug: \Illuminate\Support\Str::slug($titleForImage . '-thumbnail') ?: 'ai-thumbnail',
-                idx: 0,
-                warnings: $warnings
-            );
+            $thumbnailUrl = null;
+            if ($openaiImageKey !== '') {
+                $thumbnailUrl = $this->generateAndSaveImageOpenAI(
+                    apiKey: $openaiImageKey,
+                    baseUrl: $openAiImageConfig['base_url'],
+                    preferredModel: $openaiImageModel,
+                    imageQuality: $openaiImageQuality,
+                    description: $this->buildArticleImagePrompt($titleForImage, $titleForImage, 'thumbnail', 'h1'),
+                    slug: \Illuminate\Support\Str::slug($titleForImage . '-thumbnail') ?: 'ai-thumbnail',
+                    idx: 0,
+                    warnings: $warnings
+                );
+            }
 
             $generatedImages = [];
-            $selectedHeadings = $this->selectHeadingsForImages($headings, $imageCount);
+            $selectedHeadings = $openaiImageKey !== ''
+                ? $this->selectHeadingsForImages($headings, $imageCount)
+                : [];
 
-            if ($imageCount > 0 && empty($selectedHeadings)) {
+            if ($openaiImageKey !== '' && $imageCount > 0 && empty($selectedHeadings)) {
                 $warnings[] = 'Khong tim thay H1/H2/H3 phu hop de chen hinh anh inline.';
                 \Log::warning('AI Images: No H1/H2/H3 headings found for inline images');
             }
@@ -594,8 +605,8 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                 $headingText = $heading['text'];
                 $headingTag = $heading['tag'];
                 $imageUrl = $this->generateAndSaveImageOpenAI(
-                    apiKey: $openaiKey,
-                    baseUrl: $openAiConfig['base_url'],
+                    apiKey: $openaiImageKey,
+                    baseUrl: $openAiImageConfig['base_url'],
                     preferredModel: $openaiImageModel,
                     imageQuality: $openaiImageQuality,
                     description: $this->buildArticleImagePrompt($headingText, $titleForImage, 'inline', $headingTag),
@@ -700,8 +711,37 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             'model' => $this->resolveOpenAiSetting('openai_model', 'model', 'gpt-5.5'),
             'reasoning_effort' => $reasoningEffort,
             'max_tokens' => $maxTokens,
-            'image_model' => $this->resolveOpenAiSetting('openai_image_model', 'image_model', 'gpt-image-2'),
-            'image_quality' => $this->resolveOpenAiSetting('openai_image_quality', 'image_quality', 'medium'),
+        ];
+    }
+
+    private function resolveOpenAiImageConfig(): array
+    {
+        $baseUrl = rtrim($this->resolveOpenAiSetting(
+            'openai_image_base_url',
+            'image_base_url',
+            'https://api.openai.com/v1'
+        ), '/');
+
+        $scheme = strtolower((string) parse_url($baseUrl, PHP_URL_SCHEME));
+        $host = parse_url($baseUrl, PHP_URL_HOST);
+        if (!filter_var($baseUrl, FILTER_VALIDATE_URL) || $scheme !== 'https' || !$host) {
+            throw new \InvalidArgumentException('OpenAI Image Base URL phai la dia chi HTTPS hop le.');
+        }
+
+        $quality = strtolower($this->resolveOpenAiSetting(
+            'openai_image_quality',
+            'image_quality',
+            'medium'
+        ));
+        if (!in_array($quality, ['low', 'medium', 'high', 'auto'], true)) {
+            throw new \InvalidArgumentException('OpenAI image quality khong hop le.');
+        }
+
+        return [
+            'api_key' => $this->resolveOpenAiSetting('openai_image_api_key', 'image_api_key', ''),
+            'base_url' => $baseUrl,
+            'model' => $this->resolveOpenAiSetting('openai_image_model', 'image_model', 'gpt-image-2'),
+            'quality' => $quality,
         ];
     }
 
@@ -1002,12 +1042,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
         array &$warnings = []
     ): ?string
     {
-        $modelsToTry = array_values(array_unique(array_filter([
-            $preferredModel,
-            'gpt-image-2',
-            'gpt-image-1',
-            'dall-e-3',
-        ])));
+        $modelsToTry = [$preferredModel];
 
         foreach ($modelsToTry as $model) {
             try {

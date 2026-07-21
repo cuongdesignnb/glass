@@ -474,7 +474,7 @@ export default function AdminSettingsPage() {
         placeholder: "Dán API key của modelapi.vn",
         isPassword: true,
         section: "AI Provider - AI đăng bài",
-        hint: "Dùng chung cho sinh nội dung, thumbnail và ảnh inline. API key được che khi nhập.",
+        hint: "Chỉ dùng để sinh nội dung bài viết qua modelapi.vn. API key được che khi nhập.",
       },
       {
         key: "openai_base_url",
@@ -510,13 +510,27 @@ export default function AdminSettingsPage() {
         key: "image_generator",
         label: "Legacy Image Generator",
         placeholder: "legacy",
-        hint: "Legacy - khong con dung cho AI dang bai. Article AI images always use OpenAI.",
+        hint: "Legacy - không còn dùng cho AI đăng bài.",
+      },
+      {
+        key: "openai_image_api_key",
+        label: "OpenAI Image API Key",
+        placeholder: "sk-...",
+        isPassword: true,
+        section: "OpenAI chính hãng - sinh ảnh bài viết",
+        hint: "API key OpenAI chính hãng, chỉ dùng để sinh thumbnail và ảnh trong bài. Không dùng key modelapi.vn tại đây.",
+      },
+      {
+        key: "openai_image_base_url",
+        label: "OpenAI Image Base URL",
+        placeholder: "https://api.openai.com/v1",
+        hint: "Để trống sẽ gọi trực tiếp OpenAI chính hãng tại https://api.openai.com/v1.",
       },
       {
         key: "openai_image_model",
         label: "Model sinh ảnh",
         placeholder: "gpt-image-2",
-        hint: "Tên model ảnh mà AI Provider hỗ trợ. Mặc định: gpt-image-2.",
+        hint: "Model ảnh OpenAI chính hãng. Mặc định: gpt-image-2.",
       },
       {
         key: "openai_image_quality",

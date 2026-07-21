@@ -75,6 +75,8 @@ class AiProviderIntegrationTest extends TestCase
             'model' => 'gpt-5.5',
             'reasoning_effort' => 'high',
             'max_tokens' => 4096,
+            'image_api_key' => 'official-image-key',
+            'image_base_url' => 'https://api.openai.com/v1',
             'image_model' => 'gpt-image-2',
             'image_quality' => 'medium',
         ]);
@@ -255,7 +257,7 @@ class AiProviderIntegrationTest extends TestCase
         Http::assertNothingSent();
     }
 
-    public function test_image_requests_use_the_custom_base_url_and_failures_remain_warnings(): void
+    public function test_image_requests_use_separate_official_openai_configuration_and_failures_remain_warnings(): void
     {
         Setting::setValue('openai_api_key', 'test-key', 'api');
 
@@ -268,7 +270,7 @@ class AiProviderIntegrationTest extends TestCase
                 ]);
             }
 
-            if ($request->url() === 'https://modelapi.vn/v1/images/generations') {
+            if ($request->url() === 'https://api.openai.com/v1/images/generations') {
                 return Http::response(['error' => ['message' => 'Image model unavailable']], 503);
             }
 
@@ -291,8 +293,46 @@ class AiProviderIntegrationTest extends TestCase
         $this->assertNotEmpty($payload['warnings']);
         $this->assertNull($payload['thumbnail']);
 
-        Http::assertSent(fn (HttpRequest $request) => $request->url() === 'https://modelapi.vn/v1/images/generations');
-        Http::assertNotSent(fn (HttpRequest $request) => str_contains($request->url(), 'api.openai.com'));
+        Http::assertSent(function (HttpRequest $request) {
+            return $request->url() === 'https://api.openai.com/v1/images/generations'
+                && $request->hasHeader('Authorization', 'Bearer official-image-key')
+                && $request['model'] === 'gpt-image-2';
+        });
+        Http::assertNotSent(function (HttpRequest $request) {
+            return str_contains($request->url(), 'modelapi.vn/v1/images/generations')
+                || ($request->hasHeader('Authorization', 'Bearer test-key')
+                    && str_contains($request->url(), '/images/generations'));
+        });
+    }
+
+    public function test_missing_official_image_key_skips_images_but_keeps_generated_article(): void
+    {
+        Setting::setValue('openai_api_key', 'test-key', 'api');
+        config()->set('services.openai.image_api_key', '');
+
+        Http::fake([
+            'https://modelapi.vn/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => '<h2>Noi dung khong anh</h2><p>Thanh cong.</p>',
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $response = (new AiController)->generateContentWithImages(Request::create('/ai/content-with-images', 'POST', [
+            'topic' => 'Khong co image key',
+            'image_count' => 1,
+        ]));
+
+        $payload = $response->getData(true);
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertTrue($payload['success']);
+        $this->assertNull($payload['thumbnail']);
+        $this->assertNotEmpty($payload['warnings']);
+        $this->assertStringContainsString('API key', $payload['warnings'][0]);
+        Http::assertNotSent(fn (HttpRequest $request) => str_contains($request->url(), '/images/generations'));
     }
 
     public function test_image_generation_accepts_base64_results(): void
@@ -305,7 +345,7 @@ class AiProviderIntegrationTest extends TestCase
                 return Http::response(['status' => 'completed', 'output_text' => '<h2>Base64</h2><p>Test.</p>']);
             }
 
-            if ($request->url() === 'https://modelapi.vn/v1/images/generations') {
+            if ($request->url() === 'https://api.openai.com/v1/images/generations') {
                 return Http::response(['data' => [['b64_json' => base64_encode($png)]]]);
             }
 
@@ -334,7 +374,7 @@ class AiProviderIntegrationTest extends TestCase
                 return Http::response(['status' => 'completed', 'output_text' => '<h2>URL</h2><p>Test.</p>']);
             }
 
-            if ($request->url() === 'https://modelapi.vn/v1/images/generations') {
+            if ($request->url() === 'https://api.openai.com/v1/images/generations') {
                 return Http::response(['data' => [['url' => 'https://cdn.example/generated.png']]]);
             }
 
