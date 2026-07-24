@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - perf/baseline-and-quick-wins
+      - perf/ssr-rendering-and-cls
   workflow_dispatch:
 
 permissions:
