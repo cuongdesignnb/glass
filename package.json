@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:performance": "node --test --experimental-strip-types tests/performance-quick-wins.test.ts",
+    "test:performance": "node --test --experimental-strip-types tests/*.test.ts",
     "perf:http": "node scripts/perf/curl-matrix.mjs",
     "perf:lighthouse": "node scripts/perf/lighthouse-matrix.mjs",
     "perf:summarize": "node scripts/perf/summarize-lighthouse.mjs",
