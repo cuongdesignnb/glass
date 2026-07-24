@@ -7,11 +7,13 @@ const read = (path: string) => readFileSync(path, 'utf8');
 test('homepage collections use only managed records and real collection routes', () => {
   const homepage = read('src/app/(public)/page.tsx');
   const component = read('src/app/(public)/HomeCollections.tsx');
+  const legacyHomeClient = read('src/app/(public)/HomeClient.tsx');
 
   assert.match(homepage, /publicApi\.getCollections\(\)/);
   assert.match(homepage, /<HomeCollections/);
   assert.doesNotMatch(homepage, /<DynamicCollections/);
   assert.doesNotMatch(component, /DEFAULT_COLLECTIONS|Thanh Lịch|Năng Động|\?style=/);
+  assert.doesNotMatch(legacyHomeClient, /DEFAULT_COLLECTIONS|DynamicCollections|Thanh Lịch|Năng Động|\?style=/);
   assert.match(component, /\/bo-suu-tap\/\$\{encodeURIComponent\(collection\.slug\)\}/);
   assert.match(component, /collections\.length === 0/);
   assert.doesNotMatch(component, /publicApi\.getCollections|useEffect/);
