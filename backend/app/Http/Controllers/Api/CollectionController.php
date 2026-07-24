@@ -9,42 +9,68 @@ use Illuminate\Http\Request;
 
 class CollectionController extends Controller
 {
-    /**
-     * Public: Get active collections (ordered) with product count
-     */
+    private function isAdmin(): bool
+    {
+        $user = auth('sanctum')->user();
+        return $user !== null && $user->isAdmin();
+    }
+
+    private function requireAdmin(): void
+    {
+        abort_unless($this->isAdmin(), 403, 'Không có quyền quản lý bộ sưu tập');
+    }
+
     public function index(Request $request)
     {
-        $query = Collection::withCount('products')->orderBy('order');
+        $includeAll = $this->isAdmin() && $request->boolean('all', false);
 
-        // Public call: only active
-        if (!$request->boolean('all', false)) {
+        $query = Collection::withCount(['products' => function ($q) use ($includeAll) {
+            if (!$includeAll) {
+                $q->where('products.is_active', true);
+            }
+        }])->orderBy('order');
+
+        if (!$includeAll) {
             $query->where('is_active', true);
         }
 
         return response()->json($query->get());
     }
 
-    /**
-     * Get single collection by slug or id — includes products
-     */
     public function show(string $slugOrId)
     {
-        $collection = Collection::with(['products' => function ($q) {
-                $q->where('is_active', true)->orderByPivot('order');
+        $isAdmin = $this->isAdmin();
+
+        $query = Collection::with(['products' => function ($q) use ($isAdmin) {
+                if (!$isAdmin) {
+                    $q->where('products.is_active', true);
+                }
+                $q->with('category')->orderByPivot('order');
             }])
-            ->withCount('products')
-            ->where('slug', $slugOrId)
-            ->orWhere('id', is_numeric($slugOrId) ? $slugOrId : 0)
+            ->withCount(['products' => function ($q) use ($isAdmin) {
+                if (!$isAdmin) {
+                    $q->where('products.is_active', true);
+                }
+            }]);
+
+        if (!$isAdmin) {
+            $query->where('is_active', true);
+        }
+
+        $collection = $query
+            ->where(function ($q) use ($slugOrId) {
+                $q->where('slug', $slugOrId)
+                  ->orWhere('id', is_numeric($slugOrId) ? $slugOrId : 0);
+            })
             ->firstOrFail();
 
         return response()->json($collection);
     }
 
-    /**
-     * Admin: Create collection
-     */
     public function store(Request $request)
     {
+        $this->requireAdmin();
+
         $data = $request->validate([
             'name'          => 'required|string|max:255',
             'description'   => 'nullable|string|max:500',
@@ -52,11 +78,13 @@ class CollectionController extends Controller
             'variant'       => 'nullable|string|max:50',
             'size'          => 'nullable|in:normal,tall,wide',
             'image'         => 'nullable|string',
-            'gradient_from' => 'nullable|string|max:7',
-            'gradient_to'   => 'nullable|string|max:7',
-            'accent_color'  => 'nullable|string|max:7',
-            'order'         => 'nullable|integer',
+            'gradient_from' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'gradient_to'   => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'accent_color'  => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'order'         => 'nullable|integer|min:0',
             'is_active'     => 'nullable|boolean',
+            'product_ids'   => 'nullable|array',
+            'product_ids.*' => 'integer|distinct|exists:products,id',
         ]);
 
         $data['slug'] = VietnameseSlug::make($data['name']);
@@ -65,27 +93,19 @@ class CollectionController extends Controller
         }
 
         $data['size'] = $data['size'] ?? 'normal';
-        $data['order'] = $data['order'] ?? Collection::max('order') + 1;
+        $data['order'] = $data['order'] ?? ((int) Collection::max('order') + 1);
+        unset($data['product_ids']);
 
         $collection = Collection::create($data);
-
-        // Sync products if provided
-        if ($request->has('product_ids') && is_array($request->product_ids)) {
-            $syncData = [];
-            foreach ($request->product_ids as $i => $pid) {
-                $syncData[$pid] = ['order' => $i];
-            }
-            $collection->products()->sync($syncData);
-        }
+        $this->syncProducts($collection, $request);
 
         return response()->json($collection->load('products')->loadCount('products'), 201);
     }
 
-    /**
-     * Admin: Update collection
-     */
     public function update(Request $request, Collection $collection)
     {
+        $this->requireAdmin();
+
         $data = $request->validate([
             'name'          => 'sometimes|string|max:255',
             'description'   => 'nullable|string|max:500',
@@ -93,11 +113,13 @@ class CollectionController extends Controller
             'variant'       => 'nullable|string|max:50',
             'size'          => 'nullable|in:normal,tall,wide',
             'image'         => 'nullable|string',
-            'gradient_from' => 'nullable|string|max:7',
-            'gradient_to'   => 'nullable|string|max:7',
-            'accent_color'  => 'nullable|string|max:7',
-            'order'         => 'nullable|integer',
+            'gradient_from' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'gradient_to'   => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'accent_color'  => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'order'         => 'nullable|integer|min:0',
             'is_active'     => 'nullable|boolean',
+            'product_ids'   => 'nullable|array',
+            'product_ids.*' => 'integer|distinct|exists:products,id',
         ]);
 
         if (isset($data['name'])) {
@@ -108,39 +130,43 @@ class CollectionController extends Controller
             }
         }
 
+        unset($data['product_ids']);
         $collection->update($data);
-
-        // Sync products if provided
-        if ($request->has('product_ids') && is_array($request->product_ids)) {
-            $syncData = [];
-            foreach ($request->product_ids as $i => $pid) {
-                $syncData[$pid] = ['order' => $i];
-            }
-            $collection->products()->sync($syncData);
-        }
+        $this->syncProducts($collection, $request);
 
         return response()->json($collection->load('products')->loadCount('products'));
     }
 
-    /**
-     * Admin: Delete collection
-     */
+    private function syncProducts(Collection $collection, Request $request): void
+    {
+        if (!$request->has('product_ids')) {
+            return;
+        }
+
+        $syncData = [];
+        foreach ($request->input('product_ids', []) as $index => $productId) {
+            $syncData[$productId] = ['order' => $index];
+        }
+        $collection->products()->sync($syncData);
+        $collection->touch();
+    }
+
     public function destroy(Collection $collection)
     {
+        $this->requireAdmin();
         $collection->products()->detach();
         $collection->delete();
         return response()->json(['message' => 'Xóa bộ sưu tập thành công']);
     }
 
-    /**
-     * Admin: Reorder collections
-     */
     public function reorder(Request $request)
     {
+        $this->requireAdmin();
+
         $items = $request->validate([
             'items' => 'required|array',
             'items.*.id' => 'required|exists:collections,id',
-            'items.*.order' => 'required|integer',
+            'items.*.order' => 'required|integer|min:0',
         ]);
 
         foreach ($items['items'] as $item) {
