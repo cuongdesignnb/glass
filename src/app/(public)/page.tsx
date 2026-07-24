@@ -1,23 +1,15 @@
 import { Metadata } from 'next';
-import React from 'react';
 import Link from 'next/link';
 import { FiArrowRight, FiTruck, FiShield, FiRefreshCw, FiAward, FiEye, FiCamera, FiPhone, FiCircle, FiSquare, FiHeart, FiMaximize } from 'react-icons/fi';
-import { RiGlassesLine, RiSunLine, RiVipCrownLine, RiPriceTag3Line } from 'react-icons/ri';
 import { publicApi } from '@/lib/api';
 import { getPublicSettings } from '@/lib/settings';
-import { DynamicCategories, DynamicProducts, DynamicCollections, DynamicVouchers, DynamicStats, DynamicConsultButton } from './HomeClient';
+import { DynamicCategories, DynamicProducts, DynamicVouchers, DynamicStats, DynamicConsultButton } from './HomeClient';
+import HomeCollections from './HomeCollections';
 import HomeHero from './HomeHero';
 import Newsletter from '@/components/layout/Newsletter';
 import './home.css';
 
-// Trang chủ không cần title/description riêng vì layout.tsx đã quản lý qua admin settings.
-// Chúng ta chỉ thiết lập thẻ canonical để tránh lỗi lập chỉ mục.
-export const metadata: Metadata = {
-  alternates: {
-    canonical: '/',
-  },
-};
-
+export const metadata: Metadata = { alternates: { canonical: '/' } };
 export const revalidate = 60;
 
 const faceShapes = [
@@ -27,7 +19,6 @@ const faceShapes = [
   { shape: 'Tim', icon: <FiHeart />, desc: 'Gọng browline hoặc aviator', param: 'tim', recommended: 'Aviator, Browline' },
   { shape: 'Dài', icon: <FiMaximize />, desc: 'Gọng bo tròn, overlay', param: 'dai', recommended: 'Oval, Cat-eye' },
 ];
-
 
 const services = [
   { icon: <FiEye />, title: 'Đo Mắt Miễn Phí', desc: 'Đo mắt chuẩn y khoa với thiết bị hiện đại, hoàn toàn miễn phí khi mua kính tại cửa hàng.' },
@@ -62,15 +53,15 @@ export default async function HomePage() {
 
   const categories = Array.isArray(categoriesRes) ? categoriesRes.filter((c: any) => c.is_active !== false) : [];
   const products = Array.isArray(productsRes) ? productsRes.slice(0, 8) : [];
-  const collections = Array.isArray(collectionsRes) ? collectionsRes : [];
+  const collections = Array.isArray(collectionsRes)
+    ? collectionsRes.filter((collection: any) => collection.is_active !== false && collection.slug && collection.name)
+    : [];
   const vouchers = Array.isArray(vouchersRes) ? vouchersRes : [];
 
   return (
     <>
-      {/* Critical hero copy and settings are emitted in the server response. */}
       <HomeHero settings={settings} />
 
-      {/* Trust Badges */}
       <section className="trust-badges">
         <div className="container">
           <div className="trust-badges__grid">
@@ -82,14 +73,10 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Voucher Slider */}
       <section className="section voucher-home-section" style={{ paddingTop: 'var(--space-lg)', paddingBottom: 'var(--space-lg)' }}>
-        <div className="container">
-          <DynamicVouchers initialData={vouchers} />
-        </div>
+        <div className="container"><DynamicVouchers initialData={vouchers} /></div>
       </section>
 
-      {/* Featured Products - Client Side */}
       <section className="section" style={{ background: 'var(--color-bg-warm)' }}>
         <div className="container">
           <div className="section__header">
@@ -104,7 +91,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Categories - Client Side */}
       <section className="section">
         <div className="container">
           <div className="section__header">
@@ -116,28 +102,22 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Style Collections — Masonry Grid (Dynamic from API) */}
-      <section className="section style-collection">
-        <div className="container">
-          <div className="section__header">
-            <span className="section__tag">Phong Cách</span>
-            <h2 className="section__title">Bộ Sưu Tập Theo Phong Cách</h2>
-            <p className="section__subtitle">Chọn bộ sưu tập phù hợp với cá tính và lối sống của bạn</p>
-          </div>
-          <DynamicCollections initialData={collections} />
-        </div>
-      </section>
+      <HomeCollections
+        collections={collections}
+        enabled={settings.homepage_style_collection !== '0'}
+        eyebrow={settings.homepage_collections_eyebrow || 'Phong Cách'}
+        title={settings.homepage_collections_title || 'Bộ Sưu Tập Theo Phong Cách'}
+        description={settings.homepage_collections_description || 'Chọn bộ sưu tập phù hợp với cá tính và lối sống của bạn'}
+        ctaText={settings.homepage_collections_cta || 'Khám phá'}
+      />
 
-      {/* AI Try-on CTA */}
       <section className="ai-cta-section">
         <div className="container">
           <div className="ai-cta">
             <div className="ai-cta__content">
               <span className="section__tag">Công Nghệ AI</span>
               <h2 className="heading-lg" style={{ color: 'var(--color-text-heading)', marginBottom: 'var(--space-lg)' }}>Thử Kính Ảo Với <span className="text-gradient">Trí Tuệ Nhân Tạo</span></h2>
-              <p style={{ color: 'var(--color-text-light)', fontSize: '1.0625rem', lineHeight: '1.8', marginBottom: 'var(--space-2xl)', maxWidth: '520px' }}>
-                Chỉ cần bật camera hoặc upload ảnh, AI sẽ giúp bạn thử hàng trăm mẫu kính mà không cần đến cửa hàng.
-              </p>
+              <p style={{ color: 'var(--color-text-light)', fontSize: '1.0625rem', lineHeight: '1.8', marginBottom: 'var(--space-2xl)', maxWidth: '520px' }}>Chỉ cần bật camera hoặc upload ảnh, AI sẽ giúp bạn thử hàng trăm mẫu kính mà không cần đến cửa hàng.</p>
               <div style={{ display: 'flex', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
                 <Link href="/thu-kinh-ao" className="btn btn-primary btn-lg">Thử Ngay Miễn Phí <FiArrowRight /></Link>
                 <Link href="/thu-kinh-ao?mode=camera" className="btn btn-secondary btn-lg"><FiCamera /> Mở Camera</Link>
@@ -146,10 +126,7 @@ export default async function HomePage() {
             <div className="ai-cta__visual">
               <div className="ai-cta__orb" />
               <div className="ai-cta__screen">
-                <div className="ai-cta__screen-face">
-                  <div className="ai-face-circle" />
-                  <div className="ai-face-glasses"><div className="ai-face-lens ai-face-lens--l" /><div className="ai-face-bridge" /><div className="ai-face-lens ai-face-lens--r" /></div>
-                </div>
+                <div className="ai-cta__screen-face"><div className="ai-face-circle" /><div className="ai-face-glasses"><div className="ai-face-lens ai-face-lens--l" /><div className="ai-face-bridge" /><div className="ai-face-lens ai-face-lens--r" /></div></div>
                 <div className="ai-cta__scan-line" />
               </div>
             </div>
@@ -157,7 +134,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Face Shape Finder */}
       <section className="section face-shape-section">
         <div className="container">
           <div className="section__header">
@@ -178,10 +154,8 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Newsletter — ngay dưới chọn kính theo khuôn mặt */}
       <Newsletter />
 
-      {/* Services */}
       <section className="section services-section">
         <div className="container">
           <div className="section__header">
@@ -190,19 +164,12 @@ export default async function HomePage() {
             <p className="section__subtitle">Chúng tôi cung cấp trọn gói dịch vụ chăm sóc mắt và kính mắt chuyên nghiệp</p>
           </div>
           <div className="services-grid">
-            {services.map((svc, i) => (
-              <div key={i} className="service-card">
-                <div className="service-card__icon">{svc.icon}</div>
-                <h3 className="service-card__title">{svc.title}</h3>
-                <p className="service-card__desc">{svc.desc}</p>
-              </div>
-            ))}
+            {services.map((svc, i) => <div key={i} className="service-card"><div className="service-card__icon">{svc.icon}</div><h3 className="service-card__title">{svc.title}</h3><p className="service-card__desc">{svc.desc}</p></div>)}
           </div>
           <DynamicConsultButton />
         </div>
       </section>
 
-      {/* Testimonials */}
       <section className="section testimonials-section">
         <div className="container">
           <div className="section__header">
@@ -215,17 +182,13 @@ export default async function HomePage() {
               <div key={i} className="testimonial-card">
                 <div className="testimonial-card__stars">{'★'.repeat(t.rating)}</div>
                 <p className="testimonial-card__text">"{t.text}"</p>
-                <div className="testimonial-card__author">
-                  <div className="testimonial-card__avatar">{t.avatar}</div>
-                  <div><div className="testimonial-card__name">{t.name}</div><div className="testimonial-card__since">{t.since}</div></div>
-                </div>
+                <div className="testimonial-card__author"><div className="testimonial-card__avatar">{t.avatar}</div><div><div className="testimonial-card__name">{t.name}</div><div className="testimonial-card__since">{t.since}</div></div></div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Stats (reads from admin settings) */}
       <DynamicStats />
     </>
   );
