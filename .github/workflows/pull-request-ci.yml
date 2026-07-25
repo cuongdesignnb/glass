@@ -4,7 +4,6 @@ on:
   pull_request:
     branches:
       - main
-      - perf/baseline-and-quick-wins
   workflow_dispatch:
 
 permissions:
@@ -51,3 +50,30 @@ jobs:
 
       - name: Production build
         run: npm run build
+
+  backend:
+    name: Laravel checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, sqlite, pdo_sqlite
+          coverage: none
+
+      - name: Install Composer dependencies
+        working-directory: backend
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: PHP syntax
+        working-directory: backend
+        run: php -l app/Http/Controllers/Api/CollectionController.php
+
+      - name: Laravel tests
+        working-directory: backend
+        run: php artisan test

@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -18,6 +19,16 @@ return new class extends Migration
 
         // Check if product_id already exists (partial migration may have added it)
         if (Schema::hasColumn('addon_option_constraints', 'product_id')) {
+            return;
+        }
+
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::table('addon_option_constraints', function (Blueprint $table) {
+                $table->dropUnique('addon_option_constraints_option_id_blocked_option_id_unique');
+                $table->foreignId('product_id')->nullable()->constrained('products')->cascadeOnDelete();
+                $table->unique(['product_id', 'option_id', 'blocked_option_id'], 'constraint_unique');
+            });
+
             return;
         }
 
@@ -53,6 +64,19 @@ return new class extends Migration
     public function down(): void
     {
         if (!Schema::hasTable('addon_option_constraints') || !Schema::hasColumn('addon_option_constraints', 'product_id')) {
+            return;
+        }
+
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::table('addon_option_constraints', function (Blueprint $table) {
+                $table->dropUnique('constraint_unique');
+                $table->dropConstrainedForeignId('product_id');
+                $table->unique(
+                    ['option_id', 'blocked_option_id'],
+                    'addon_option_constraints_option_id_blocked_option_id_unique'
+                );
+            });
+
             return;
         }
 

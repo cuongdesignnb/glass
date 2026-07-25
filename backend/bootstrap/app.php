@@ -19,7 +19,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->renderable(function (\Throwable $e, $request) {
             if ($request->is('api/*') || $request->wantsJson()) {
                 $origin = $request->header('Origin', '');
-                $status = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;
+                $status = $e instanceof \Illuminate\Auth\AuthenticationException
+                    ? 401
+                    : (method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500);
 
                 if ($e instanceof \Illuminate\Validation\ValidationException) {
                     $response = response()->json([
