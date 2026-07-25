@@ -77,3 +77,43 @@ jobs:
       - name: Laravel tests
         working-directory: backend
         run: php artisan test
+
+  deploy-contract:
+    name: Safe deploy contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          coverage: none
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Bash syntax
+        run: |
+          bash -n deploy.sh
+          bash -n scripts/deploy/mitoo-deploy-lib.sh
+          bash -n scripts/deploy/mitoo-deploy-orchestrator.sh
+          bash -n scripts/deploy/tests/deploy-contract-tests.sh
+
+      - name: PHP helper syntax
+        run: php -l scripts/deploy/write-mysql-client-config.php
+
+      - name: ShellCheck
+        run: >-
+          shellcheck
+          deploy.sh
+          scripts/deploy/mitoo-deploy-lib.sh
+          scripts/deploy/mitoo-deploy-orchestrator.sh
+          scripts/deploy/tests/deploy-contract-tests.sh
+
+      - name: Deploy contract tests
+        run: bash scripts/deploy/tests/deploy-contract-tests.sh

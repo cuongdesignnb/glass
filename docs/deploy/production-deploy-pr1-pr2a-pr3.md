@@ -1,5 +1,7 @@
 # Production deploy: PR1, PR2A và PR3
 
+> Tài liệu này là hồ sơ lịch sử cho release PR1/PR2A/PR3. Với các release mới, dùng quy trình một lệnh có SHA pinning, backup và rollback trong [`safe-production-deploy.md`](./safe-production-deploy.md).
+
 Tài liệu này là runbook cho lần triển khai kế tiếp. Không có lệnh production nào được thực thi khi tài liệu được tạo.
 
 ## Source

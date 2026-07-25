@@ -1,34 +1,12 @@
-#!/bin/bash
-# ============================================
-# Glass Eyewear — Deploy Script
-# Chạy: bash deploy.sh
-# ============================================
+#!/usr/bin/env bash
 
-set -e
+set -Eeuo pipefail
+umask 022
 
-echo "🚀 Bắt đầu deploy Glass Eyewear..."
+MITOO_DEPLOY_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+export MITOO_DEPLOY_SCRIPT_DIR
 
-# 1. Pull code mới
-echo "📥 Pull code từ Git..."
-git pull origin main
+# shellcheck source=scripts/deploy/mitoo-deploy-lib.sh
+source "$MITOO_DEPLOY_SCRIPT_DIR/scripts/deploy/mitoo-deploy-lib.sh"
 
-# 2. Backend: migrate
-echo "🔧 Backend: chạy migrate..."
-php backend/artisan migrate --force
-
-# 3. Frontend: rebuild
-echo "🏗️ Frontend: build Next.js..."
-npm run build
-
-# 4. Restart PM2
-echo "♻️ Restart PM2..."
-pm2 restart glass
-
-# 5. Xóa Nginx proxy cache và reload Nginx
-echo "🧹 Xóa Nginx cache & reload..."
-rm -rf /www/server/nginx/proxy_cache_dir/*
-nginx -s reload
-
-echo ""
-echo "✅ Deploy hoàn tất!"
-echo "🌐 Website: https://mitoo.vn"
+main "$@"
