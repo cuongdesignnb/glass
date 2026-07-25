@@ -450,21 +450,15 @@ smoke_laravel_api() {
 }
 
 check_database_connection() {
-    local status_file="${1:-}"
-    local remove_status_file=0
-    if [[ -z "$status_file" ]]; then
-        status_file="$(mktemp "${TMPDIR:-/tmp}/mitoo-migration-status.XXXXXX")"
-        remove_status_file=1
-    fi
+    local status_file
+    status_file="$(mktemp "${TMPDIR:-/tmp}/mitoo-migration-status.XXXXXX")"
     "$PHP_BIN" "$APP_ROOT/backend/artisan" migrate:status --no-ansi > "$status_file"
     if grep -Eq '(^|[[:space:]])Pending([[:space:]]|$)' "$status_file"; then
         emit "MIGRATION_PENDING_CURRENT" "YES"
     else
         emit "MIGRATION_PENDING_CURRENT" "NO"
     fi
-    if [[ "$remove_status_file" == "1" ]]; then
-        rm -f -- "$status_file"
-    fi
+    rm -f -- "$status_file"
     emit "DATABASE_CONNECTION" "PASS"
 }
 

@@ -2,7 +2,7 @@
 
 # The harness intentionally overrides sourced functions and global deploy state
 # inside isolated subshells; ShellCheck cannot follow those dynamic references.
-# shellcheck disable=SC2016,SC2034,SC2329
+# shellcheck disable=SC2016,SC2034,SC2317,SC2329
 
 set -Eeuo pipefail
 umask 022
