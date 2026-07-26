@@ -250,6 +250,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/ai/queue-process-batch', [AiContentQueueController::class, 'processBatch']);
     Route::get('/ai/queue-settings', [AiContentQueueController::class, 'settings']);
     Route::put('/ai/queue-settings', [AiContentQueueController::class, 'updateSettings']);
+    Route::get('/ai/queue-status', [AiContentQueueController::class, 'status']);
+    Route::post('/ai/queue/{aiContentQueue}/retry', [AiContentQueueController::class, 'retry']);
+    Route::post('/ai/queue-retry-failed', [AiContentQueueController::class, 'retryFailed']);
 
     // === ADMIN: Users ===
     Route::get('/admin/users', [AdminUserController::class, 'index']);

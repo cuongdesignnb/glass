@@ -723,7 +723,22 @@ export const adminApi = {
     const query = params ? "?" + new URLSearchParams(params).toString() : "";
     return fetchApi(`/ai/queue${query}`, { token });
   },
-  addAiQueue: (token: string, data: any) =>
+  addAiQueue: (
+    token: string,
+    data: {
+      topics: string;
+      start_at?: string;
+      interval: number;
+      auto_publish: boolean;
+      article_category_id?: number | null;
+      type?: "article" | "product_description" | "seo";
+      tone?: "professional" | "casual" | "luxury";
+      length?: "short" | "medium" | "long";
+      with_images?: boolean;
+      image_count?: number;
+      keywords?: string;
+    },
+  ) =>
     fetchApi("/ai/queue", { method: "POST", body: JSON.stringify(data), token }),
   deleteAiQueue: (token: string, id: number) =>
     fetchApi(`/ai/queue/${id}`, { method: "DELETE", token }),
@@ -748,6 +763,12 @@ export const adminApi = {
       body: JSON.stringify(data),
       token,
     }),
+  getAiQueueStatus: (token: string) =>
+    fetchApi("/ai/queue-status", { token }),
+  retryAiQueueItem: (token: string, id: number) =>
+    fetchApi(`/ai/queue/${id}/retry`, { method: "POST", token }),
+  retryAllFailedAiQueue: (token: string) =>
+    fetchApi("/ai/queue-retry-failed", { method: "POST", token }),
 
   // === Admin: Users ===
   getUsers: (token: string, params?: Record<string, string>) => {

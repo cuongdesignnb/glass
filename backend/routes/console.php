@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Schedule;
 
-Schedule::command('ai:queue-process --limit=5')
+Schedule::command('ai:queue-process')
     ->everyMinute()
-    ->withoutOverlapping(10)
-    ->runInBackground();
+    ->withoutOverlapping(30);

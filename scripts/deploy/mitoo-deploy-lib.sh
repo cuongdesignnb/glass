@@ -15,6 +15,7 @@ MITOO_DEPLOY_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 : "${MYSQL_MAX_RUNNING:=30}"
 : "${MIN_DISK_KB:=5242880}"
 : "${PM2_APP:=glass}"
+: "${AI_SCHEDULER_PM2_APP:=glass-ai-scheduler}"
 : "${NEXT_PORT:=3222}"
 : "${PUBLIC_DOMAIN:=mitoo.vn}"
 : "${PRODUCTION_ROOT:=/www/wwwroot/kinhmathongnhung.vn}"
@@ -50,6 +51,7 @@ DATABASE_BACKUP_OK=0
 ACTIVATION_STARTED=0
 ACTIVATION_SUCCEEDED=0
 ROLLBACK_STARTED=0
+AI_SCHEDULER_BOOTSTRAP_REQUIRED=0
 OLD_NEXT_MOVED=0
 OLD_NODE_MOVED=0
 OLD_VENDOR_MOVED=0
@@ -846,6 +848,40 @@ check_pm2_online() {
     emit "PM2_PID" "$pid"
 }
 
+ai_scheduler_pm2_exists() {
+    pm2 describe "$AI_SCHEDULER_PM2_APP" >/dev/null 2>&1
+}
+
+check_ai_scheduler_online() {
+    local pid
+    pid="$(pm2 pid "$AI_SCHEDULER_PM2_APP" | awk 'NF {print; exit}')"
+    [[ "$pid" =~ ^[1-9][0-9]*$ ]] \
+        || die "AI_SCHEDULER_ONLINE" "BLOCKED" "PM2 app $AI_SCHEDULER_PM2_APP has no online PID"
+    pm2 describe "$AI_SCHEDULER_PM2_APP" | grep -Eq 'status.*online' \
+        || die "AI_SCHEDULER_ONLINE" "BLOCKED" "PM2 app $AI_SCHEDULER_PM2_APP is not online"
+    emit "AI_SCHEDULER_PID" "$pid"
+}
+
+restart_ai_scheduler_if_present() {
+    if ai_scheduler_pm2_exists; then
+        pm2 restart "$AI_SCHEDULER_PM2_APP" --update-env
+        check_ai_scheduler_online
+        AI_SCHEDULER_BOOTSTRAP_REQUIRED=0
+        emit "AI_SCHEDULER_RESTART" "PASS"
+    else
+        AI_SCHEDULER_BOOTSTRAP_REQUIRED=1
+        emit "AI_SCHEDULER_BOOTSTRAP_REQUIRED" "YES"
+    fi
+}
+
+validate_ai_queue_schedule() {
+    local schedule_output
+    schedule_output="$(cd "$APP_ROOT/backend" && "$PHP_BIN" artisan schedule:list --no-ansi)"
+    grep -Fq 'ai:queue-process' <<< "$schedule_output" \
+        || die "AI_QUEUE_SCHEDULE" "BLOCKED" "Laravel schedule does not contain ai:queue-process"
+    emit "AI_QUEUE_SCHEDULE" "PASS"
+}
+
 post_activation_checks() {
     check_local_next_health 18 5
     smoke_public_pages
@@ -855,6 +891,12 @@ post_activation_checks() {
     [[ "$(git -C "$APP_ROOT" rev-parse HEAD)" == "$DEPLOY_SHA" ]] \
         || die "DEPLOYED_SHA" "BLOCKED" "Production HEAD does not match DEPLOY_SHA"
     check_pm2_online
+    if [[ "$AI_SCHEDULER_BOOTSTRAP_REQUIRED" == "0" ]]; then
+        check_ai_scheduler_online
+    else
+        emit "AI_SCHEDULER_BOOTSTRAP_REQUIRED" "YES"
+    fi
+    validate_ai_queue_schedule
     pm2 save
     emit "POST_ACTIVATION" "PASS"
 }
@@ -876,6 +918,7 @@ activate_release() {
     laravel_boot_as_www "$APP_ROOT"
     reload_php_fpm
     pm2 restart "$PM2_APP" --update-env
+    restart_ai_scheduler_if_present
     post_activation_checks
 
     ACTIVATION_SUCCEEDED=1
@@ -935,6 +978,10 @@ rollback_release() {
     laravel_boot_as_www "$APP_ROOT" || runtime_status=1
     reload_php_fpm || runtime_status=1
     pm2 restart "$PM2_APP" --update-env || pm2_status=1
+    if ai_scheduler_pm2_exists; then
+        pm2 restart "$AI_SCHEDULER_PM2_APP" --update-env || pm2_status=1
+        check_ai_scheduler_online || pm2_status=1
+    fi
     check_local_next_health 18 5 || runtime_status=1
     check_pm2_online || pm2_status=1
 
