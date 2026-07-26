@@ -25,6 +25,7 @@ write_release_summary() {
     emit "RELEASE_RECORD" "$RELEASE_RECORD"
     emit "ROLLBACK_RUNTIME_PATH" "$ROLLBACK_RUNTIME_PATH"
     emit "MIGRATION_EXECUTED" "$([[ "$MIGRATION_EXECUTED" == "1" ]] && printf YES || printf NO)"
+    emit "AI_SCHEDULER_BOOTSTRAP_REQUIRED" "$([[ "$AI_SCHEDULER_BOOTSTRAP_REQUIRED" == "1" ]] && printf YES || printf NO)"
     emit "PRODUCTION_CHANGED" "$([[ "$ACTIVATION_SUCCEEDED" == "1" ]] && printf YES || printf NO)"
 }
 
