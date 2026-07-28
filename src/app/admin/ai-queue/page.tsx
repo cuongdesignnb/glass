@@ -62,8 +62,12 @@ interface QueueStatus {
   due_count: number;
   processing_count: number;
   failed_count: number;
+  done_count: number;
+  total_count: number;
   next_scheduled_at?: string | null;
 }
+
+type QueueFilter = 'all' | QueueItem['status'];
 
 const POLL_INTERVAL_MS = 15_000;
 
@@ -101,6 +105,8 @@ export default function AdminAiQueuePage() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [actionId, setActionId] = useState<string | null>(null);
+  const [queueTotal, setQueueTotal] = useState(0);
+  const [queueFilter, setQueueFilter] = useState<QueueFilter>('all');
 
   const [topicsText, setTopicsText] = useState('');
   const [startAt, setStartAt] = useState('');
@@ -124,6 +130,10 @@ export default function AdminAiQueuePage() {
     [topicsText],
   );
   const flatCategories = useMemo(() => flattenCategories(categories), [categories]);
+  const visibleItems = useMemo(
+    () => queueFilter === 'all' ? items : items.filter((item) => item.status === queueFilter),
+    [items, queueFilter],
+  );
 
   const schedulePreview = useMemo(() => {
     if (!startAt || topicLines.length === 0 || intervalMinutes < 1) return [];
@@ -139,8 +149,10 @@ export default function AdminAiQueuePage() {
 
   const loadQueue = useCallback(async () => {
     if (!token) return;
-    const data = await adminApi.getAiQueue(token);
-    setItems(Array.isArray(data?.data) ? data.data : []);
+    const data = await adminApi.getAiQueue(token, { per_page: '100' });
+    const nextItems = Array.isArray(data?.data) ? data.data : [];
+    setItems(nextItems);
+    setQueueTotal(Number(data?.total) || nextItems.length);
   }, [token]);
 
   const loadStatus = useCallback(async () => {
@@ -279,13 +291,13 @@ export default function AdminAiQueuePage() {
     }
   };
 
-  const deletePendingItem = async (id: number) => {
+  const deleteQueueItem = async (id: number) => {
     if (!token || actionId) return;
     setActionId(`delete-${id}`);
     try {
       await adminApi.deleteAiQueue(token, id);
       setItems((current) => current.filter((item) => item.id !== id));
-      toast.success('Đã xóa mục đang chờ.');
+      toast.success('Đã xóa mục khỏi hàng đợi.');
       await loadStatus();
     } catch (error: any) {
       toast.error(error?.message || 'Không thể xóa mục này.');
@@ -294,12 +306,14 @@ export default function AdminAiQueuePage() {
     }
   };
 
-  const clearPending = async () => {
-    if (!token || actionId || !window.confirm('Xóa tất cả mục đang chờ?')) return;
+  const clearQueue = async () => {
+    if (!token || actionId || !window.confirm(
+      'Xóa toàn bộ hàng đợi, bao gồm mục đang chờ, đang xử lý, hoàn thành và lỗi? Bài viết đã tạo sẽ không bị xóa. Nếu worker đang chạy, bài hiện tại vẫn có thể hoàn tất sau khi hàng đợi được dọn.',
+    )) return;
     setActionId('clear');
     try {
-      await adminApi.clearAiQueue(token);
-      toast.success('Đã xóa tất cả mục đang chờ.');
+      const data = await adminApi.clearAiQueue(token);
+      toast.success(data.message || 'Đã dọn hàng đợi.');
       await loadDashboard(false);
     } catch (error: any) {
       toast.error(error?.message || 'Không thể xóa hàng đợi.');
@@ -350,8 +364,8 @@ export default function AdminAiQueuePage() {
           <button className="admin-btn admin-btn--secondary admin-btn--sm" onClick={retryAllFailed} disabled={Boolean(actionId) || !queueStatus?.failed_count}>
             <FiRefreshCw /> Thử lại tất cả bài lỗi
           </button>
-          <button className="admin-btn admin-btn--danger admin-btn--sm" onClick={clearPending} disabled={Boolean(actionId) || !queueStatus?.pending_count}>
-            <FiTrash2 /> Xóa mục đang chờ
+          <button className="admin-btn admin-btn--danger admin-btn--sm" onClick={clearQueue} disabled={Boolean(actionId) || !(queueStatus?.total_count ?? queueTotal)}>
+            {actionId === 'clear' ? <FiLoader className="spin" /> : <FiTrash2 />} Xóa tất cả
           </button>
         </div>
       </div>
@@ -509,26 +523,58 @@ export default function AdminAiQueuePage() {
           </div>
 
           <div className="admin-card queue-card">
-            <h3 className="admin-card__title">Hàng đợi bài viết</h3>
+            <div className="queue-card__header">
+              <div>
+                <h3 className="admin-card__title">Hàng đợi bài viết</h3>
+                <small>Hiển thị {items.length}/{queueTotal} tác vụ gần nhất</small>
+              </div>
+              <div className="queue-filters" aria-label="Lọc trạng thái hàng đợi">
+                {([
+                  ['all', 'Tất cả', queueStatus?.total_count ?? queueTotal],
+                  ['pending', 'Đang chờ', queueStatus?.pending_count ?? 0],
+                  ['processing', 'Đang xử lý', queueStatus?.processing_count ?? 0],
+                  ['done', 'Hoàn thành', queueStatus?.done_count ?? 0],
+                  ['failed', 'Lỗi', queueStatus?.failed_count ?? 0],
+                ] as Array<[QueueFilter, string, number]>).map(([value, label, count]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={`queue-filter ${queueFilter === value ? 'queue-filter--active' : ''}`}
+                    onClick={() => setQueueFilter(value)}
+                  >
+                    {label} <strong>{count}</strong>
+                  </button>
+                ))}
+              </div>
+            </div>
             {loading ? (
               <div className="empty-state"><FiLoader className="spin" /> Đang tải...</div>
             ) : items.length === 0 ? (
               <div className="empty-state"><FiClock /> Chưa có bài trong hàng đợi.</div>
+            ) : visibleItems.length === 0 ? (
+              <div className="empty-state"><FiClock /> Không có tác vụ ở trạng thái này.</div>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
+              <div className="queue-table-wrap">
                 <table className="admin-table queue-table">
-                  <thead><tr><th>Chủ đề</th><th>Lịch và chế độ</th><th>Trạng thái</th><th>Bài viết</th><th></th></tr></thead>
+                  <colgroup>
+                    <col className="queue-col-topic" />
+                    <col className="queue-col-schedule" />
+                    <col className="queue-col-status" />
+                    <col className="queue-col-article" />
+                    <col className="queue-col-actions" />
+                  </colgroup>
+                  <thead><tr><th>Chủ đề</th><th>Lịch và chế độ</th><th>Trạng thái</th><th>Bài viết</th><th>Thao tác</th></tr></thead>
                   <tbody>
-                    {items.map((item) => {
+                    {visibleItems.map((item) => {
                       const state = itemStatus(item);
                       return (
                         <tr key={item.id}>
-                          <td>
+                          <td data-label="Chủ đề">
                             <strong>{item.topic}</strong>
                             <small>{item.article_category?.name || 'Không có danh mục'}</small>
-                            {item.error_message ? <small style={{ color: item.status === 'done' ? '#f59e0b' : '#f44336' }}>{item.error_message.slice(0, 240)}</small> : null}
+                            {item.error_message ? <small className="queue-error" style={{ color: item.status === 'done' ? '#f59e0b' : '#f44336' }}>{item.error_message.slice(0, 500)}</small> : null}
                           </td>
-                          <td>
+                          <td data-label="Lịch và chế độ">
                             <span>{formatDateTime(item.scheduled_at)}</span>
                             <small>{item.auto_publish ? 'Tự đăng' : 'Bản nháp'}</small>
                             <small style={{ color: item.with_images ? 'var(--color-gold)' : 'rgba(255,255,255,.45)' }}>
@@ -536,11 +582,11 @@ export default function AdminAiQueuePage() {
                             </small>
                             {item.next_attempt_at ? <small>Thử lại: {formatDateTime(item.next_attempt_at)}</small> : null}
                           </td>
-                          <td>
+                          <td data-label="Trạng thái">
                             <span className="status-pill" style={{ color: state.color, borderColor: `${state.color}55` }}>{state.icon} {state.label}</span>
                             <small>Lần thử {item.attempts}/{item.max_attempts}</small>
                           </td>
-                          <td>
+                          <td data-label="Bài viết">
                             {item.article ? (
                               <a href={`/admin/articles/${item.article.id}`} style={{ color: 'var(--color-gold)' }}>
                                 {item.article.thumbnail ? (
@@ -554,14 +600,14 @@ export default function AdminAiQueuePage() {
                               </a>
                             ) : <span>Chưa tạo</span>}
                           </td>
-                          <td>
+                          <td data-label="Thao tác" className="queue-actions">
                             {item.status === 'failed' && !item.article_id ? (
                               <button className="icon-button" title="Thử lại" disabled={Boolean(actionId)} onClick={() => retryItem(item.id)}>
                                 {actionId === `retry-${item.id}` ? <FiLoader className="spin" /> : <FiRefreshCw />}
                               </button>
                             ) : null}
-                            {item.status === 'pending' ? (
-                              <button className="icon-button" title="Xóa" disabled={Boolean(actionId)} onClick={() => deletePendingItem(item.id)}>
+                            {item.status !== 'processing' ? (
+                              <button className="icon-button icon-button--danger" title="Xóa mục" disabled={Boolean(actionId)} onClick={() => deleteQueueItem(item.id)}>
                                 {actionId === `delete-${item.id}` ? <FiLoader className="spin" /> : <FiX />}
                               </button>
                             ) : null}
@@ -588,17 +634,47 @@ export default function AdminAiQueuePage() {
         .schedule-preview { display:flex; flex-direction:column; gap:8px; padding:14px; background:rgba(255,255,255,.04); border-radius:8px; }
         .schedule-preview div { display:flex; flex-direction:column; gap:2px; }
         .queue-card { min-width:0; }
-        .queue-table { font-size:13px; }
-        .queue-table td { vertical-align:top; min-width:120px; }
-        .queue-table td:first-child { min-width:220px; }
+        .queue-card__header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:16px; }
+        .queue-card__header .admin-card__title { margin-bottom:4px; }
+        .queue-filters { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+        .queue-filter { display:inline-flex; align-items:center; gap:6px; border:1px solid rgba(255,255,255,.1); border-radius:999px; background:rgba(255,255,255,.035); color:rgba(255,255,255,.62); padding:6px 10px; font-size:12px; cursor:pointer; }
+        .queue-filter strong { color:inherit; font-size:11px; }
+        .queue-filter:hover { border-color:rgba(212,175,55,.45); color:rgba(255,255,255,.9); }
+        .queue-filter--active { border-color:rgba(212,175,55,.55); background:rgba(212,175,55,.14); color:var(--color-gold); }
+        .queue-table-wrap { width:100%; overflow-x:auto; border:1px solid rgba(255,255,255,.06); border-radius:10px; }
+        .queue-table { min-width:820px; table-layout:fixed; font-size:13px; }
+        .queue-col-topic { width:29%; }
+        .queue-col-schedule { width:24%; }
+        .queue-col-status { width:18%; }
+        .queue-col-article { width:18%; }
+        .queue-col-actions { width:11%; }
+        .queue-table th, .queue-table td { overflow-wrap:anywhere; word-break:break-word; }
+        .queue-table td { vertical-align:top; }
         .queue-table td small { display:block; margin-top:5px; }
+        .queue-error { max-height:7.2em; overflow:auto; padding:7px 8px; border-radius:6px; background:rgba(244,67,54,.08); line-height:1.45; }
+        .queue-actions { white-space:nowrap; }
         .status-pill { display:inline-flex; align-items:center; gap:5px; border:1px solid; border-radius:14px; padding:4px 8px; white-space:nowrap; }
         .icon-button { border:0; background:transparent; color:rgba(255,255,255,.65); cursor:pointer; padding:6px; }
+        .icon-button--danger { color:#ef5350; }
+        .icon-button:hover { background:rgba(255,255,255,.06); border-radius:6px; }
         .icon-button:disabled { opacity:.4; cursor:not-allowed; }
         .empty-state { min-height:260px; display:flex; align-items:center; justify-content:center; gap:8px; color:rgba(255,255,255,.45); }
         .spin { animation:spin 1s linear infinite; }
         @keyframes spin { to { transform:rotate(360deg); } }
         @media (max-width:1100px) { .queue-layout { grid-template-columns:1fr; } }
+        @media (max-width:760px) {
+          .queue-card__header { flex-direction:column; }
+          .queue-filters { justify-content:flex-start; }
+          .queue-table-wrap { overflow:visible; border:0; }
+          .queue-table { display:block; min-width:0; }
+          .queue-table colgroup, .queue-table thead { display:none; }
+          .queue-table tbody { display:grid; gap:12px; }
+          .queue-table tr { display:block; padding:14px; border:1px solid rgba(255,255,255,.08); border-radius:10px; background:rgba(255,255,255,.025); }
+          .queue-table td { display:grid; grid-template-columns:112px minmax(0,1fr); gap:10px; padding:8px 0; border-bottom:1px solid rgba(255,255,255,.05); }
+          .queue-table td:last-child { border-bottom:0; }
+          .queue-table td::before { content:attr(data-label); color:rgba(255,255,255,.42); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
+          .queue-table td > * { min-width:0; }
+        }
       `}</style>
     </>
   );

@@ -245,7 +245,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/ai/queue', [AiContentQueueController::class, 'index']);
     Route::post('/ai/queue', [AiContentQueueController::class, 'store']);
     Route::delete('/ai/queue/{aiContentQueue}', [AiContentQueueController::class, 'destroy']);
-    Route::delete('/ai/queue-clear', [AiContentQueueController::class, 'clearPending']);
+    Route::delete('/ai/queue-clear', [AiContentQueueController::class, 'clearAll']);
     Route::post('/ai/queue-process', [AiContentQueueController::class, 'processNext']);
     Route::post('/ai/queue-process-batch', [AiContentQueueController::class, 'processBatch']);
     Route::get('/ai/queue-settings', [AiContentQueueController::class, 'settings']);

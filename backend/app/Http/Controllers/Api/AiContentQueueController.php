@@ -87,8 +87,8 @@ class AiContentQueueController extends Controller
 
     public function destroy(AiContentQueue $aiContentQueue): JsonResponse
     {
-        if ($aiContentQueue->status !== 'pending') {
-            return response()->json(['message' => 'Chỉ có thể xóa mục đang chờ.'], 422);
+        if ($aiContentQueue->status === 'processing') {
+            return response()->json(['message' => 'Không thể xóa mục đang được xử lý. Vui lòng chờ tác vụ hoàn tất.'], 422);
         }
 
         $aiContentQueue->delete();
@@ -96,11 +96,16 @@ class AiContentQueueController extends Controller
         return response()->json(['message' => 'Đã xóa mục khỏi hàng đợi.']);
     }
 
-    public function clearPending(): JsonResponse
+    public function clearAll(): JsonResponse
     {
-        $count = AiContentQueue::where('status', 'pending')->delete();
+        $deletedCount = AiContentQueue::count();
+        AiContentQueue::query()->delete();
 
-        return response()->json(['message' => "Đã xóa {$count} mục đang chờ."]);
+        return response()->json([
+            'success' => true,
+            'deleted_count' => $deletedCount,
+            'message' => "Đã xóa toàn bộ {$deletedCount} mục khỏi hàng đợi.",
+        ]);
     }
 
     public function processNext(): JsonResponse
@@ -187,6 +192,8 @@ class AiContentQueueController extends Controller
             'due_count' => $dueQuery->count(),
             'processing_count' => AiContentQueue::where('status', 'processing')->count(),
             'failed_count' => AiContentQueue::where('status', 'failed')->count(),
+            'done_count' => AiContentQueue::where('status', 'done')->count(),
+            'total_count' => AiContentQueue::count(),
             'next_scheduled_at' => $nextScheduled ? Carbon::parse($nextScheduled)->toIso8601String() : null,
         ]);
     }
