@@ -222,6 +222,45 @@ class AiContentQueueAutomationTest extends TestCase
         $this->assertSame('pending', $second->fresh()->status);
     }
 
+    public function test_clear_queue_deletes_every_status_including_stuck_processing_items(): void
+    {
+        Sanctum::actingAs($this->admin());
+        $pending = $this->queue(['status' => 'pending']);
+        $failed = $this->queue(['status' => 'failed', 'completed_at' => now()]);
+        $done = $this->queue(['status' => 'done', 'completed_at' => now()]);
+        $stale = $this->queue([
+            'status' => 'processing',
+            'locked_at' => now()->subMinutes(31),
+        ]);
+        $active = $this->queue([
+            'status' => 'processing',
+            'locked_at' => now(),
+        ]);
+
+        $this->deleteJson('/api/ai/queue-clear')
+            ->assertOk()
+            ->assertJsonPath('deleted_count', 5);
+
+        foreach ([$pending, $failed, $done, $stale, $active] as $deleted) {
+            $this->assertDatabaseMissing('ai_content_queue', ['id' => $deleted->id]);
+        }
+    }
+
+    public function test_individual_delete_allows_finished_items_but_protects_processing_items(): void
+    {
+        Sanctum::actingAs($this->admin());
+        $failed = $this->queue(['status' => 'failed']);
+        $processing = $this->queue(['status' => 'processing', 'locked_at' => now()]);
+
+        $this->deleteJson("/api/ai/queue/{$failed->id}")->assertOk();
+        $this->assertDatabaseMissing('ai_content_queue', ['id' => $failed->id]);
+
+        $this->deleteJson("/api/ai/queue/{$processing->id}")
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Không thể xóa mục đang được xử lý. Vui lòng chờ tác vụ hoàn tất.');
+        $this->assertDatabaseHas('ai_content_queue', ['id' => $processing->id]);
+    }
+
     public function test_queue_routes_require_authentication(): void
     {
         $item = $this->queue(['status' => 'failed']);
