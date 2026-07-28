@@ -66,6 +66,8 @@ class ArticleController extends Controller
             'excerpt' => 'nullable|string',
             'content' => 'nullable|string',
             'thumbnail' => 'nullable|string',
+            'thumbnail_alt' => 'nullable|string|max:255',
+            'thumbnail_caption' => 'nullable|string|max:1000',
             'author' => 'nullable|string',
             'tags' => 'nullable|array',
             'is_published' => 'nullable|boolean',
@@ -88,6 +90,10 @@ class ArticleController extends Controller
             $data['published_at'] = now();
         }
 
+        if (! empty($data['thumbnail']) && empty(trim((string) ($data['thumbnail_alt'] ?? '')))) {
+            $data['thumbnail_alt'] = $data['title'];
+        }
+
         $article = Article::create($data);
         return response()->json($article, 201);
     }
@@ -99,6 +105,8 @@ class ArticleController extends Controller
             'excerpt' => 'nullable|string',
             'content' => 'nullable|string',
             'thumbnail' => 'nullable|string',
+            'thumbnail_alt' => 'nullable|string|max:255',
+            'thumbnail_caption' => 'nullable|string|max:1000',
             'author' => 'nullable|string',
             'tags' => 'nullable|array',
             'is_published' => 'nullable|boolean',
@@ -122,6 +130,14 @@ class ArticleController extends Controller
         // Auto set published_at
         if (!empty($data['is_published']) && !$article->published_at) {
             $data['published_at'] = now();
+        }
+
+        $resultingThumbnail = $data['thumbnail'] ?? $article->thumbnail;
+        $resultingAlt = array_key_exists('thumbnail_alt', $data)
+            ? $data['thumbnail_alt']
+            : $article->thumbnail_alt;
+        if (! empty($resultingThumbnail) && empty(trim((string) $resultingAlt))) {
+            $data['thumbnail_alt'] = $data['title'] ?? $article->title;
         }
 
         $article->update($data);

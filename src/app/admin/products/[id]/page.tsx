@@ -28,7 +28,7 @@ export default function ProductFormPage() {
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [mediaPickerTarget, setMediaPickerTarget] = useState<'thumbnail' | 'gallery' | 'color_variant' | 'og_image' | 'editor'>('thumbnail');
   const [mediaPickerColor, setMediaPickerColor] = useState<string | null>(null);
-  const [editorInsertFn, setEditorInsertFn] = useState<((url: string) => void) | null>(null);
+  const [editorInsertFn, setEditorInsertFn] = useState<((url: string, alt?: string, caption?: string) => void) | null>(null);
 
   const [form, setForm] = useState({
     name: '', sku: '', description: '', content: '',
@@ -38,7 +38,8 @@ export default function ProductFormPage() {
     colors: [] as string[], color_names: [] as string[],
     color_variants: [] as { color: string; color_name: string; images: string[] }[],
     face_shapes: [] as string[], frame_styles: [] as string[], materials: [] as string[],
-    images: [] as string[], thumbnail: '',
+    images: [] as string[], thumbnail: '', thumbnail_alt: '', thumbnail_caption: '',
+    image_alts: {} as Record<string, string>, image_captions: {} as Record<string, string>,
     weight: '', frame_width: '', lens_width: '', lens_height: '', bridge_width: '', temple_length: '',
     meta_title: '', meta_desc: '', meta_keywords: '', og_image: '',
     is_active: true, is_featured: false, is_new: false, stock: '0', featured_order: '0',
@@ -102,6 +103,9 @@ export default function ProductFormPage() {
           face_shapes: product.face_shapes || [], frame_styles: product.frame_styles || [],
           materials: product.materials || [],
           images: product.images || [], thumbnail: product.thumbnail || '',
+          thumbnail_alt: product.thumbnail_alt || product.name || '',
+          thumbnail_caption: product.thumbnail_caption || '',
+          image_alts: product.image_alts || {}, image_captions: product.image_captions || {},
           weight: product.weight || '', frame_width: product.frame_width || '',
           lens_width: product.lens_width || '', lens_height: product.lens_height || '',
           bridge_width: product.bridge_width || '', temple_length: product.temple_length || '',
@@ -508,11 +512,21 @@ export default function ProductFormPage() {
                 {form.thumbnail && (
                   <div style={{ marginTop: '12px', position: 'relative', width: '200px' }}>
                     <img src={form.thumbnail.startsWith('http') ? form.thumbnail : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${form.thumbnail}`}
-                      alt="" style={{ width: '200px', height: '150px', objectFit: 'cover', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }} />
+                      alt={form.thumbnail_alt || form.name} style={{ width: '200px', height: '150px', objectFit: 'cover', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }} />
                     <button onClick={() => setForm({ ...form, thumbnail: '' })}
                       style={{ position: 'absolute', top: '-8px', right: '-8px', width: '24px', height: '24px', borderRadius: '50%', background: '#ef4444', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <FiX style={{ fontSize: '0.75rem' }} />
                     </button>
+                  </div>
+                )}
+                {form.thumbnail && (
+                  <div style={{ display: 'grid', gap: '8px', marginTop: '12px', maxWidth: '640px' }}>
+                    <input className="admin-form__input" value={form.thumbnail_alt}
+                      onChange={e => setForm({ ...form, thumbnail_alt: e.target.value })}
+                      placeholder="Alt thumbnail chuẩn SEO (mặc định dùng tên sản phẩm)" />
+                    <textarea className="admin-form__input" value={form.thumbnail_caption}
+                      onChange={e => setForm({ ...form, thumbnail_caption: e.target.value })}
+                      placeholder="Chú thích thumbnail (không bắt buộc)" rows={2} />
                   </div>
                 )}
               </div>
@@ -528,11 +542,26 @@ export default function ProductFormPage() {
                     {form.images.map((url, i) => (
                       <div key={i} style={{ position: 'relative', aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
                         <img src={url.startsWith('http') ? url : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${url}`}
-                          alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          alt={form.image_alts[url] || `${form.name} ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         <button onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, idx) => idx !== i) }))}
                           style={{ position: 'absolute', top: '4px', right: '4px', width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(239,68,68,0.9)', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <FiX style={{ fontSize: '0.625rem' }} />
                         </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {form.images.length > 0 && (
+                  <div style={{ display: 'grid', gap: '12px', marginTop: '16px' }}>
+                    {form.images.map((url, i) => (
+                      <div key={`seo-${url}-${i}`} style={{ display: 'grid', gap: '8px', padding: '12px', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}>
+                        <strong style={{ fontSize: '0.8125rem' }}>Ảnh gallery {i + 1}</strong>
+                        <input className="admin-form__input" value={form.image_alts[url] || ''}
+                          onChange={e => setForm(f => ({ ...f, image_alts: { ...f.image_alts, [url]: e.target.value } }))}
+                          placeholder={`${form.name || 'Tên sản phẩm'} – ảnh ${i + 1}`} />
+                        <textarea className="admin-form__input" value={form.image_captions[url] || ''}
+                          onChange={e => setForm(f => ({ ...f, image_captions: { ...f.image_captions, [url]: e.target.value } }))}
+                          placeholder="Chú thích ảnh (không bắt buộc)" rows={2} />
                       </div>
                     ))}
                   </div>
@@ -908,24 +937,30 @@ export default function ProductFormPage() {
         isOpen={showMediaPicker}
         onClose={() => setShowMediaPicker(false)}
         multiple={mediaPickerTarget === 'gallery' || mediaPickerTarget === 'color_variant'}
-        onSelectMultiple={(urls) => {
+        onSelectMultiple={(urls, items) => {
+          const selectedAlts = Object.fromEntries(items.map(item => [item.url, item.alt || '']));
+          const selectedCaptions = Object.fromEntries(items.map(item => [item.url, item.caption || '']));
           if (mediaPickerTarget === 'gallery') {
-            setForm(f => ({ ...f, images: [...f.images, ...urls] }));
+            setForm(f => ({ ...f, images: [...f.images, ...urls], image_alts: { ...f.image_alts, ...selectedAlts }, image_captions: { ...f.image_captions, ...selectedCaptions } }));
           } else if (mediaPickerTarget === 'color_variant' && mediaPickerColor) {
-            setForm(f => ({ ...f, color_variants: f.color_variants.map(v => v.color === mediaPickerColor ? { ...v, images: [...v.images, ...urls] } : v) }));
+            setForm(f => ({ ...f, color_variants: f.color_variants.map(v => v.color === mediaPickerColor ? { ...v, images: [...v.images, ...urls] } : v), image_alts: { ...f.image_alts, ...selectedAlts }, image_captions: { ...f.image_captions, ...selectedCaptions } }));
           }
         }}
-        onSelect={(url) => {
+        onSelect={(url, item) => {
           if (mediaPickerTarget === 'thumbnail') {
-            setForm(f => ({ ...f, thumbnail: url }));
+            setForm(f => ({ ...f, thumbnail: url, thumbnail_alt: item?.alt || f.thumbnail_alt || f.name, thumbnail_caption: item?.caption || f.thumbnail_caption }));
           } else if (mediaPickerTarget === 'gallery') {
-            setForm(f => ({ ...f, images: [...f.images, url] }));
+            setForm(f => ({ ...f, images: [...f.images, url], image_alts: { ...f.image_alts, [url]: item?.alt || '' }, image_captions: { ...f.image_captions, [url]: item?.caption || '' } }));
           } else if (mediaPickerTarget === 'color_variant' && mediaPickerColor) {
-            setForm(f => ({ ...f, color_variants: f.color_variants.map(v => v.color === mediaPickerColor ? { ...v, images: [...v.images, url] } : v) }));
+            setForm(f => ({ ...f, color_variants: f.color_variants.map(v => v.color === mediaPickerColor ? { ...v, images: [...v.images, url] } : v), image_alts: { ...f.image_alts, [url]: item?.alt || '' }, image_captions: { ...f.image_captions, [url]: item?.caption || '' } }));
           } else if (mediaPickerTarget === 'og_image') {
             setForm(f => ({ ...f, og_image: url }));
           } else if (mediaPickerTarget === 'editor' && editorInsertFn) {
-            editorInsertFn(url.startsWith('http') ? url : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${url}`);
+            editorInsertFn(
+              url.startsWith('http') ? url : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${url}`,
+              item?.alt || form.name,
+              item?.caption || '',
+            );
           }
         }}
       />

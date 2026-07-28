@@ -42,6 +42,7 @@ class MediaController extends Controller
             'file' => 'required|file|max:10240', // max 10MB
             'folder' => 'nullable|string',
             'alt' => 'nullable|string',
+            'caption' => 'nullable|string|max:1000',
         ]);
 
         // Tăng memory limit cho xử lý ảnh
@@ -102,6 +103,7 @@ class MediaController extends Controller
                 'width' => $width,
                 'height' => $height,
                 'alt' => $request->get('alt', $baseName),
+                'caption' => $request->get('caption'),
                 'folder' => $folder,
             ]);
         } elseif ($isImage && !$skipConvert) {
@@ -134,6 +136,7 @@ class MediaController extends Controller
                     'width' => $width,
                     'height' => $height,
                     'alt' => $request->get('alt', $baseName),
+                    'caption' => $request->get('caption'),
                     'folder' => $folder,
                 ]);
             } catch (\Throwable $e) {
@@ -162,6 +165,7 @@ class MediaController extends Controller
                     'width' => $width,
                     'height' => $height,
                     'alt' => $request->get('alt', $baseName),
+                    'caption' => $request->get('caption'),
                     'folder' => $folder,
                 ]);
             }
@@ -181,6 +185,7 @@ class MediaController extends Controller
                 'mime_type' => $mimeType,
                 'size' => $file->getSize(),
                 'alt' => $request->get('alt', $baseName),
+                'caption' => $request->get('caption'),
                 'folder' => $folder,
             ]);
         }
@@ -211,6 +216,7 @@ class MediaController extends Controller
     {
         $data = $request->validate([
             'alt' => 'nullable|string|max:255',
+            'caption' => 'nullable|string|max:1000',
             'folder' => 'nullable|string|max:100',
         ]);
 

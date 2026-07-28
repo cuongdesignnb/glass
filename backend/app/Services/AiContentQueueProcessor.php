@@ -247,6 +247,8 @@ class AiContentQueueProcessor
                 'meta_keywords' => (string) ($payload['meta_keywords'] ?? ''),
                 'tags' => $tags,
                 'thumbnail' => $thumbnail,
+                'thumbnail_alt' => $payload['thumbnail_alt'] ?? ($thumbnail ? ($title ?: $queueItem->topic) : null),
+                'thumbnail_caption' => $payload['thumbnail_caption'] ?? null,
                 'og_image' => $payload['og_image'] ?? $thumbnail,
                 'article_category_id' => $queueItem->article_category_id,
                 'is_published' => $queueItem->auto_publish,

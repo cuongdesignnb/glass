@@ -203,7 +203,7 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
                   {featuredArticle.thumbnail ? (
                     <Image
                       src={buildImageUrl(featuredArticle.thumbnail)}
-                      alt={featuredArticle.title}
+                      alt={featuredArticle.thumbnail_alt || featuredArticle.title}
                       fill
                       priority
                       sizes="(max-width: 768px) 100vw, 600px"
@@ -257,7 +257,7 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
                       {article.thumbnail ? (
                         <Image
                           src={buildImageUrl(article.thumbnail)}
-                          alt={article.title}
+                          alt={article.thumbnail_alt || article.title}
                           fill
                           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 360px"
                           style={{ objectFit: 'cover' }}

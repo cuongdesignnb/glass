@@ -61,6 +61,22 @@ function injectHeadingIds(html: string): string {
   });
 }
 
+function injectMissingImageAlts(html: string, articleTitle: string): string {
+  const escapedTitle = articleTitle
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  return html.replace(/<img\b([^>]*)>/gi, (imageTag, attributes: string) => {
+    if (/\balt\s*=\s*(["'])\s*\1/i.test(attributes)) {
+      return imageTag.replace(/\balt\s*=\s*(["'])\s*\1/i, `alt="${escapedTitle}"`);
+    }
+    if (/\balt\s*=/i.test(attributes)) return imageTag;
+    return `<img${attributes} alt="${escapedTitle}">`;
+  });
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const article = await getArticle(slug);
@@ -90,7 +106,9 @@ export default async function ArticleDetailPage({ params }: { params: Promise<{ 
   const related = await getRelatedArticles(article.id, article.tags || []);
 
   // Process content: inject heading IDs for TOC
-  const processedContent = article.content ? injectHeadingIds(article.content) : '';
+  const processedContent = article.content
+    ? injectMissingImageAlts(injectHeadingIds(article.content), article.title)
+    : '';
 
   const settings = await getPublicSettings();
   const siteName = settings['site_name'] || 'Glass Eyewear';

@@ -19,6 +19,8 @@ export default function AdminAiContentPage() {
   const [articleMeta, setArticleMeta] = useState<any>(null);
   const [generatedContent, setGeneratedContent] = useState('');
   const [generatedThumbnail, setGeneratedThumbnail] = useState('');
+  const [generatedThumbnailAlt, setGeneratedThumbnailAlt] = useState('');
+  const [generatedThumbnailCaption, setGeneratedThumbnailCaption] = useState('');
   const [generatedImages, setGeneratedImages] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -30,6 +32,8 @@ export default function AdminAiContentPage() {
     setLoading(true);
     setGeneratedImages([]);
     setGeneratedThumbnail('');
+    setGeneratedThumbnailAlt('');
+    setGeneratedThumbnailCaption('');
     setArticleMeta(null);
     const aiToast = toast.loading(withImages ? 'AI đang viết bài và sinh ảnh... (1-2 phút)' : 'AI đang viết bài...');
     try {
@@ -42,6 +46,8 @@ export default function AdminAiContentPage() {
       }
       setGeneratedContent(data.content || 'Không có nội dung');
       setGeneratedThumbnail(data.thumbnail || data.og_image || data.images?.[0]?.url || '');
+      setGeneratedThumbnailAlt(data.thumbnail_alt || data.title || topic);
+      setGeneratedThumbnailCaption(data.thumbnail_caption || '');
       setGeneratedImages(data.images || []);
       if (data.full_article) {
         setArticleMeta({
@@ -88,6 +94,8 @@ export default function AdminAiContentPage() {
         meta_keywords: articleMeta?.meta_keywords || '',
         tags: articleMeta?.tags || [],
         thumbnail: generatedThumbnail || generatedImages?.[0]?.url || null,
+        thumbnail_alt: generatedThumbnailAlt || articleMeta?.title || topic,
+        thumbnail_caption: generatedThumbnailCaption || null,
         og_image: generatedThumbnail || generatedImages?.[0]?.url || null,
       };
 

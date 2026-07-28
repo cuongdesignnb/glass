@@ -23,11 +23,11 @@ export default function ArticleFormPage() {
   const [generatingAi, setGeneratingAi] = useState(false);
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [mediaTarget, setMediaTarget] = useState<'thumbnail' | 'editor'>('thumbnail');
-  const [editorInsertFn, setEditorInsertFn] = useState<((url: string) => void) | null>(null);
+  const [editorInsertFn, setEditorInsertFn] = useState<((url: string, alt?: string, caption?: string) => void) | null>(null);
   const [aiImageCount, setAiImageCount] = useState(2);
 
   const [form, setForm] = useState({
-    title: '', excerpt: '', content: '', thumbnail: '',
+    title: '', excerpt: '', content: '', thumbnail: '', thumbnail_alt: '', thumbnail_caption: '',
     author: '', tags: [] as string[], is_published: false, is_featured: false,
     meta_title: '', meta_desc: '', meta_keywords: '', og_image: '',
     article_category_id: '' as string | number,
@@ -60,6 +60,8 @@ export default function ArticleFormPage() {
         setForm({
           title: article.title || '', excerpt: article.excerpt || '',
           content: article.content || '', thumbnail: article.thumbnail || '',
+          thumbnail_alt: article.thumbnail_alt || article.title || '',
+          thumbnail_caption: article.thumbnail_caption || '',
           author: article.author || '', tags: article.tags || [],
           is_published: article.is_published ?? false, is_featured: article.is_featured ?? false,
           meta_title: article.meta_title || '', meta_desc: article.meta_desc || '',
@@ -132,6 +134,8 @@ export default function ArticleFormPage() {
         const aiThumb = data.thumbnail || data.og_image || data.images?.[0]?.url || '';
         if (aiThumb) {
           updates.thumbnail = aiThumb;
+          updates.thumbnail_alt = data.thumbnail_alt || data.title || form.title;
+          updates.thumbnail_caption = data.thumbnail_caption || '';
           updates.og_image = aiThumb;
         }
         if (data.full_article) {
@@ -308,12 +312,22 @@ export default function ArticleFormPage() {
                   {form.thumbnail && (
                     <div style={{ marginTop: '8px', borderRadius: '8px', overflow: 'hidden', aspectRatio: '16/9', background: 'rgba(255,255,255,0.06)', position: 'relative' }}>
                       <img src={form.thumbnail.startsWith('http') ? form.thumbnail : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${form.thumbnail}`}
-                        alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        alt={form.thumbnail_alt || form.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <button onClick={() => setForm({ ...form, thumbnail: '' })}
                         style={{ position: 'absolute', top: '6px', right: '6px', width: '22px', height: '22px', borderRadius: '50%', background: '#ef4444', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <FiX style={{ fontSize: '0.625rem' }} />
                       </button>
                     </div>
+                  )}
+                  {form.thumbnail && (
+                    <>
+                      <input className="admin-form__input" value={form.thumbnail_alt}
+                        onChange={e => setForm({ ...form, thumbnail_alt: e.target.value })}
+                        placeholder="Alt ảnh chuẩn SEO (mặc định dùng tiêu đề bài viết)" />
+                      <textarea className="admin-form__input" value={form.thumbnail_caption}
+                        onChange={e => setForm({ ...form, thumbnail_caption: e.target.value })}
+                        placeholder="Chú thích ảnh (không bắt buộc)" rows={2} />
+                    </>
                   )}
                 </div>
               </div>
@@ -347,11 +361,20 @@ export default function ArticleFormPage() {
       <MediaPicker
         isOpen={showMediaPicker}
         onClose={() => setShowMediaPicker(false)}
-        onSelect={(url) => {
+        onSelect={(url, item) => {
           if (mediaTarget === 'thumbnail') {
-            setForm(f => ({ ...f, thumbnail: url }));
+            setForm(f => ({
+              ...f,
+              thumbnail: url,
+              thumbnail_alt: item?.alt || f.thumbnail_alt || f.title,
+              thumbnail_caption: item?.caption || f.thumbnail_caption,
+            }));
           } else if (mediaTarget === 'editor' && editorInsertFn) {
-            editorInsertFn(url.startsWith('http') ? url : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${url}`);
+            editorInsertFn(
+              url.startsWith('http') ? url : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${url}`,
+              item?.alt || form.title,
+              item?.caption || '',
+            );
           }
         }}
       />

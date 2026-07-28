@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Article extends Model
 {
     protected $fillable = [
-        'title', 'slug', 'excerpt', 'content', 'thumbnail',
+        'title', 'slug', 'excerpt', 'content', 'thumbnail', 'thumbnail_alt', 'thumbnail_caption',
         'author', 'tags', 'is_published', 'is_featured',
         'meta_title', 'meta_desc', 'meta_keywords', 'og_image',
         'views', 'published_at', 'article_category_id',

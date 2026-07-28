@@ -73,7 +73,7 @@ Route::prefix('public')->group(function () {
                       ->orWhere('sku', 'LIKE', "%{$q}%")
                       ->orWhere('brand', 'LIKE', "%{$q}%");
             })
-            ->select('id', 'name', 'slug', 'thumbnail', 'price', 'sale_price')
+            ->select('id', 'name', 'slug', 'thumbnail', 'thumbnail_alt', 'price', 'sale_price')
             ->limit(5)
             ->get();
 
@@ -82,7 +82,7 @@ Route::prefix('public')->group(function () {
                 $query->where('title', 'LIKE', "%{$q}%")
                       ->orWhere('excerpt', 'LIKE', "%{$q}%");
             })
-            ->select('id', 'title', 'slug', 'thumbnail', 'excerpt')
+            ->select('id', 'title', 'slug', 'thumbnail', 'thumbnail_alt', 'excerpt')
             ->limit(3)
             ->get();
 

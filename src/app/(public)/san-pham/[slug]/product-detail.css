@@ -110,6 +110,14 @@
   overflow-x: auto;
 }
 
+.product-gallery__caption {
+  margin: 10px 8px 0;
+  color: var(--color-gray-500);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
 .product-gallery__thumb {
   width: 72px;
   height: 72px;

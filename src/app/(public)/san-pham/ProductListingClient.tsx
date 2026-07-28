@@ -494,7 +494,7 @@ export default function ProductListingClient({
                         {product.thumbnail ? (
                           <Image
                             src={`${process.env.NEXT_PUBLIC_API_URL?.replace("/api", "")}${product.thumbnail}`}
-                            alt={product.name}
+                            alt={product.thumbnail_alt || product.name}
                             fill
                             priority={index === 0}
                             sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 250px"

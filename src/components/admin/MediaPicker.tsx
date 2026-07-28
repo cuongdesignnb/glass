@@ -8,8 +8,8 @@ import { FiX, FiSearch, FiCheck, FiUploadCloud, FiTrash2, FiLoader, FiImage } fr
 interface MediaPickerProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (url: string) => void;
-  onSelectMultiple?: (urls: string[]) => void;
+  onSelect: (url: string, item: any) => void;
+  onSelectMultiple?: (urls: string[], items: any[]) => void;
   multiple?: boolean;
 }
 
@@ -133,13 +133,14 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
   const handleConfirm = () => {
     if (multiple) {
       if (selectedMultiple.size > 0 && onSelectMultiple) {
-        onSelectMultiple(Array.from(selectedMultiple));
+        const urls = Array.from(selectedMultiple);
+        onSelectMultiple(urls, urls.map(url => media.find(item => item.url === url)).filter(Boolean));
         setSelectedMultiple(new Set());
         onClose();
       }
     } else {
       if (selected) {
-        onSelect(selected);
+        onSelect(selected, media.find(item => item.url === selected));
         setSelected('');
         onClose();
       }
@@ -240,7 +241,7 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
                     className={`media-picker-item ${isSelected ? 'media-picker-item--selected' : ''}`}
                     onClick={() => handleItemClick(item.url)}
                     style={{ opacity: isDeleting ? 0.4 : 1 }}>
-                    <img src={fullUrl} alt={item.filename} loading="lazy" />
+                    <img src={fullUrl} alt={item.alt || item.filename} loading="lazy" />
 
                     {/* Selected checkmark */}
                     {isSelected && (
