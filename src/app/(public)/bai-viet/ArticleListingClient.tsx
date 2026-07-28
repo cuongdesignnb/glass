@@ -50,7 +50,7 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
   const sort = filters.sort;
   const page = Number(filters.page);
   const categories = useMemo(() => [
-    { slug: '', label: 'Táº¥t Cáº£', icon: <FiFileText /> },
+    { slug: '', label: 'Tất Cả', icon: <FiFileText /> },
     ...initialCategories.map((category) => ({
       slug: String(category.slug || ''),
       label: String(category.name || category.slug || ''),
@@ -102,11 +102,11 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
       <div className="articles-header">
         <div className="container">
           <div className="articles-header__label">
-            <FiBookOpen /> Nháº­t KÃ½ KÃ­nh Máº¯t
+            <FiBookOpen /> Nhật Ký Kính Mắt
           </div>
-          <h1 className="articles-header__title">BÃ i Viáº¿t & Kiáº¿n Thá»©c</h1>
+          <h1 className="articles-header__title">Bài Viết & Kiến Thức</h1>
           <p className="articles-header__sub">
-            KhÃ¡m phÃ¡ xu hÆ°á»›ng má»›i nháº¥t, máº¹o chÄƒm sÃ³c vÃ  kiáº¿n thá»©c vá» kÃ­nh máº¯t tá»« cÃ¡c chuyÃªn gia
+            Khám phá xu hướng mới nhất, mẹo chăm sóc và kiến thức về kính mắt từ các chuyên gia
           </p>
         </div>
       </div>
@@ -141,14 +141,14 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
             <FiSearch />
             <input
               type="text"
-              placeholder="TÃ¬m kiáº¿m bÃ i viáº¿t..."
+              placeholder="Tìm kiếm bài viết..."
               value={searchInput}
               onChange={(e) => handleSearch(e.target.value)}
             />
           </div>
           <div className="articles-toolbar__right">
             <span className="articles-toolbar__count">
-              {loading ? '...' : `${pagination.total || 0} bÃ i viáº¿t`}
+              {loading ? '...' : `${pagination.total || 0} bài viết`}
             </span>
             <select
               value={sort}
@@ -157,7 +157,7 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
               disabled
               aria-label="Article sort is fixed to newest until backend sort is implemented"
             >
-              <option value="newest">Má»›i nháº¥t</option>
+              <option value="newest">Mới nhất</option>
             </select>
           </div>
         </div>
@@ -184,14 +184,14 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
         ) : articles.length === 0 ? (
           <div className="articles-empty">
             <div className="articles-empty__icon"><FiFile /></div>
-            <h3>KhÃ´ng tÃ¬m tháº¥y bÃ i viáº¿t</h3>
-            <p>Thá»­ chá»n danh má»¥c khÃ¡c hoáº·c thay Ä‘á»•i tá»« khÃ³a tÃ¬m kiáº¿m</p>
+            <h3>Không tìm thấy bài viết</h3>
+            <p>Thử chọn danh mục khác hoặc thay đổi từ khóa tìm kiếm</p>
             <button
               className="btn btn-primary"
               style={{ marginTop: 'var(--space-lg)' }}
               onClick={() => { setSearchInput(''); navigate({ category: '', search: '', sort: 'newest', page: '1' }); }}
             >
-              Xem táº¥t cáº£ bÃ i viáº¿t
+              Xem tất cả bài viết
             </button>
           </div>
         ) : (
@@ -213,7 +213,7 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
                     <div className="article-featured__placeholder"><FiFileText /></div>
                   )}
                   {featuredArticle.is_featured && (
-                    <span className="article-featured__badge"><FiStar /> BÃ i ná»•i báº­t</span>
+                    <span className="article-featured__badge"><FiStar /> Bài nổi bật</span>
                   )}
                 </div>
                 <div className="article-featured__body">
@@ -237,12 +237,12 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
                     </div>
                     {featuredArticle.views > 0 && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', color: 'var(--color-gray-500)' }}>
-                        <FiEye /> {featuredArticle.views.toLocaleString()} lÆ°á»£t xem
+                        <FiEye /> {featuredArticle.views.toLocaleString()} lượt xem
                       </div>
                     )}
                   </div>
                   <span className="article-featured__cta">
-                    Äá»c bÃ i viáº¿t <FiArrowRight />
+                    Đọc bài viết <FiArrowRight />
                   </span>
                 </div>
               </Link>
@@ -306,11 +306,11 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
                     onClick={() => syncFilters({ ...filtersRef.current, page: String(page - 1) })}
                     aria-label="Previous page"
                   >
-                    <FiChevronLeft /> Previous
+                    <FiChevronLeft /> Trước
                   </Link>
                 ) : (
                   <span className="articles-pagination__btn articles-pagination__btn--disabled" aria-disabled="true">
-                    <FiChevronLeft /> Previous
+                    <FiChevronLeft /> Trước
                   </span>
                 )}
                 {Array.from({ length: Math.min(pagination.lastPage, 7) }, (_, i) => {
@@ -341,11 +341,11 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
                     onClick={() => syncFilters({ ...filtersRef.current, page: String(page + 1) })}
                     aria-label="Next page"
                   >
-                    Next <FiChevronRight />
+                    Tiếp <FiChevronRight />
                   </Link>
                 ) : (
                   <span className="articles-pagination__btn articles-pagination__btn--disabled" aria-disabled="true">
-                    Next <FiChevronRight />
+                    Tiếp <FiChevronRight />
                   </span>
                 )}
               </div>
