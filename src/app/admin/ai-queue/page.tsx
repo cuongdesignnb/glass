@@ -358,8 +358,14 @@ export default function AdminAiQueuePage() {
           <button className="admin-btn admin-btn--secondary admin-btn--sm" onClick={() => loadDashboard(true)} disabled={loading}>
             <FiRefreshCw /> Làm mới
           </button>
-          <button className="admin-btn admin-btn--primary admin-btn--sm" onClick={processDueItems} disabled={processing || !queueStatus?.due_count}>
-            {processing ? <FiLoader className="spin" /> : <FiPlay />} Xử lý ngay bài đến giờ
+          <button
+            className="admin-btn admin-btn--primary admin-btn--sm"
+            onClick={processDueItems}
+            disabled={processing || autoEnabled || !queueStatus?.due_count}
+            title={autoEnabled ? 'Tắt chế độ tự động nếu muốn xử lý thủ công.' : 'Xử lý ngay các bài đã đến giờ.'}
+          >
+            {processing ? <FiLoader className="spin" /> : autoEnabled ? <FiClock /> : <FiPlay />}
+            {autoEnabled ? 'Đang chạy tự động' : 'Xử lý ngay bài đến giờ'}
           </button>
           <button className="admin-btn admin-btn--secondary admin-btn--sm" onClick={retryAllFailed} disabled={Boolean(actionId) || !queueStatus?.failed_count}>
             <FiRefreshCw /> Thử lại tất cả bài lỗi

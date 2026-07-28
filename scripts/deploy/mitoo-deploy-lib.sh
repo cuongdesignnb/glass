@@ -862,16 +862,17 @@ check_ai_scheduler_online() {
     emit "AI_SCHEDULER_PID" "$pid"
 }
 
-restart_ai_scheduler_if_present() {
+ensure_ai_scheduler_online() {
     if ai_scheduler_pm2_exists; then
         pm2 restart "$AI_SCHEDULER_PM2_APP" --update-env
-        check_ai_scheduler_online
-        AI_SCHEDULER_BOOTSTRAP_REQUIRED=0
         emit "AI_SCHEDULER_RESTART" "PASS"
     else
-        AI_SCHEDULER_BOOTSTRAP_REQUIRED=1
-        emit "AI_SCHEDULER_BOOTSTRAP_REQUIRED" "YES"
+        require_file "$APP_ROOT/ecosystem.ai-scheduler.config.cjs"
+        pm2 start "$APP_ROOT/ecosystem.ai-scheduler.config.cjs" --only "$AI_SCHEDULER_PM2_APP"
+        emit "AI_SCHEDULER_START" "PASS"
     fi
+    check_ai_scheduler_online
+    AI_SCHEDULER_BOOTSTRAP_REQUIRED=0
 }
 
 validate_ai_queue_schedule() {
@@ -918,7 +919,7 @@ activate_release() {
     laravel_boot_as_www "$APP_ROOT"
     reload_php_fpm
     pm2 restart "$PM2_APP" --update-env
-    restart_ai_scheduler_if_present
+    ensure_ai_scheduler_online
     post_activation_checks
 
     ACTIVATION_SUCCEEDED=1
