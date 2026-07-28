@@ -12,6 +12,7 @@ class Product extends Model
     protected $fillable = [
         'name', 'slug', 'sku', 'description', 'content',
         'price', 'sale_price', 'images', 'thumbnail',
+        'thumbnail_alt', 'thumbnail_caption', 'image_alts', 'image_captions',
         'colors', 'color_names', 'color_variants', 'prescription', 'gender',
         'face_shapes', 'frame_styles', 'materials',
         'brand', 'weight', 'frame_width', 'lens_width',
@@ -25,6 +26,8 @@ class Product extends Model
     {
         return [
             'images' => 'array',
+            'image_alts' => 'array',
+            'image_captions' => 'array',
             'gender' => 'array',
             'colors' => 'array',
             'color_names' => 'array',

@@ -253,6 +253,19 @@ export default function ProductDetailClient({
       ? galleryImages
       : thumbnail ? [thumbnail] : [];
 
+  const originalImageUrl = (imageUrl: string) =>
+    apiMediaUrl && imageUrl.startsWith(apiMediaUrl) ? imageUrl.slice(apiMediaUrl.length) : imageUrl;
+  const imageAlt = (imageUrl: string, index: number) => {
+    if (thumbnail && imageUrl === thumbnail) return product.thumbnail_alt || product.name;
+    const originalUrl = originalImageUrl(imageUrl);
+    return product.image_alts?.[originalUrl] || product.image_alts?.[imageUrl] || `${product.name} – ảnh ${index + 1}`;
+  };
+  const imageCaption = (imageUrl: string) => {
+    if (thumbnail && imageUrl === thumbnail) return product.thumbnail_caption || '';
+    const originalUrl = originalImageUrl(imageUrl);
+    return product.image_captions?.[originalUrl] || product.image_captions?.[imageUrl] || '';
+  };
+
   const handleColorSelect = (color: string, index: number) => {
     setSelectedColor(color);
     setSelectedColorName(product.color_names?.[index] || "");
@@ -417,7 +430,7 @@ export default function ProductDetailClient({
             {allImages.length > 0 ? (
               <Image
                 src={allImages[mainImageIndex]}
-                alt={product.name}
+                alt={imageAlt(allImages[mainImageIndex], mainImageIndex)}
                 fill
                 priority
                 sizes="(max-width: 768px) 100vw, 600px"
@@ -460,6 +473,9 @@ export default function ProductDetailClient({
               )}
             </div>
           </div>
+          {allImages[mainImageIndex] && imageCaption(allImages[mainImageIndex]) && (
+            <p className="product-gallery__caption">{imageCaption(allImages[mainImageIndex])}</p>
+          )}
           {allImages.length > 1 && (
             <div className="product-gallery__thumbs">
               {allImages.map((img: string, i: number) => (
@@ -468,7 +484,7 @@ export default function ProductDetailClient({
                   className={`product-gallery__thumb ${i === mainImageIndex ? "product-gallery__thumb--active" : ""}`}
                   onClick={() => setMainImageIndex(i)}
                 >
-                  <Image src={img} alt={`${product.name} ${i + 1}`} width={72} height={72} style={{ objectFit: 'cover' }} />
+                  <Image src={img} alt={imageAlt(img, i)} width={72} height={72} style={{ objectFit: 'cover' }} />
                 </button>
               ))}
             </div>
@@ -1271,7 +1287,7 @@ function RelatedProducts({
                   {img ? (
                     <Image
                       src={img}
-                      alt={p.name}
+                      alt={p.thumbnail_alt || p.name}
                       fill
                       sizes="(max-width: 768px) 50vw, 220px"
                       style={{ objectFit: "cover" }}

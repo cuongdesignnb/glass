@@ -750,6 +750,14 @@
   display: block;
 }
 
+.article-thumbnail figcaption {
+  margin-top: var(--space-sm);
+  color: var(--color-gray-500);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
 /* Body Layout */
 .article-body {
   max-width: 1200px;

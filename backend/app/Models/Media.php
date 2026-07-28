@@ -8,6 +8,6 @@ class Media extends Model
 {
     protected $fillable = [
         'filename', 'original_name', 'path', 'url',
-        'mime_type', 'size', 'width', 'height', 'alt', 'folder',
+        'mime_type', 'size', 'width', 'height', 'alt', 'caption', 'folder',
     ];
 }

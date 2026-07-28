@@ -241,6 +241,12 @@ class ProductController extends Controller
             'sale_price' => 'nullable|numeric|min:0',
             'images' => 'nullable|array',
             'thumbnail' => 'nullable|string',
+            'thumbnail_alt' => 'nullable|string|max:255',
+            'thumbnail_caption' => 'nullable|string|max:1000',
+            'image_alts' => 'nullable|array',
+            'image_alts.*' => 'nullable|string|max:255',
+            'image_captions' => 'nullable|array',
+            'image_captions.*' => 'nullable|string|max:1000',
             'colors' => 'nullable|array',
             'color_names' => 'nullable|array',
             'color_variants' => 'nullable|array',
@@ -280,6 +286,10 @@ class ProductController extends Controller
 
         // Generate slug
         $data['slug'] = VietnameseSlug::make($data['name']);
+
+        if (! empty($data['thumbnail']) && empty(trim((string) ($data['thumbnail_alt'] ?? '')))) {
+            $data['thumbnail_alt'] = $data['name'];
+        }
 
         // Ensure unique slug
         $existingSlug = Product::where('slug', $data['slug'])->exists();
@@ -346,6 +356,12 @@ class ProductController extends Controller
             'sale_price' => 'nullable|numeric|min:0',
             'images' => 'nullable|array',
             'thumbnail' => 'nullable|string',
+            'thumbnail_alt' => 'nullable|string|max:255',
+            'thumbnail_caption' => 'nullable|string|max:1000',
+            'image_alts' => 'nullable|array',
+            'image_alts.*' => 'nullable|string|max:255',
+            'image_captions' => 'nullable|array',
+            'image_captions.*' => 'nullable|string|max:1000',
             'colors' => 'nullable|array',
             'color_names' => 'nullable|array',
             'color_variants' => 'nullable|array',
@@ -383,6 +399,14 @@ class ProductController extends Controller
                 $data['color_variants'] ?? ($product->color_variants ?? []),
                 $data['colors'] ?? ($product->colors ?? [])
             );
+        }
+
+        $resultingThumbnail = $data['thumbnail'] ?? $product->thumbnail;
+        $resultingAlt = array_key_exists('thumbnail_alt', $data)
+            ? $data['thumbnail_alt']
+            : $product->thumbnail_alt;
+        if (! empty($resultingThumbnail) && empty(trim((string) $resultingAlt))) {
+            $data['thumbnail_alt'] = $data['name'] ?? $product->name;
         }
 
         // Regenerate slug if name changed

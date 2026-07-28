@@ -15,7 +15,7 @@ interface RichEditorProps {
   content: string;
   onChange: (html: string) => void;
   placeholder?: string;
-  onMediaPick?: (insertImage: (url: string) => void) => void;
+  onMediaPick?: (insertImage: (url: string, alt?: string, caption?: string) => void) => void;
 }
 
 export default function RichEditor({ content, onChange, placeholder = 'Viết nội dung tại đây...', onMediaPick }: RichEditorProps) {
@@ -60,15 +60,17 @@ export default function RichEditor({ content, onChange, placeholder = 'Viết n�
 
   const addImage = () => {
     if (onMediaPick) {
-      onMediaPick((url: string) => {
+      onMediaPick((url: string, alt?: string, caption?: string) => {
         if (url) {
-          editor.chain().focus().setImage({ src: url }).run();
+          editor.chain().focus().setImage({ src: url, alt: alt || '', title: caption || undefined }).run();
         }
       });
     } else {
       const url = prompt('Nhập URL ảnh:');
       if (url) {
-        editor.chain().focus().setImage({ src: url }).run();
+        const alt = prompt('Nhập mô tả ảnh (alt):') || '';
+        const caption = prompt('Nhập chú thích ảnh (không bắt buộc):') || '';
+        editor.chain().focus().setImage({ src: url, alt, title: caption || undefined }).run();
       }
     }
   };

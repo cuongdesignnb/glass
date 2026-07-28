@@ -143,16 +143,17 @@ export default function ArticleDetailClient({ article, related, processedContent
 
       {/* Thumbnail */}
       {article.thumbnail && (
-        <div className="article-thumbnail">
+        <figure className="article-thumbnail">
           <Image
             src={buildImageUrl(article.thumbnail)}
-            alt={article.title}
+            alt={article.thumbnail_alt || article.title}
             width={1200}
             height={675}
             priority
             style={{ width: '100%', height: 'auto', borderRadius: 'var(--radius-xl)' }}
           />
-        </div>
+          {article.thumbnail_caption && <figcaption>{article.thumbnail_caption}</figcaption>}
+        </figure>
       )}
 
       {/* Body */}
@@ -286,7 +287,7 @@ export default function ArticleDetailClient({ article, related, processedContent
                       {rel.thumbnail ? (
                         <Image
                           src={buildImageUrl(rel.thumbnail)}
-                          alt={rel.title}
+                          alt={rel.thumbnail_alt || rel.title}
                           width={68}
                           height={52}
                           style={{ objectFit: 'cover' }}
@@ -318,7 +319,7 @@ export default function ArticleDetailClient({ article, related, processedContent
                   {rel.thumbnail ? (
                     <Image
                       src={buildImageUrl(rel.thumbnail)}
-                      alt={rel.title}
+                      alt={rel.thumbnail_alt || rel.title}
                       fill
                       sizes="(max-width: 768px) 100vw, 360px"
                       style={{ objectFit: 'cover' }}

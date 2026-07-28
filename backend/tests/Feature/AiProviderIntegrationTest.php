@@ -64,6 +64,7 @@ class AiProviderIntegrationTest extends TestCase
             $table->integer('width')->nullable();
             $table->integer('height')->nullable();
             $table->string('alt')->nullable();
+            $table->text('caption')->nullable();
             $table->string('folder')->default('general');
             $table->timestamps();
         });
@@ -360,8 +361,15 @@ class AiProviderIntegrationTest extends TestCase
         $payload = $response->getData(true);
         $this->assertSame(200, $response->getStatusCode());
         $this->assertNotEmpty($payload['thumbnail']);
+        $this->assertSame('Base64 image', $payload['thumbnail_alt']);
+        $this->assertSame('Ảnh minh họa: Base64 image', $payload['thumbnail_caption']);
         $this->rememberGeneratedFile($payload['thumbnail']);
-        $this->assertDatabaseHas('media', ['url' => $payload['thumbnail'], 'folder' => 'ai-generated']);
+        $this->assertDatabaseHas('media', [
+            'url' => $payload['thumbnail'],
+            'folder' => 'ai-generated',
+            'alt' => 'Base64 image',
+            'caption' => 'Ảnh minh họa: Base64 image',
+        ]);
     }
 
     public function test_image_generation_accepts_remote_url_results(): void

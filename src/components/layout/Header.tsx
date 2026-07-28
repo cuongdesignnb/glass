@@ -212,7 +212,7 @@ export default function Header({ menus }: HeaderProps) {
                               {searchResults.products.map((p: any) => (
                                 <button key={p.id} className="search-dropdown__item" onClick={() => navigateToResult(`/san-pham/${p.slug}`)}>
                                   <div className="search-dropdown__thumb">
-                                    {p.thumbnail ? <img src={p.thumbnail.startsWith('http') ? p.thumbnail : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${p.thumbnail}`} alt={p.name} /> : <RiGlassesLine />}
+                                    {p.thumbnail ? <img src={p.thumbnail.startsWith('http') ? p.thumbnail : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${p.thumbnail}`} alt={p.thumbnail_alt || p.name} /> : <RiGlassesLine />}
                                   </div>
                                   <div className="search-dropdown__info">
                                     <div className="search-dropdown__name">{p.name}</div>
@@ -232,7 +232,7 @@ export default function Header({ menus }: HeaderProps) {
                               {searchResults.articles.map((a: any) => (
                                 <button key={a.id} className="search-dropdown__item" onClick={() => navigateToResult(`/bai-viet/${a.slug}`)}>
                                   <div className="search-dropdown__thumb">
-                                    {a.thumbnail ? <img src={a.thumbnail.startsWith('http') ? a.thumbnail : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${a.thumbnail}`} alt={a.title} /> : <FiSearch />}
+                                    {a.thumbnail ? <img src={a.thumbnail.startsWith('http') ? a.thumbnail : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${a.thumbnail}`} alt={a.thumbnail_alt || a.title} /> : <FiSearch />}
                                   </div>
                                   <div className="search-dropdown__info">
                                     <div className="search-dropdown__name">{a.title}</div>

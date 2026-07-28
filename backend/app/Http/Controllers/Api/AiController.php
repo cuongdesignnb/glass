@@ -578,6 +578,8 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
 
             $titleForImage = $h1Heading['text'] ?? $articleMeta['title'] ?? $request->topic;
             $thumbnailUrl = null;
+            $thumbnailAlt = trim(strip_tags((string) $titleForImage));
+            $thumbnailCaption = $thumbnailAlt !== '' ? 'Ảnh minh họa: ' . $thumbnailAlt : '';
             if ($openaiImageKey !== '') {
                 $thumbnailUrl = $this->generateAndSaveImageOpenAI(
                     apiKey: $openaiImageKey,
@@ -585,6 +587,8 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                     preferredModel: $openaiImageModel,
                     imageQuality: $openaiImageQuality,
                     description: $this->buildArticleImagePrompt($titleForImage, $titleForImage, 'thumbnail', 'h1'),
+                    altText: $thumbnailAlt,
+                    caption: $thumbnailCaption,
                     slug: \Illuminate\Support\Str::slug($titleForImage . '-thumbnail') ?: 'ai-thumbnail',
                     idx: 0,
                     warnings: $warnings
@@ -610,6 +614,8 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                     preferredModel: $openaiImageModel,
                     imageQuality: $openaiImageQuality,
                     description: $this->buildArticleImagePrompt($headingText, $titleForImage, 'inline', $headingTag),
+                    altText: $headingText,
+                    caption: $headingText,
                     slug: \Illuminate\Support\Str::slug($headingText) ?: 'ai-image',
                     idx: $idx + 1,
                     warnings: $warnings
@@ -632,18 +638,24 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                     'heading_tag' => $headingTag,
                     'heading' => $headingText,
                     'url' => $imageUrl,
+                    'alt' => $headingText,
+                    'caption' => $headingText,
                     'position' => $idx + 1,
                 ];
             }
 
             if (!$thumbnailUrl && !empty($generatedImages[0]['url'])) {
                 $thumbnailUrl = $generatedImages[0]['url'];
+                $thumbnailAlt = $generatedImages[0]['alt'] ?? $thumbnailAlt;
+                $thumbnailCaption = $generatedImages[0]['caption'] ?? $thumbnailCaption;
             }
 
             $responseData = [
                 'success' => true,
                 'content' => $content,
                 'thumbnail' => $thumbnailUrl,
+                'thumbnail_alt' => $thumbnailUrl ? $thumbnailAlt : null,
+                'thumbnail_caption' => $thumbnailUrl ? $thumbnailCaption : null,
                 'og_image' => $thumbnailUrl,
                 'images' => $generatedImages,
                 'warnings' => $warnings,
@@ -1037,6 +1049,8 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
         string $preferredModel,
         string $imageQuality,
         string $description,
+        string $altText,
+        string $caption,
         string $slug,
         int $idx,
         array &$warnings = []
@@ -1105,7 +1119,8 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                     return $this->saveBase64ImageAsWebpToLibrary(
                         base64Data: $base64Data,
                         originalMimeType: 'image/png',
-                        altText: $description,
+                        altText: $altText,
+                        caption: $caption,
                         topic: $slug,
                         idx: $idx
                     );
@@ -1125,7 +1140,14 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
         return null;
     }
 
-    private function saveBase64ImageAsWebpToLibrary(string $base64Data, string $originalMimeType, string $altText, string $topic, int $idx): string
+    private function saveBase64ImageAsWebpToLibrary(
+        string $base64Data,
+        string $originalMimeType,
+        string $altText,
+        string $caption,
+        string $topic,
+        int $idx
+    ): string
     {
         $binary = base64_decode($base64Data);
 
@@ -1193,6 +1215,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             'width' => $width,
             'height' => $height,
             'alt' => mb_substr(strip_tags($altText), 0, 255),
+            'caption' => mb_substr(strip_tags($caption), 0, 1000),
             'folder' => 'ai-generated',
         ]);
 
