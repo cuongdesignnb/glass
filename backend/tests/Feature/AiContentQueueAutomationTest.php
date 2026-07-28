@@ -278,6 +278,51 @@ class AiContentQueueAutomationTest extends TestCase
         $this->assertSame($category->id, $items[0]->article_category_id);
     }
 
+    public function test_new_queue_items_only_enable_images_when_explicitly_requested(): void
+    {
+        Sanctum::actingAs($this->admin());
+        $base = [
+            'topics' => 'Default image topic',
+            'interval' => 60,
+            'auto_publish' => false,
+        ];
+
+        $this->postJson('/api/ai/queue', $base)->assertCreated();
+        $defaultItem = AiContentQueue::where('topic', 'Default image topic')->firstOrFail();
+        $this->assertFalse($defaultItem->with_images);
+        $this->assertSame(0, $defaultItem->image_count);
+
+        $this->postJson('/api/ai/queue', [
+            ...$base,
+            'topics' => 'Image topic',
+            'with_images' => true,
+            'image_count' => 3,
+        ])->assertCreated();
+        $imageItem = AiContentQueue::where('topic', 'Image topic')->firstOrFail();
+        $this->assertTrue($imageItem->with_images);
+        $this->assertSame(3, $imageItem->image_count);
+    }
+
+    public function test_image_generation_warning_is_visible_without_failing_the_article(): void
+    {
+        $item = $this->queue([
+            'topic' => 'Article with an image warning',
+            'with_images' => true,
+            'image_count' => 2,
+        ]);
+        $this->generator->warningsByTopic[$item->topic] = [
+            'OpenAI image model gpt-image-2 loi HTTP 403: organization verification required',
+        ];
+
+        $result = $this->processor()->processItem($item);
+
+        $this->assertSame('success', $result['result']);
+        $this->assertDatabaseHas('articles', ['id' => $result['article_id']]);
+        $this->assertSame('done', $item->fresh()->status);
+        $this->assertStringContainsString('Cảnh báo sinh ảnh:', (string) $item->fresh()->error_message);
+        $this->assertStringContainsString('HTTP 403', (string) $item->fresh()->error_message);
+    }
+
     public function test_batch_limit_is_constrained_to_one_through_twenty(): void
     {
         Sanctum::actingAs($this->admin());
@@ -336,6 +381,9 @@ class FakeAiArticleGenerator implements AiArticleGenerator
     /** @var array<int, string> */
     public array $failTopics = [];
 
+    /** @var array<string, array<int, string>> */
+    public array $warningsByTopic = [];
+
     public int $calls = 0;
 
     public function generate(AiContentQueue $item): array
@@ -353,7 +401,7 @@ class FakeAiArticleGenerator implements AiArticleGenerator
      */
     public function payloadFor(AiContentQueue $item): array
     {
-        return [
+        $payload = [
             'success' => true,
             'title' => 'Bài viết '.$item->topic,
             'content' => '<h2>Nội dung</h2><p>Đã kiểm thử.</p>',
@@ -365,5 +413,11 @@ class FakeAiArticleGenerator implements AiArticleGenerator
             'thumbnail' => '/storage/test.webp',
             'og_image' => '/storage/test.webp',
         ];
+
+        if (isset($this->warningsByTopic[$item->topic])) {
+            $payload['warnings'] = $this->warningsByTopic[$item->topic];
+        }
+
+        return $payload;
     }
 }

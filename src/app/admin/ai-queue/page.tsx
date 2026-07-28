@@ -526,11 +526,14 @@ export default function AdminAiQueuePage() {
                           <td>
                             <strong>{item.topic}</strong>
                             <small>{item.article_category?.name || 'Không có danh mục'}</small>
-                            {item.error_message ? <small style={{ color: '#f44336' }}>{item.error_message.slice(0, 120)}</small> : null}
+                            {item.error_message ? <small style={{ color: item.status === 'done' ? '#f59e0b' : '#f44336' }}>{item.error_message.slice(0, 240)}</small> : null}
                           </td>
                           <td>
                             <span>{formatDateTime(item.scheduled_at)}</span>
                             <small>{item.auto_publish ? 'Tự đăng' : 'Bản nháp'}</small>
+                            <small style={{ color: item.with_images ? 'var(--color-gold)' : 'rgba(255,255,255,.45)' }}>
+                              {item.with_images ? `Có ảnh: thumbnail + ${item.image_count} ảnh trong bài` : 'Không sinh ảnh'}
+                            </small>
                             {item.next_attempt_at ? <small>Thử lại: {formatDateTime(item.next_attempt_at)}</small> : null}
                           </td>
                           <td>
@@ -540,6 +543,13 @@ export default function AdminAiQueuePage() {
                           <td>
                             {item.article ? (
                               <a href={`/admin/articles/${item.article.id}`} style={{ color: 'var(--color-gold)' }}>
+                                {item.article.thumbnail ? (
+                                  <img
+                                    src={item.article.thumbnail.startsWith('http') ? item.article.thumbnail : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${item.article.thumbnail}`}
+                                    alt={item.article.title}
+                                    style={{ width: 48, height: 32, objectFit: 'cover', borderRadius: 4, marginBottom: 6, display: 'block' }}
+                                  />
+                                ) : null}
                                 {item.article.is_published ? 'Đã xuất bản' : 'Bản nháp'}
                               </a>
                             ) : <span>Chưa tạo</span>}
