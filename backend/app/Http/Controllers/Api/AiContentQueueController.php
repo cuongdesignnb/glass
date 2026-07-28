@@ -65,7 +65,9 @@ class AiContentQueueController extends Controller
                 'tone' => $data['tone'] ?? 'professional',
                 'length' => $data['length'] ?? 'medium',
                 'with_images' => (bool) ($data['with_images'] ?? false),
-                'image_count' => (int) ($data['image_count'] ?? 2),
+                'image_count' => (bool) ($data['with_images'] ?? false)
+                    ? (int) ($data['image_count'] ?? 2)
+                    : 0,
                 'auto_publish' => (bool) $data['auto_publish'],
                 'article_category_id' => $data['article_category_id'] ?? null,
                 'status' => 'pending',

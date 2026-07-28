@@ -227,9 +227,9 @@ export default function AdminAiContentPage() {
             <div className="admin-card__header">
               <h3 className="admin-card__title">Kết quả</h3>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                {generatedImages.length > 0 && (
+                {(generatedThumbnail || generatedImages.length > 0) && (
                   <span style={{ fontSize: '0.75rem', color: 'var(--color-gold)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <FiImage /> {generatedImages.length} ảnh
+                    <FiImage /> {generatedThumbnail ? '1 thumbnail' : ''}{generatedThumbnail && generatedImages.length ? ' + ' : ''}{generatedImages.length ? `${generatedImages.length} ảnh trong bài` : ''}
                   </span>
                 )}
                 {generatedContent && (
@@ -267,6 +267,21 @@ export default function AdminAiContentPage() {
                   )}
                 </div>
               </div>
+            )}
+
+            {generatedThumbnail && (
+              <figure style={{ margin: '0 0 16px' }}>
+                <img
+                  src={generatedThumbnail.startsWith('http') ? generatedThumbnail : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}${generatedThumbnail}`}
+                  alt={generatedThumbnailAlt || articleMeta?.title || topic}
+                  style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: '10px' }}
+                />
+                {generatedThumbnailCaption && (
+                  <figcaption style={{ marginTop: '6px', color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem', textAlign: 'center' }}>
+                    {generatedThumbnailCaption}
+                  </figcaption>
+                )}
+              </figure>
             )}
 
             <div style={{ flex: 1, padding: '20px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px',

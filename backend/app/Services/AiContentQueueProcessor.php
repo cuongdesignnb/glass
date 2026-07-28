@@ -236,6 +236,17 @@ class AiContentQueueProcessor
                 $thumbnail = $payload['images'][0]['url'];
             }
             $publishedAt = $queueItem->auto_publish ? now() : null;
+            $warnings = $payload['warnings'] ?? [];
+            if (is_string($warnings)) {
+                $warnings = [$warnings];
+            }
+            if (! is_array($warnings)) {
+                $warnings = [];
+            }
+            $warningMessage = trim(implode(' | ', array_filter(array_map(
+                static fn ($warning) => trim((string) $warning),
+                $warnings
+            ))));
 
             $article = Article::create([
                 'title' => $title ?: $queueItem->topic,
@@ -263,8 +274,20 @@ class AiContentQueueProcessor
                 'completed_at' => $now,
                 'locked_at' => null,
                 'next_attempt_at' => null,
-                'error_message' => null,
+                'error_message' => $warningMessage !== ''
+                    ? mb_substr('Cảnh báo sinh ảnh: '.$warningMessage, 0, 1000)
+                    : null,
             ]);
+
+            if ($warningMessage !== '') {
+                Log::warning('AI_QUEUE_IMAGE_WARNING', [
+                    'queue_id' => $queueItem->id,
+                    'article_id' => $article->id,
+                    'with_images' => $queueItem->with_images,
+                    'image_count' => $queueItem->image_count,
+                    'warning' => mb_substr($warningMessage, 0, 1000),
+                ]);
+            }
 
             return $article;
         }, 3);
