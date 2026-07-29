@@ -608,7 +608,9 @@ export default function TraCuuDonHangPage() {
         .tracking-item__img {
           width: 48px; height: 48px;
           border-radius: 8px;
-          object-fit: cover;
+          object-fit: contain;
+          object-position: center;
+          padding: 4px;
           background: rgba(255,255,255,0.05);
         }
         .tracking-item__info { flex: 1; }

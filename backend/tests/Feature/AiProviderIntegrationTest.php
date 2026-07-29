@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\Api\AiController;
 use App\Http\Controllers\Api\SettingController;
+use App\Models\Article;
 use App\Models\Media;
 use App\Models\Setting;
 use Illuminate\Database\Schema\Blueprint;
@@ -222,6 +223,71 @@ class AiProviderIntegrationTest extends TestCase
 
         $this->assertSame(200, $response->getStatusCode());
         $this->assertStringContainsString('Gateway compatible', $response->getData(true)['content']);
+    }
+
+    public function test_internal_anchor_text_is_bound_to_its_related_target_url(): void
+    {
+        Setting::setValue('openai_api_key', 'test-key', 'api');
+
+        Article::create([
+            'title' => 'Cách chọn gọng kính cho mặt tròn',
+            'slug' => 'cach-chon-gong-kinh-mat-tron',
+            'meta_keywords' => 'gọng kính mặt tròn, phong cách oval',
+            'is_published' => true,
+        ]);
+        Article::create([
+            'title' => 'Cách vệ sinh kính áp tròng',
+            'slug' => 'cach-ve-sinh-kinh-ap-trong',
+            'meta_keywords' => 'vệ sinh kính áp tròng, dung dịch ngâm kính',
+            'is_published' => true,
+        ]);
+
+        $article = [
+            'title' => 'Gọng kính phù hợp khuôn mặt tròn',
+            'excerpt' => 'Tóm tắt',
+            'content' => '<p>Hãy tham khảo <a href="/bai-viet/cach-chon-gong-kinh-mat-tron">chăm sóc kính áp tròng</a> trước khi chọn.</p>'
+                . '<p><a href="/bai-viet/duong-dan-khong-duoc-phep">anchor không có trong danh sách</a></p>',
+            'meta_title' => 'Meta title',
+            'meta_desc' => 'Meta description',
+            'meta_keywords' => 'gọng kính mặt tròn',
+            'tags' => ['gọng kính'],
+        ];
+
+        Http::fake([
+            'https://modelapi.vn/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => json_encode($article, JSON_UNESCAPED_UNICODE),
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $response = (new AiController)->generateContent(Request::create('/ai/content', 'POST', [
+            'topic' => 'Gọng kính phù hợp khuôn mặt tròn',
+            'keywords' => 'gọng kính mặt tròn',
+            'length' => 'medium',
+            'full_article' => true,
+        ]));
+
+        $payload = $response->getData(true);
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertStringContainsString(
+            '<a href="/bai-viet/cach-chon-gong-kinh-mat-tron">gọng kính mặt tròn</a>',
+            $payload['content']
+        );
+        $this->assertStringNotContainsString('>chăm sóc kính áp tròng</a>', $payload['content']);
+        $this->assertStringNotContainsString('href="/bai-viet/duong-dan-khong-duoc-phep"', $payload['content']);
+        $this->assertStringContainsString('anchor không có trong danh sách', $payload['content']);
+
+        Http::assertSent(function (HttpRequest $request) {
+            $systemPrompt = (string) ($request['messages'][0]['content'] ?? '');
+
+            return str_contains($systemPrompt, 'cach-chon-gong-kinh-mat-tron')
+                && str_contains($systemPrompt, 'gọng kính mặt tròn')
+                && !str_contains($systemPrompt, 'cach-ve-sinh-kinh-ap-trong');
+        });
     }
 
     public function test_provider_gateway_error_remains_json_and_exposes_original_status(): void

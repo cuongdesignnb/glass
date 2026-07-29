@@ -158,7 +158,7 @@ export function DynamicProducts({ initialData }: { initialData?: any[] }) {
           <Link key={product.id} href={`/san-pham/${product.slug}`} className="product-card">
             <div className="product-card__image">
               {product.thumbnail ? (
-                <Image src={getImageUrl(product.thumbnail)!} alt={product.thumbnail_alt || product.name} fill sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 250px" style={{ objectFit: 'cover' }} />
+                <Image src={getImageUrl(product.thumbnail)!} alt={product.thumbnail_alt || product.name} fill sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 250px" style={{ objectFit: 'contain', objectPosition: 'center' }} />
               ) : (
                 <div className="product-card__placeholder">
                   <div className="product-card__placeholder-glasses">

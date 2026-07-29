@@ -110,7 +110,7 @@ export default async function CollectionPage({ params }: { params: { slug: strin
                   <Link key={product.id} href={`/san-pham/${product.slug}`} className="product-card">
                     <div className="product-card__image">
                       {thumbnail ? (
-                        <Image src={thumbnail} alt={product.thumbnail_alt || product.name} fill priority={index === 0} sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 250px" style={{ objectFit: 'cover' }} />
+                        <Image src={thumbnail} alt={product.thumbnail_alt || product.name} fill priority={index === 0} sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 250px" style={{ objectFit: 'contain', objectPosition: 'center' }} />
                       ) : (
                         <div className="product-card__placeholder" aria-hidden="true" />
                       )}

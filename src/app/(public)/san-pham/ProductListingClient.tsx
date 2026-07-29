@@ -498,7 +498,7 @@ export default function ProductListingClient({
                             fill
                             priority={index === 0}
                             sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 250px"
-                            style={{ objectFit: 'cover' }}
+                            style={{ objectFit: 'contain', objectPosition: 'center' }}
                           />
                         ) : (
                           <div className="product-card__placeholder">

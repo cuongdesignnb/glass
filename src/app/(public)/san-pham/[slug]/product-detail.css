@@ -136,7 +136,9 @@
 .product-gallery__thumb img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
+  padding: 5px;
 }
 
 /* Product Info */
@@ -1048,12 +1050,14 @@
 .related-products__img img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
+  padding: 10px;
   transition: transform 0.3s;
 }
 
 .related-products__card:hover .related-products__img img {
-  transform: scale(1.05);
+  transform: none;
 }
 
 .related-products__img svg {

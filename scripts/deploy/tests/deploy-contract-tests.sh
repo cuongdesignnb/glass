@@ -348,11 +348,19 @@ test_dangerous_legacy_commands_absent() {
     fi
 }
 
-test_missing_scheduler_requests_bootstrap() {
+test_missing_scheduler_is_started_automatically() {
+    local calls="$TEST_TMP/scheduler-pm2-start-calls"
     ai_scheduler_pm2_exists() { return 1; }
-    AI_SCHEDULER_BOOTSTRAP_REQUIRED=0
-    restart_ai_scheduler_if_present >/dev/null
-    assert_eq "$AI_SCHEDULER_BOOTSTRAP_REQUIRED" "1"
+    check_ai_scheduler_online() { :; }
+    pm2() { printf '%s\n' "$*" >> "$calls"; }
+    AI_SCHEDULER_PM2_APP=glass-ai-scheduler
+    AI_SCHEDULER_BOOTSTRAP_REQUIRED=1
+
+    ensure_ai_scheduler_online >/dev/null
+
+    grep -Fxq "start $APP_ROOT/ecosystem.ai-scheduler.config.cjs --only glass-ai-scheduler" "$calls"
+    assert_eq "$(wc -l < "$calls" | tr -d ' ')" "1"
+    assert_eq "$AI_SCHEDULER_BOOTSTRAP_REQUIRED" "0"
 }
 
 test_existing_scheduler_restarts_only_scheduler_app() {
@@ -363,7 +371,7 @@ test_existing_scheduler_restarts_only_scheduler_app() {
     AI_SCHEDULER_PM2_APP=glass-ai-scheduler
     AI_SCHEDULER_BOOTSTRAP_REQUIRED=1
 
-    restart_ai_scheduler_if_present >/dev/null
+    ensure_ai_scheduler_online >/dev/null
 
     grep -Fxq 'restart glass-ai-scheduler --update-env' "$calls"
     assert_eq "$(wc -l < "$calls" | tr -d ' ')" "1"
@@ -423,7 +431,7 @@ run_test 'public smoke uses local SNI resolve' test_hairpin_smoke_uses_resolve
 run_test 'staging uses detached worktree' test_staging_uses_detached_worktree
 run_test 'database backup includes integrity checks' test_database_backup_has_integrity_checks
 run_test 'dangerous legacy commands are absent' test_dangerous_legacy_commands_absent
-run_test 'missing scheduler requests one-time bootstrap' test_missing_scheduler_requests_bootstrap
+run_test 'missing scheduler starts automatically' test_missing_scheduler_is_started_automatically
 run_test 'existing scheduler restarts only its PM2 app' test_existing_scheduler_restarts_only_scheduler_app
 run_test 'deploy validates the AI queue schedule' test_schedule_validation_targets_queue_command
 run_test 'scheduler bootstrap checks PID and online status' test_scheduler_bootstrap_checks_pid_and_online_status

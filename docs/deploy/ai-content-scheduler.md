@@ -15,9 +15,11 @@ DEPLOY_SHA="<merge-sha>" ALLOW_MIGRATIONS=1 bash deploy.sh
 
 Lần triển khai đầu tiên có migration bổ sung cột cho `ai_content_queue`. Migration giữ dữ liệu hiện có và để `auto_publish=false` cho các item cũ. Không bỏ qua bước `CHECK_ONLY` và sao lưu cơ sở dữ liệu của quy trình deploy.
 
-## Bootstrap scheduler lần đầu
+## Khởi động scheduler
 
-Safe deploy sẽ restart `glass-ai-scheduler` nếu process đã tồn tại. Nếu chưa có, kết quả deploy ghi `AI_SCHEDULER_BOOTSTRAP_REQUIRED=YES`; khi đó chạy một trong hai cách sau đúng một lần:
+Safe deploy tự động tạo `glass-ai-scheduler` nếu process chưa tồn tại và restart đúng process này ở các lần deploy tiếp theo. Không cần bootstrap thủ công trong quy trình bình thường.
+
+Nếu cần khôi phục scheduler ngoài quy trình deploy, chạy:
 
 ```bash
 cd /www/wwwroot/kinhmathongnhung.vn
