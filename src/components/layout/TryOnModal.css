@@ -87,7 +87,9 @@
 .tryon-modal__product-img img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
+  padding: 3px;
 }
 
 .tryon-modal__product-name {

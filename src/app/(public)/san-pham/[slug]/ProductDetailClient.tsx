@@ -484,7 +484,7 @@ export default function ProductDetailClient({
                   className={`product-gallery__thumb ${i === mainImageIndex ? "product-gallery__thumb--active" : ""}`}
                   onClick={() => setMainImageIndex(i)}
                 >
-                  <Image src={img} alt={imageAlt(img, i)} width={72} height={72} style={{ objectFit: 'cover' }} />
+                  <Image src={img} alt={imageAlt(img, i)} width={72} height={72} style={{ objectFit: 'contain', objectPosition: 'center' }} />
                 </button>
               ))}
             </div>
@@ -1290,7 +1290,7 @@ function RelatedProducts({
                       alt={p.thumbnail_alt || p.name}
                       fill
                       sizes="(max-width: 768px) 50vw, 220px"
-                      style={{ objectFit: "cover" }}
+                      style={{ objectFit: "contain", objectPosition: "center" }}
                     />
                   ) : (
                     <RiGlassesLine />
