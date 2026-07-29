@@ -11,6 +11,7 @@ use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 class AiController extends Controller
 {
@@ -314,10 +315,11 @@ Generate ONE realistic photo of this person wearing these exact glasses.
             default => '1000-1500 từ',
         };
 
-        // Build random SEO anchor opportunities from articles and products.
+        // Build target-bound SEO anchor opportunities from related articles and products.
         $categoryIdValue = $request->input('category_id');
         $categoryId = $categoryIdValue === null ? null : (int) $categoryIdValue;
-        $linkInstruction = $this->buildSeoAnchorInstruction($categoryId, $length, $request->topic, $keywords);
+        $seoAnchors = $this->getSeoAnchorOpportunities($categoryId, $this->seoAnchorTargetCount($length), $request->topic, $keywords);
+        $linkInstruction = $this->buildSeoAnchorInstruction($seoAnchors);
 
         if ($fullArticle) {
             $systemPrompt = "Bạn là content writer chuyên nghiệp cho ngành thời trang kính mắt. Viết bằng tiếng Việt. Giọng văn {$tone}.
@@ -392,10 +394,12 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                 if (!$articleData || !isset($articleData['content'])) {
                     return response()->json([
                         'success' => true,
-                        'content' => $rawContent,
+                        'content' => $this->enforceSeoAnchorTargets($rawContent, $seoAnchors),
                         'usage' => $result['usage'] ?? null,
                     ]);
                 }
+
+                $articleData['content'] = $this->enforceSeoAnchorTargets((string) $articleData['content'], $seoAnchors);
 
                 return response()->json([
                     'success' => true,
@@ -413,7 +417,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
 
             return response()->json([
                 'success' => true,
-                'content' => $rawContent,
+                'content' => $this->enforceSeoAnchorTargets($rawContent, $seoAnchors),
                 'usage' => $result['usage'] ?? null,
             ]);
         } catch (\Exception $e) {
@@ -489,7 +493,8 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
 
         $categoryIdValue = $request->input('category_id');
         $categoryId = $categoryIdValue === null ? null : (int) $categoryIdValue;
-        $linkInstruction = $this->buildSeoAnchorInstruction($categoryId, $length, $request->topic, $keywords);
+        $seoAnchors = $this->getSeoAnchorOpportunities($categoryId, $this->seoAnchorTargetCount($length), $request->topic, $keywords);
+        $linkInstruction = $this->buildSeoAnchorInstruction($seoAnchors);
 
         if ($fullArticle) {
             $systemPrompt = "Ban la content writer chuyen nghiep cho nganh thoi trang kinh mat. Viet bang tieng Viet. Giong van {$tone}.\n\n"
@@ -566,6 +571,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             $content = preg_replace('/\s*```$/i', '', $content);
             $content = $this->normalizeMarkdownToHtml($content);
             $content = preg_replace('/\[IMG:[^\]]*\]/', '', $content);
+            $content = $this->enforceSeoAnchorTargets($content, $seoAnchors);
 
             $headings = $this->extractArticleHeadings($content, $articleMeta['title'] ?? $request->topic);
             $h1Heading = null;
@@ -1221,29 +1227,33 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
 
         return "/storage/{$relativePath}";
     }
-    private function buildSeoAnchorInstruction(?int $categoryId, string $length, string $topic, string $keywords = ''): string
+    private function seoAnchorTargetCount(string $length): int
     {
-        $targetCount = match ($length) {
+        return match ($length) {
             'short' => 2,
             'long' => 4,
             default => 3,
         };
+    }
 
-        $anchors = $this->getSeoAnchorOpportunities($categoryId, $targetCount, $topic, $keywords);
-
+    private function buildSeoAnchorInstruction(array $anchors): string
+    {
         if (empty($anchors)) {
             return '';
         }
 
+        $targetCount = count($anchors);
         $instruction = "\nSEO INTERNAL LINKS / ANCHOR TEXT TU NHIEN:\n";
-        $instruction .= "- Chen dung {$targetCount} anchor text neu ngu canh phu hop; toi thieu 2 anchor, toi da 4 anchor trong mot bai.\n";
+        $instruction .= "- Chi chen link khi noi dung cau dang de cap dung chu de cua trang dich; khong duoc ep link vao ngu canh khac.\n";
+        $instruction .= "- Co the dung tu 0 den {$targetCount} link. Do chinh xac giua anchor va trang dich quan trong hon so luong link.\n";
         $instruction .= "- Phan bo deu trong than bai, khong dat lien tiep trong cung mot doan.\n";
         $instruction .= "- Moi URL chi dung mot lan. Khong nhai lai mot anchor text.\n";
         $instruction .= "- Viet cau van tu nhien truoc, sau do gan link vao cum tu phu hop. Khong viet kieu danh sach link, khong dung 'xem them', 'doc them', 'tai day'.\n";
-        $instruction .= "- Anchor text nen la cum 2-6 tu, co lien quan ngu canh, uu tien tu khoa/bien the tu khoa tu database, khong bat buoc dung nguyen ten san pham/tieu de.\n";
+        $instruction .= "- Moi cum anchor goi y ben duoi chi thuoc URL cung dong. Tuyet doi khong doi, tron hoac gan anchor cua dong nay sang URL dong khac.\n";
+        $instruction .= "- Chi dung nguyen van mot trong cac anchor goi y cua URL dich; he thong se hau kiem va sua link neu ghep sai.\n";
         $instruction .= "- Neu anchor la san pham, chi chen khi cau van dang noi ve nhu cau, phong cach, chat lieu, kieu dang hoac lua chon kinh phu hop.\n";
         $instruction .= "- Bat buoc tra ve link HTML dang <a href=\"URL\">anchor text</a>.\n";
-        $instruction .= "\nDanh sach anchor duoc phep chon random cho bai nay:\n";
+        $instruction .= "\nCAC CAP TRANG DICH - ANCHOR DUOC PHEP (khong duoc ghep cheo):\n";
 
         foreach ($anchors as $anchor) {
             $phrases = implode(' | ', array_slice($anchor['anchor_texts'], 0, 5));
@@ -1255,44 +1265,39 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
 
     private function getSeoAnchorOpportunities(?int $categoryId, int $limit, string $topic, string $keywords = ''): array
     {
-        $articleLimit = max(1, (int) ceil($limit / 2));
-        $productLimit = max(1, $limit - $articleLimit + 1);
-
         $articleQuery = Article::where('is_published', true)
             ->whereNotNull('slug')
             ->where('slug', '!=', '')
-            ->select(['title', 'slug', 'meta_keywords']);
+            ->select(['title', 'slug', 'meta_keywords', 'article_category_id']);
 
-        if ($categoryId) {
-            $articleQuery->where('article_category_id', $categoryId);
-        }
-
-        $articles = $articleQuery->inRandomOrder()->limit($articleLimit + 2)->get();
-
-        if ($articles->isEmpty() && $categoryId) {
-            $articles = Article::where('is_published', true)
-                ->whereNotNull('slug')
-                ->where('slug', '!=', '')
-                ->inRandomOrder()
-                ->limit($articleLimit + 2)
-                ->get(['title', 'slug', 'meta_keywords']);
-        }
+        $articles = $articleQuery->latest('id')->limit(100)->get();
 
         $products = Product::where('is_active', true)
             ->whereNotNull('slug')
             ->where('slug', '!=', '')
-            ->inRandomOrder()
-            ->limit($productLimit + 2)
+            ->latest('id')
+            ->limit(100)
             ->get(['name', 'slug', 'brand', 'meta_keywords', 'frame_styles', 'materials', 'gender']);
 
         $items = [];
+        $queryContext = trim($topic . ', ' . $keywords, ', ');
 
         foreach ($articles as $article) {
+            $anchorTexts = $this->buildAnchorTextCandidates($article->title, $article->meta_keywords);
+            $score = $this->seoRelevanceScore($queryContext, $article->title, (string) $article->meta_keywords);
+            if ($score <= 0 || empty($anchorTexts)) {
+                continue;
+            }
+            if ($categoryId && (int) $article->article_category_id === $categoryId) {
+                $score += 3;
+            }
+
             $items[] = [
                 'type' => 'article',
                 'title' => $article->title,
                 'url' => '/bai-viet/' . $article->slug,
-                'anchor_texts' => $this->buildAnchorTextCandidates($article->title, $article->meta_keywords, $topic, $keywords),
+                'anchor_texts' => $anchorTexts,
+                'score' => $score,
             ];
         }
 
@@ -1304,60 +1309,166 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                 is_array($product->gender) ? implode(', ', $product->gender) : $product->gender,
             ]);
 
+            $targetKeywords = trim(($product->meta_keywords ?: '') . ', ' . implode(', ', $descriptorParts), ', ');
+            $anchorTexts = $this->buildAnchorTextCandidates($product->name, $targetKeywords);
+            $score = $this->seoRelevanceScore($queryContext, $product->name, $targetKeywords);
+            if ($score <= 0 || empty($anchorTexts)) {
+                continue;
+            }
+
             $items[] = [
                 'type' => 'product',
                 'title' => $product->name,
                 'url' => '/san-pham/' . $product->slug,
-                'anchor_texts' => $this->buildAnchorTextCandidates(
-                    $product->name,
-                    trim(($product->meta_keywords ?: '') . ', ' . implode(', ', $descriptorParts), ', '),
-                    $topic,
-                    $keywords
-                ),
+                'anchor_texts' => $anchorTexts,
+                'score' => $score,
             ];
         }
 
-        shuffle($items);
+        usort($items, static function (array $left, array $right): int {
+            $scoreComparison = ($right['score'] ?? 0) <=> ($left['score'] ?? 0);
+            return $scoreComparison !== 0
+                ? $scoreComparison
+                : strcmp((string) ($left['title'] ?? ''), (string) ($right['title'] ?? ''));
+        });
 
-        return array_slice($items, 0, min($limit, count($items)));
+        $items = array_slice($items, 0, min($limit, count($items)));
+        foreach ($items as &$item) {
+            unset($item['score']);
+        }
+        unset($item);
+
+        return $items;
     }
 
-    private function buildAnchorTextCandidates(string $title, ?string $sourceKeywords = null, string $topic = '', string $requestKeywords = ''): array
+    private function buildAnchorTextCandidates(string $title, ?string $sourceKeywords = null): array
     {
         $candidates = [];
-        $keywordSource = implode(',', array_filter([$sourceKeywords, $requestKeywords]));
+        $cleanTitle = trim(strip_tags($title));
+        $titleTokens = $this->seoSemanticTokens($cleanTitle);
 
-        foreach (explode(',', $keywordSource) as $keyword) {
+        foreach (explode(',', (string) $sourceKeywords) as $keyword) {
             $keyword = trim(strip_tags($keyword));
-            if ($keyword !== '' && mb_strlen($keyword) >= 3 && mb_strlen($keyword) <= 60) {
+            $wordCount = count(preg_split('/\s+/u', $keyword, -1, PREG_SPLIT_NO_EMPTY) ?: []);
+            $keywordTokens = $this->seoSemanticTokens($keyword);
+            if ($keyword !== ''
+                && mb_strlen($keyword) >= 3
+                && mb_strlen($keyword) <= 80
+                && $wordCount >= 2
+                && $wordCount <= 8
+                && !empty(array_intersect($titleTokens, $keywordTokens))) {
                 $candidates[] = $keyword;
             }
         }
 
-        $cleanTitle = trim(strip_tags($title));
         if ($cleanTitle !== '') {
             $candidates[] = $cleanTitle;
         }
 
-        $topic = trim(strip_tags($topic));
-        if ($topic !== '') {
-            $candidates[] = 'lua chon phu hop voi ' . mb_strtolower($topic);
-            $candidates[] = 'goi y lien quan den ' . mb_strtolower($topic);
-        }
-
-        $generic = [
-            'mau kinh phu hop',
-            'gong kinh thoi trang',
-            'kinh mat cao cap',
-            'lua chon kinh hien dai',
-            'phong cach kinh mat',
-        ];
-
-        $candidates = array_merge($candidates, $generic);
-        $candidates = array_values(array_unique(array_filter($candidates)));
-        shuffle($candidates);
+        $seen = [];
+        $candidates = array_values(array_filter($candidates, function (string $candidate) use (&$seen): bool {
+            $normalized = $this->normalizeSeoText($candidate);
+            if ($normalized === '' || isset($seen[$normalized])) {
+                return false;
+            }
+            $seen[$normalized] = true;
+            return true;
+        }));
 
         return array_slice($candidates, 0, 6);
+    }
+
+    private function seoRelevanceScore(string $queryContext, string $targetTitle, string $targetContext): int
+    {
+        $queryTokens = $this->seoSemanticTokens($queryContext);
+        if (empty($queryTokens)) {
+            return 0;
+        }
+
+        $titleMatches = count(array_intersect($queryTokens, $this->seoSemanticTokens($targetTitle)));
+        $contextMatches = count(array_intersect($queryTokens, $this->seoSemanticTokens($targetContext)));
+
+        return ($titleMatches * 5) + ($contextMatches * 2);
+    }
+
+    private function seoSemanticTokens(string $value): array
+    {
+        $normalized = $this->normalizeSeoText($value);
+        $stopWords = array_flip([
+            'bai', 'cac', 'cho', 'cua', 'gong', 'kinh', 'la', 'mat', 'mot', 'nhieu',
+            'nhung', 'san', 'pham', 'top', 'trong', 'va', 've', 'viet', 'voi',
+        ]);
+
+        $tokens = preg_split('/\s+/', $normalized, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $tokens = array_filter($tokens, static fn (string $token): bool => mb_strlen($token) >= 3 && !isset($stopWords[$token]));
+
+        return array_values(array_unique($tokens));
+    }
+
+    private function normalizeSeoText(string $value): string
+    {
+        $ascii = mb_strtolower(Str::ascii(html_entity_decode(strip_tags($value), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+        return trim((string) preg_replace('/[^a-z0-9]+/', ' ', $ascii));
+    }
+
+    private function enforceSeoAnchorTargets(string $html, array $anchors): string
+    {
+        if ($html === '') {
+            return $html;
+        }
+
+        $allowedByUrl = [];
+        foreach ($anchors as $anchor) {
+            $url = $this->normalizeSeoInternalUrl((string) ($anchor['url'] ?? ''));
+            $anchorTexts = array_values(array_filter($anchor['anchor_texts'] ?? [], 'is_string'));
+            if ($url === '' || empty($anchorTexts)) {
+                continue;
+            }
+
+            $allowedByUrl[$url] = [
+                'url' => (string) $anchor['url'],
+                'canonical' => $anchorTexts[0],
+                'normalized' => array_fill_keys(array_map(fn (string $text): string => $this->normalizeSeoText($text), $anchorTexts), true),
+            ];
+        }
+
+        return (string) preg_replace_callback(
+            '/<a\b[^>]*\bhref\s*=\s*(["\'])(.*?)\1[^>]*>(.*?)<\/a>/isu',
+            function (array $match) use ($allowedByUrl): string {
+                $href = html_entity_decode(trim($match[2]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                $url = $this->normalizeSeoInternalUrl($href);
+                $isManagedInternalUrl = str_starts_with($url, '/bai-viet/') || str_starts_with($url, '/san-pham/');
+
+                if (!$isManagedInternalUrl) {
+                    return $match[0];
+                }
+
+                if (!isset($allowedByUrl[$url])) {
+                    return $match[3];
+                }
+
+                $target = $allowedByUrl[$url];
+                $currentText = $this->normalizeSeoText($match[3]);
+                $displayText = isset($target['normalized'][$currentText])
+                    ? trim(strip_tags($match[3]))
+                    : $target['canonical'];
+
+                return '<a href="' . htmlspecialchars($target['url'], ENT_QUOTES, 'UTF-8') . '">'
+                    . htmlspecialchars($displayText, ENT_QUOTES, 'UTF-8')
+                    . '</a>';
+            },
+            $html
+        );
+    }
+
+    private function normalizeSeoInternalUrl(string $url): string
+    {
+        $path = parse_url($url, PHP_URL_PATH);
+        if (!is_string($path) || $path === '') {
+            return '';
+        }
+
+        return '/' . ltrim(rtrim($path, '/'), '/');
     }
     /**
      * Convert basic markdown elements (headings, bold, italic) to HTML.
