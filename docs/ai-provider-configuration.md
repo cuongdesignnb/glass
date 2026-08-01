@@ -9,6 +9,8 @@ Tài liệu này mô tả cách tích hợp AI vào một hệ thống Laravel +
 
 Không đưa API key thật vào source, Git, log hoặc tài liệu.
 
+> Tài liệu này bám theo code đang chạy trong dự án Glass, cập nhật ngày 30/07/2026. `gpt-5.5` là model chính thức có ID `gpt-5.5` và hỗ trợ cả `responses` lẫn `chat_completions`. Hệ thống hiện mặc định gọi model này qua gateway tương thích OpenAI tại `modelapi.vn`; nếu chuyển sang OpenAI chính hãng thì chỉ cần đổi Base URL/API key và nên chọn `responses`.
+
 ## 1. Kiến trúc tổng quan
 
 ```text
@@ -435,3 +437,425 @@ Sau deploy:
 - [ ] API key không xuất hiện trong public endpoint hoặc log.
 - [ ] Có test HTTP fake cho cả hai provider.
 - [ ] Test production với một thumbnail trước khi sinh nhiều ảnh.
+
+## 16. Vì sao hệ thống hiện tại chạy được `gpt-5.5`?
+
+Luồng viết bài không phụ thuộc vào SDK hoặc một danh sách model được hard-code. Backend gọi HTTP trực tiếp theo chuẩn OpenAI-compatible và gửi model dưới dạng chuỗi cấu hình:
+
+```text
+openai_model = gpt-5.5
+openai_wire_api = chat_completions
+openai_base_url = https://modelapi.vn/v1
+```
+
+Request thực tế:
+
+```http
+POST https://modelapi.vn/v1/chat/completions
+Authorization: Bearer <CONTENT_PROVIDER_KEY>
+Content-Type: application/json
+```
+
+```json
+{
+  "model": "gpt-5.5",
+  "messages": [
+    { "role": "system", "content": "Quy tắc viết và định dạng bài" },
+    { "role": "user", "content": "Chủ đề, từ khóa và yêu cầu bài viết" }
+  ],
+  "max_tokens": 4096
+}
+```
+
+Gateway nhận model ID, route request đến channel tương ứng và trả kết quả tương thích Chat Completions. Ứng dụng đọc nội dung từ `choices[0].message.content` nên không cần biết gateway triển khai model phía sau như thế nào.
+
+Theo tài liệu chính thức hiện tại, `gpt-5.5` có:
+
+- Model ID: `gpt-5.5`.
+- Hỗ trợ `responses`, `chat_completions` và `batch`.
+- Reasoning effort: `none`, `low`, `medium`, `high`, `xhigh`.
+- Context window 1.050.000 token và output tối đa 128.000 token.
+
+Đây là giới hạn của model, không phải giá trị cần khai báo vào ứng dụng. Glass chỉ cấu hình `openai_max_tokens=4096` để giới hạn output cho một bài và kiểm soát thời gian/chi phí. Các khóa kiểu `model_context_window`, `model_auto_compact_token_limit`, `review_model` hay `network_access` là cấu hình của công cụ Codex, không dùng cho website này.
+
+Điểm quan trọng khi mang sang hệ thống khác:
+
+1. Gọi `GET {base_url}/models` để xác nhận provider có liệt kê model.
+2. Gửi một request viết ngắn tới đúng endpoint để xác nhận provider thực sự route được model.
+3. Không kết luận model sử dụng được chỉ vì nó xuất hiện trong `/models`.
+4. Không tự nối thêm `/v1` nếu Base URL đã chứa `/v1`.
+5. Không thêm chữ `gateway`, tên nhà cung cấp hoặc path nội bộ khác vào URL nếu tài liệu provider không yêu cầu.
+
+## 17. Contract bài viết hoàn chỉnh
+
+Frontend gửi `full_article=true` để yêu cầu một bài có đủ dữ liệu quản trị và SEO. Body mẫu:
+
+```json
+{
+  "topic": "Cách chọn kính phù hợp khuôn mặt tròn",
+  "type": "article",
+  "keywords": "kính mặt tròn, chọn gọng kính",
+  "tone": "professional",
+  "length": "medium",
+  "category_id": 3,
+  "full_article": true
+}
+```
+
+Các giá trị hợp lệ:
+
+| Trường | Giá trị |
+|---|---|
+| `type` | `article`, `product_description`, `seo` |
+| `tone` | `professional`, `casual`, `luxury` |
+| `length` | `short`, `medium`, `long` |
+| `full_article` | `true` để trả đủ title/SEO/tags |
+
+Prompt yêu cầu model trả JSON thuần, không có code fence:
+
+```json
+{
+  "title": "Tiêu đề bài viết",
+  "excerpt": "Tóm tắt 2-3 câu",
+  "content": "<h2>...</h2><p>...</p>",
+  "meta_title": "SEO title tối đa 60 ký tự",
+  "meta_desc": "SEO description tối đa 160 ký tự",
+  "meta_keywords": "từ khóa 1, từ khóa 2",
+  "tags": ["tag1", "tag2", "tag3"]
+}
+```
+
+Backend cần thực hiện tuần tự:
+
+1. Bỏ code fence có nhãn `json` hoặc `html` nếu model vẫn tự thêm vào.
+2. Decode JSON và kiểm tra ít nhất trường `content`.
+3. Chuẩn hóa Markdown cơ bản sang HTML khi cần.
+4. Loại placeholder ảnh như `[IMG:...]`.
+5. Hậu kiểm internal link và anchor text.
+6. Trả `usage` nếu provider có cung cấp.
+
+Response thành công không ảnh:
+
+```json
+{
+  "success": true,
+  "full_article": true,
+  "title": "Cách chọn kính phù hợp khuôn mặt tròn",
+  "excerpt": "...",
+  "content": "<h2>...</h2><p>...</p>",
+  "meta_title": "...",
+  "meta_desc": "...",
+  "meta_keywords": "...",
+  "tags": ["kính mắt", "tư vấn kính"],
+  "usage": {
+    "prompt_tokens": 1000,
+    "completion_tokens": 2500,
+    "total_tokens": 3500
+  }
+}
+```
+
+Không được tin hoàn toàn JSON hoặc HTML do model trả về. Luôn validate kiểu dữ liệu, giới hạn chiều dài, sanitize HTML theo allowlist của ứng dụng và không render script/event handler.
+
+## 18. Chọn Chat Completions hay Responses API
+
+### Phương án giống hệ thống đang chạy qua `modelapi.vn`
+
+```dotenv
+OPENAI_BASE_URL=https://modelapi.vn/v1
+OPENAI_WIRE_API=chat_completions
+OPENAI_MODEL=gpt-5.5
+OPENAI_REASONING_EFFORT=high
+OPENAI_MAX_TOKENS=4096
+```
+
+Lý do dùng Chat Completions trong cấu hình mặc định là endpoint này đã được kiểm chứng hoạt động trên gateway. Trường `OPENAI_REASONING_EFFORT` vẫn được lưu nhưng không gửi trong payload Chat Completions hiện tại; gateway tự xử lý reasoning.
+
+### Phương án gọi OpenAI chính hãng cho nội dung
+
+```dotenv
+OPENAI_API_KEY=sk-...
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_WIRE_API=responses
+OPENAI_MODEL=gpt-5.5
+OPENAI_REASONING_EFFORT=high
+OPENAI_MAX_TOKENS=4096
+```
+
+Request Responses API:
+
+```json
+{
+  "model": "gpt-5.5",
+  "instructions": "Quy tắc viết và định dạng bài",
+  "input": "Chủ đề, từ khóa và yêu cầu bài viết",
+  "reasoning": { "effort": "high" },
+  "max_output_tokens": 4096,
+  "store": false
+}
+```
+
+Khi yêu cầu bài hoàn chỉnh, Glass bổ sung:
+
+```json
+{
+  "text": {
+    "format": {
+      "type": "json_object"
+    }
+  }
+}
+```
+
+Ứng dụng parse theo thứ tự tương thích:
+
+1. `output_text`.
+2. `response.output_text` hoặc `data.output_text` của một số gateway.
+3. `choices[0].message.content` hoặc `choices[0].text`.
+4. Ghép các phần tử `output[].content[]` có type `output_text`/`text`.
+
+Nhờ lớp parse này, cùng một service có thể đổi giữa gateway Chat Completions và OpenAI Responses mà frontend không phải thay đổi.
+
+## 19. Sinh ảnh, ALT và chú thích
+
+Chỉ gọi endpoint có ảnh khi người dùng bật tùy chọn sinh ảnh:
+
+```text
+POST /api/ai/content-with-images
+```
+
+Body bổ sung:
+
+```json
+{
+  "image_count": 2
+}
+```
+
+`image_count` là số ảnh nội dung, từ 0 đến 10. Thumbnail được sinh riêng khi chế độ ảnh được bật; `image_count=0` vẫn có thể sinh thumbnail. Nếu không bật ảnh, frontend phải gọi `/api/ai/content` và không phát sinh chi phí ảnh.
+
+Luồng xử lý ảnh hiện tại:
+
+1. Lấy tiêu đề bài và các heading `h2`/`h3`.
+2. Tạo prompt ảnh bám đúng heading, cấm chữ/logo/watermark.
+3. Gọi API ảnh chính hãng bằng key riêng.
+4. Nhận `b64_json` hoặc URL HTTPS.
+5. Chuyển sang WebP, thu nhỏ tối đa 1600 px, quality 85.
+6. Lưu file tại `storage/app/public/uploads/YYYY-MM`.
+7. Tạo bản ghi `media` với `alt`, `caption`, kích thước và folder `ai-generated`.
+8. Chèn ảnh inline bằng `<figure>`, `<img alt="...">` và `<figcaption>` ngay sau heading liên quan.
+9. Trả riêng `thumbnail_alt` và `thumbnail_caption` để lưu vào bài viết.
+
+Response ảnh mẫu:
+
+```json
+{
+  "success": true,
+  "content": "<h2>...</h2><figure>...</figure>",
+  "thumbnail": "/storage/uploads/2026-07/ten-bai.webp",
+  "thumbnail_alt": "Tiêu đề mô tả đúng nội dung ảnh",
+  "thumbnail_caption": "Chú thích ảnh",
+  "og_image": "/storage/uploads/2026-07/ten-bai.webp",
+  "images": [
+    {
+      "type": "inline",
+      "heading_tag": "h2",
+      "heading": "Cách chọn kiểu gọng",
+      "url": "/storage/uploads/2026-07/cach-chon-kieu-gong-2.webp",
+      "alt": "Cách chọn kiểu gọng",
+      "caption": "Cách chọn kiểu gọng"
+    }
+  ],
+  "warnings": []
+}
+```
+
+ALT phải mô tả đúng nội dung ảnh và ngữ cảnh heading, không nhồi từ khóa. Caption có thể giống ALT ở bản đầu nhưng nên là một câu đọc tự nhiên nếu hệ thống có bước biên tập.
+
+## 20. Internal link và anchor text đúng trang đích
+
+Không để model tự nghĩ URL hoặc ghép anchor tùy ý. Glass làm theo cơ chế target-bound:
+
+1. Đọc tối đa 100 bài đã xuất bản và 100 sản phẩm đang hoạt động.
+2. Tính điểm liên quan giữa chủ đề/từ khóa hiện tại với title, meta keywords và thuộc tính sản phẩm.
+3. Chỉ đưa các cặp đã chọn vào prompt theo dạng `URL -> danh sách anchor được phép`.
+4. Cho phép model dùng từ 0 đến số link mục tiêu; độ đúng quan trọng hơn số lượng.
+5. Sau khi model trả HTML, backend duyệt lại toàn bộ thẻ `<a>`.
+6. Link `/bai-viet/...` hoặc `/san-pham/...` không nằm trong danh sách được phép sẽ bị gỡ nhưng giữ nguyên chữ.
+7. Anchor gắn sai URL sẽ được thay bằng anchor canonical của chính URL đó.
+
+Ví dụ dữ liệu đưa vào prompt:
+
+```text
+- article: Cách chọn kính cho mặt tròn
+  -> /bai-viet/cach-chon-kinh-cho-mat-tron
+  | anchor: kính cho mặt tròn | chọn kính mặt tròn
+
+- product: Gọng kính Titanium M123
+  -> /san-pham/gong-kinh-titanium-m123
+  | anchor: gọng kính Titanium M123 | gọng Titanium nhẹ
+```
+
+Không bao giờ tạo một danh sách anchor tách rời danh sách URL rồi cho model ghép chéo. Đó là nguyên nhân phổ biến khiến chữ nói về chủ đề A nhưng link sang trang B.
+
+## 21. Hàng đợi tự viết và tự đăng
+
+Hệ thống khác muốn chạy tự động cần thêm bảng queue với tối thiểu các trường:
+
+```text
+topic, keywords, type, tone, length
+with_images, image_count
+auto_publish, article_category_id
+status, attempts, max_attempts, error_message
+article_id, scheduled_at, locked_at
+last_attempt_at, next_attempt_at
+started_at, processed_at, completed_at
+```
+
+Trạng thái: `pending -> processing -> done`, hoặc `pending -> processing -> pending` khi retry, và cuối cùng `failed` khi hết lượt.
+
+Processor hiện tại:
+
+- Chạy tối đa `ai_queue_batch_limit`, mặc định 5 và giới hạn 1-20.
+- Claim item bằng một lệnh update có điều kiện để tránh hai worker xử lý cùng bài.
+- Retry sau 2 phút ở lỗi lần 1, sau 5 phút ở lỗi lần 2; tối đa 3 lần.
+- Khôi phục item bị kẹt `processing` quá 30 phút nếu chưa có `article_id`.
+- Tạo bài và cập nhật queue trong transaction.
+- `auto_publish=true` mới gán `is_published=true` và `published_at=now()`.
+- Warning ảnh được lưu vào `error_message` nhưng item vẫn `done` nếu nội dung đã thành công.
+
+Laravel Scheduler:
+
+```php
+Schedule::command('ai:queue-process')
+    ->everyMinute()
+    ->withoutOverlapping(30);
+```
+
+Command:
+
+```bash
+php artisan ai:queue-process
+php artisan ai:queue-process --limit=1 --force
+```
+
+- `ai_queue_auto_enabled=1`: scheduler tự nhận bài đến giờ.
+- `ai_queue_auto_enabled=0`: scheduler chỉ ghi heartbeat, không xử lý bài; nút xử lý thủ công có thể dùng `--force` hoặc endpoint quản trị.
+
+Production phải giữ `php artisan schedule:work` chạy liên tục bằng PM2, systemd, Supervisor hoặc cron `schedule:run`. Với dự án Glass xem thêm `docs/deploy/ai-content-scheduler.md`.
+
+## 22. Khung code tối thiểu để áp dụng cho Laravel khác
+
+### Resolver theo thứ tự Database -> `.env` -> mặc định
+
+```php
+private function setting(string $dbKey, string $configKey, string $default): string
+{
+    $databaseValue = trim((string) Setting::getValue($dbKey, ''));
+    if ($databaseValue !== '') {
+        return $databaseValue;
+    }
+
+    $configValue = trim((string) config("services.openai.{$configKey}", $default));
+    return $configValue !== '' ? $configValue : $default;
+}
+```
+
+### Gọi provider
+
+```php
+$response = Http::timeout(180)
+    ->withToken($apiKey)
+    ->acceptJson()
+    ->asJson()
+    ->post($endpoint, $payload);
+
+if ($response->failed()) {
+    $body = $response->json() ?: [];
+    $message = data_get($body, 'error.message')
+        ?? data_get($body, 'message')
+        ?? 'Upstream request failed';
+
+    return response()->json([
+        'error' => $message,
+        'message' => $message,
+        'provider_status' => $response->status(),
+    ], 424);
+}
+```
+
+### Routes phải là POST và cần xác thực Admin
+
+```php
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/ai/content', [AiController::class, 'generateContent']);
+    Route::post('/ai/content-with-images', [AiController::class, 'generateContentWithImages']);
+});
+```
+
+Nếu mở URL `/api/ai/content` trực tiếp trong trình duyệt, trình duyệt gửi GET và Laravel sẽ báo `GET method is not supported`. Đây không phải lỗi AI; frontend phải gửi POST kèm token đăng nhập.
+
+## 23. Checklist kiểm thử trước production
+
+### Cấu hình
+
+- [ ] Chỉ lưu API key trong Admin hoặc `.env`, không nằm trong Git.
+- [ ] Database ghi đè `.env`; setting rỗng không chặn fallback.
+- [ ] Base URL bỏ dấu `/` cuối và bắt buộc HTTPS.
+- [ ] Public settings không trả mọi khóa chứa `api_key`, `secret`, `password`, `token`.
+
+### Nội dung `gpt-5.5`
+
+- [ ] `/models` có model và request ngắn trả `OK`.
+- [ ] Chat Completions gửi đúng `messages`/`max_tokens`.
+- [ ] Responses gửi đúng `instructions`/`input`/`reasoning`/`max_output_tokens`/`store:false`.
+- [ ] Parse được Chat Completions và các dạng output của Responses.
+- [ ] Full article JSON có `content`, title, excerpt, SEO và tags.
+- [ ] HTML được sanitize trước khi render.
+
+### Ảnh và SEO
+
+- [ ] Không bật ảnh thì không gọi Images API.
+- [ ] Bật ảnh thì thumbnail và ảnh inline dùng key ảnh riêng.
+- [ ] Lưu được cả kết quả `b64_json` và URL.
+- [ ] Media có ALT/caption; HTML có `img alt` và `figcaption`.
+- [ ] Một ảnh lỗi chỉ tạo warning, không làm mất bài.
+- [ ] Internal link chỉ trỏ tới URL tồn tại và anchor thuộc đúng URL đó.
+
+### Queue
+
+- [ ] Hai worker không claim trùng một item.
+- [ ] Item đến giờ tự chạy khi bật auto.
+- [ ] Tắt auto không xử lý item nhưng heartbeat vẫn cập nhật.
+- [ ] Retry 2 phút/5 phút, thất bại sau lần thứ ba.
+- [ ] Auto publish và lưu nháp hoạt động đúng tùy chọn.
+- [ ] Scheduler process vẫn online sau reboot/deploy.
+
+## 24. Tài liệu chính thức và file nguồn tham khảo
+
+Tài liệu OpenAI:
+
+- [GPT-5.5 model](https://developers.openai.com/api/docs/models/gpt-5.5)
+- [Responses API - Create](https://developers.openai.com/api/reference/resources/responses/methods/create)
+- [Chat Completions - Create](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create)
+- [Image generation guide](https://developers.openai.com/api/docs/guides/image-generation)
+- [GPT Image 2 model](https://developers.openai.com/api/docs/models/gpt-image-2)
+
+Các file quan trọng trong Glass:
+
+| Chức năng | File |
+|---|---|
+| Controller viết bài, parse response, ảnh, ALT/caption và anchor | `backend/app/Http/Controllers/Api/AiController.php` |
+| Cấu hình `.env` | `backend/config/services.php` |
+| Lưu/validate Admin settings và lọc secret | `backend/app/Http/Controllers/Api/SettingController.php` |
+| Trang cấu hình Admin | `src/app/admin/settings/page.tsx` |
+| API routes | `backend/routes/api.php` |
+| Adapter queue gọi AI | `backend/app/Services/OpenAiArticleGenerator.php` |
+| Claim/retry/tạo bài | `backend/app/Services/AiContentQueueProcessor.php` |
+| Artisan command | `backend/app/Console/Commands/ProcessAiContentQueue.php` |
+| Lịch mỗi phút | `backend/routes/console.php` |
+| PM2 scheduler | `ecosystem.ai-scheduler.config.cjs` |
+| Test provider | `backend/tests/Feature/AiProviderIntegrationTest.php` |
+| Test queue | `backend/tests/Feature/AiContentQueueAutomationTest.php` |
+
+Tách code theo các lớp trên giúp thay provider, model, frontend hoặc scheduler độc lập mà không phải viết lại toàn bộ hệ thống.

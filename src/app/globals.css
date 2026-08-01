@@ -322,7 +322,9 @@ h1, h2, h3, h4, h5, h6 {
 
 .product-card__image {
   position: relative;
-  aspect-ratio: 4 / 3;
+  /* Product photos are mixed portrait/landscape ratios. A square stage keeps
+     the grid aligned while contain preserves the complete source image. */
+  aspect-ratio: 1 / 1;
   overflow: hidden;
   background: var(--color-bg-warm);
 }
@@ -332,7 +334,7 @@ h1, h2, h3, h4, h5, h6 {
   height: 100%;
   object-fit: contain;
   object-position: center;
-  padding: 12px;
+  padding: 0;
   transition: transform var(--transition-slow);
 }
 
