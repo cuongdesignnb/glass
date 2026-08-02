@@ -14,6 +14,8 @@ use Throwable;
 
 class AiContentQueueProcessor
 {
+    private const AI_ARTICLE_AUTHOR = 'Mitoo';
+
     private const RETRY_BACKOFF_MINUTES = [1 => 2, 2 => 5];
 
     public function __construct(private readonly AiArticleGenerator $generator) {}
@@ -251,6 +253,7 @@ class AiContentQueueProcessor
             $article = Article::create([
                 'title' => $title ?: $queueItem->topic,
                 'slug' => $slug,
+                'author' => self::AI_ARTICLE_AUTHOR,
                 'content' => (string) ($payload['content'] ?? ''),
                 'excerpt' => (string) ($payload['excerpt'] ?? ''),
                 'meta_title' => (string) ($payload['meta_title'] ?? ''),

@@ -356,7 +356,10 @@ class AiContentQueueAutomationTest extends TestCase
         $result = $this->processor()->processItem($item);
 
         $this->assertSame('success', $result['result']);
-        $this->assertDatabaseHas('articles', ['id' => $result['article_id']]);
+        $this->assertDatabaseHas('articles', [
+            'id' => $result['article_id'],
+            'author' => 'Mitoo',
+        ]);
         $this->assertSame('done', $item->fresh()->status);
         $this->assertStringContainsString('Cảnh báo sinh ảnh:', (string) $item->fresh()->error_message);
         $this->assertStringContainsString('HTTP 403', (string) $item->fresh()->error_message);

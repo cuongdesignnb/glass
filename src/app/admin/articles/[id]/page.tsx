@@ -130,7 +130,7 @@ export default function ArticleFormPage() {
       }
 
       if (data.content) {
-        const updates: any = { content: data.content };
+        const updates: any = { content: data.content, author: 'Mitoo' };
         const aiThumb = data.thumbnail || data.og_image || data.images?.[0]?.url || '';
         if (aiThumb) {
           updates.thumbnail = aiThumb;

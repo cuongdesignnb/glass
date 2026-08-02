@@ -85,6 +85,7 @@ export default function AdminAiContentPage() {
     const saveToast = toast.loading('Đang lưu bài viết nháp...');
     try {
       const payload = {
+        author: 'Mitoo',
         title: articleMeta?.title || topic || 'Bài viết từ AI',
         excerpt: articleMeta?.excerpt || '',
         content: generatedContent,
