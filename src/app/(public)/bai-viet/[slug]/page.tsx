@@ -34,14 +34,40 @@ async function getArticle(slug: string) {
 
 async function getRelatedArticles(articleId: number, tags: string[]) {
   try {
-    const params = new URLSearchParams({ per_page: '3', exclude: String(articleId) });
+    const params = new URLSearchParams({
+      per_page: '6',
+      published_only: '1',
+      exclude: String(articleId),
+    });
     if (tags[0]) params.set('tag', tags[0]);
     const res = await fetch(`${SSR_API}/public/articles?${params.toString()}`, {
       headers: ssrHeaders(),
     });
     if (!res.ok) return [];
     const data = await res.json();
-    return (data.data || []).filter((a: any) => a.id !== articleId).slice(0, 3);
+    const related = (data.data || []).filter((a: any) => a.id !== articleId);
+
+    // If the article's tag/category has too few matches, fill the section
+    // with the newest published articles instead of hiding it entirely.
+    if (related.length < 3 && tags[0]) {
+      const fallbackParams = new URLSearchParams({ per_page: '6', published_only: '1' });
+      const fallbackRes = await fetch(`${SSR_API}/public/articles?${fallbackParams.toString()}`, {
+        headers: ssrHeaders(),
+      });
+      if (fallbackRes.ok) {
+        const fallbackData = await fallbackRes.json();
+        const seen = new Set(related.map((a: any) => a.id));
+        for (const candidate of fallbackData.data || []) {
+          if (candidate.id !== articleId && !seen.has(candidate.id)) {
+            related.push(candidate);
+            seen.add(candidate.id);
+          }
+          if (related.length >= 3) break;
+        }
+      }
+    }
+
+    return related.slice(0, 3);
   } catch {
     return [];
   }
