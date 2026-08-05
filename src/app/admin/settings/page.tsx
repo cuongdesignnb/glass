@@ -6,6 +6,7 @@ const RichEditor = dynamic(() => import('@/components/admin/RichEditor'), { ssr:
 import { adminApi } from "@/lib/api";
 import { useToken } from "@/lib/useToken";
 import MediaPicker from "@/components/admin/MediaPicker";
+import { resolveMediaUrl } from "@/lib/media";
 import {
   FiSave,
   FiGlobe,
@@ -47,6 +48,7 @@ export default function AdminSettingsPage() {
   const [mediaTarget, setMediaTarget] = useState("");
   const [revealedKeys, setRevealedKeys] = useState<Set<string>>(new Set());
   const [editorInsertFn, setEditorInsertFn] = useState<((url: string) => void) | null>(null);
+  const [uploadingFavicon, setUploadingFavicon] = useState(false);
 
   useEffect(() => {
     if (token) loadSettings();
@@ -75,6 +77,39 @@ export default function AdminSettingsPage() {
 
   const updateSetting = (key: string, value: string) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleFaviconUpload = async (file: File) => {
+    if (!token) return;
+
+    setUploadingFavicon(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "favicon");
+      formData.append("alt", "Website favicon");
+
+      const uploaded = await adminApi.uploadMedia(token, formData);
+      const media = uploaded?.data || uploaded;
+      const url = typeof media?.url === "string" ? media.url.trim() : "";
+      if (!url) throw new Error("Upload response did not contain a media URL");
+
+      // Persist immediately so the new favicon is connected even if the user
+      // leaves the settings page without pressing the global Save button.
+      await adminApi.updateSettings(token, [{
+        key: "site_favicon",
+        value: url,
+        group: "general",
+      }]);
+      updateSetting("site_favicon", url);
+      invalidateSettings();
+      toast.success("Đã tải lên và gắn favicon mới");
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error?.message || "Không thể tải favicon lên");
+    } finally {
+      setUploadingFavicon(false);
+    }
   };
 
   const toggleSetting = (key: string) => {
@@ -824,6 +859,25 @@ export default function AdminSettingsPage() {
     if (field.isImage) {
       return (
         <>
+          {field.key === "site_favicon" && (
+            <label
+              className="admin-btn admin-btn--primary admin-btn--sm"
+              style={{ marginRight: "8px", cursor: uploadingFavicon ? "wait" : "pointer" }}
+            >
+              <FiUpload /> {uploadingFavicon ? "Đang tải lên..." : "Tải favicon lên"}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml,image/x-icon,.ico"
+                disabled={uploadingFavicon}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (file) void handleFaviconUpload(file);
+                }}
+                style={{ display: "none" }}
+              />
+            </label>
+          )}
           <button
             type="button"
             className="admin-btn admin-btn--secondary admin-btn--sm"
@@ -845,9 +899,7 @@ export default function AdminSettingsPage() {
             >
               <img
                 src={
-                  settings[field.key].startsWith("http")
-                    ? settings[field.key]
-                    : `${process.env.NEXT_PUBLIC_API_URL?.replace("/api", "")}${settings[field.key]}`
+                  resolveMediaUrl(settings[field.key])
                 }
                 alt=""
                 style={{

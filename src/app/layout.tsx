@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import { getPublicSettings } from '@/lib/settings';
+import { resolveMediaUrl } from '@/lib/media';
 
 const inter = Inter({
   subsets: ['latin', 'vietnamese'],
@@ -17,10 +18,7 @@ const playfair = Playfair_Display({
   style: ['normal', 'italic'],
 });
 
-const INTERNAL_API = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 const PUBLIC_API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-const API_HOST = process.env.API_HOST || '';
-const MEDIA_BASE = PUBLIC_API.replace('/api', '');
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 const FONT_FORMAT_MAP: Record<string, string> = {
@@ -82,12 +80,14 @@ export async function generateMetadata(): Promise<Metadata> {
   const description = s['seo_description'] || s['site_description'] || 'Cửa hàng kính mắt thời trang cao cấp - Đa dạng kiểu dáng, chất liệu. Thử kính ảo AI. Miễn phí vận chuyển toàn quốc.';
   const keywords = s['seo_keywords'] || 'kính mắt, kính thời trang, kính cận, kính râm, mắt kính, glass eyewear';
 
-  const faviconUrl = s['site_favicon']
-    ? (s['site_favicon'].startsWith('http') ? s['site_favicon'] : `${MEDIA_BASE}${s['site_favicon']}`)
-    : '/favicon.ico';
+  // Keep the browser and Google on one first-party endpoint. The endpoint
+  // proxies the configured image and returns 200 bytes, avoiding stale 307s
+  // and malformed /storage/storage/... URLs.
+  const faviconVersion = encodeURIComponent(s['site_favicon'] || 'default-v2');
+  const faviconUrl = `/favicon.ico?v=${faviconVersion}`;
 
   const ogImage = s['site_logo']
-    ? (s['site_logo'].startsWith('http') ? s['site_logo'] : `${MEDIA_BASE}${s['site_logo']}`)
+    ? resolveMediaUrl(s['site_logo'], PUBLIC_API)
     : `${APP_URL}/og-default.jpg`;
 
   return {
@@ -100,8 +100,12 @@ export async function generateMetadata(): Promise<Metadata> {
     keywords,
     manifest: '/manifest.json',
     icons: {
-      icon: faviconUrl,
-      apple: '/icons/icon-192x192.png',
+      icon: [
+        { url: faviconUrl, type: 'image/x-icon', sizes: 'any' },
+        { url: faviconUrl, type: 'image/png', sizes: '32x32' },
+      ],
+      shortcut: [faviconUrl],
+      apple: [{ url: faviconUrl, sizes: '180x180', type: 'image/png' }],
     },
     openGraph: {
       title,
@@ -181,7 +185,7 @@ export default async function RootLayout({
               name: settings['site_name'] || 'Glass Eyewear',
               url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
               logo: settings['site_logo']
-                ? (settings['site_logo'].startsWith('http') ? settings['site_logo'] : `${MEDIA_BASE}${settings['site_logo']}`)
+                ? resolveMediaUrl(settings['site_logo'], PUBLIC_API)
                 : `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/logo.png`,
               contactPoint: {
                 '@type': 'ContactPoint',
