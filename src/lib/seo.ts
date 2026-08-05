@@ -119,9 +119,7 @@ export async function generateArticleSchema(article: {
       name: article.author || siteName,
     },
     publisher: {
-      '@type': 'Organization',
-      name: siteName,
-      logo: { '@type': 'ImageObject', url: `${APP_URL}/logo.png` },
+      '@id': `${APP_URL}/#organization`,
     },
     datePublished: article.publishedAt,
     dateModified: article.updatedAt,
@@ -144,6 +142,7 @@ export function generateOrganizationSchema(settings: {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
+    '@id': `${APP_URL}/#organization`,
     name: settings.name,
     description: settings.description,
     url: APP_URL,
@@ -221,8 +220,7 @@ export function generateMerchantListing(product: {
         : 'https://schema.org/OutOfStock',
       itemCondition: 'https://schema.org/NewCondition',
       seller: {
-        '@type': 'Organization',
-        name: APP_NAME,
+        '@id': `${APP_URL}/#organization`,
       },
       shippingDetails: {
         '@type': 'OfferShippingDetails',
@@ -362,4 +360,3 @@ export function generateCollectionPageSchema(page: {
     },
   };
 }
-

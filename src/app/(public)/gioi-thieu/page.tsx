@@ -65,12 +65,7 @@ export default async function AboutPage() {
     description: settings['about_seo_description'] || `Giới thiệu về ${siteName}`,
     url: `${appUrl}/gioi-thieu`,
     mainEntity: {
-      '@type': 'Organization',
-      name: siteName,
-      url: appUrl,
-      logo: settings['site_logo']
-        ? (settings['site_logo'].startsWith('http') ? settings['site_logo'] : `${MEDIA_BASE}${settings['site_logo']}`)
-        : undefined,
+      '@id': `${appUrl}/#organization`,
     }
   };
 

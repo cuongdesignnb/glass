@@ -182,6 +182,7 @@ export default async function RootLayout({
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'Organization',
+              '@id': `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/#organization`,
               name: settings['site_name'] || 'Glass Eyewear',
               url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
               logo: settings['site_logo']
