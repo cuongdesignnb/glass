@@ -144,7 +144,7 @@ test('listing URL parameters are normalized and mapped to stable API contracts',
   const articles = normalizeArticleSearchParams({ tag: 'kien-thuc', sort: 'popular', page: '2', search: '  gong kinh ' });
   assert.deepEqual(articles, { category: 'kien-thuc', search: 'gong kinh', sort: 'newest', page: '2' });
   assert.equal(articleListingUrl(articles), '/bai-viet?category=kien-thuc&search=gong+kinh&page=2');
-  assert.equal(productCategoryUrl({ slug: 'kinh-ram' }), '/san-pham?category=kinh-ram');
+  assert.equal(productCategoryUrl({ slug: 'kinh-ram' }), '/danh-muc/kinh-ram');
   assert.equal(productCategoryUrl({ slug: '' }), '/san-pham');
 });
 
