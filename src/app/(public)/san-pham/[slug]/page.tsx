@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { generateMeta, generateProductSchema, generateBreadcrumbSchema } from '@/lib/seo';
+import { generateMeta, generateProductSchema } from '@/lib/seo';
 import { getPublicSettings } from '@/lib/settings';
 import { productCategoryUrl } from '@/lib/listing-params';
 import Breadcrumb from '@/components/layout/Breadcrumb';
@@ -100,7 +100,7 @@ export async function generateMetadata({
   ) || [];
 
   const settings = await getPublicSettings();
-  const siteName = settings['site_name'] || 'Glass Eyewear';
+  const siteName = settings['site_name'] || 'MITOO';
 
   return await generateMeta({
     title: product.meta_title || variantTitle,
@@ -226,11 +226,6 @@ export default async function ProductDetailPage({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
         />
       )}
-      {/* Schema: BreadcrumbList */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(generateBreadcrumbSchema(breadcrumbItems)) }}
-      />
       <div className="container" style={{ paddingTop: 'var(--space-lg)', paddingBottom: 'var(--space-4xl)' }}>
         <Breadcrumb items={breadcrumbItems} />
         <ProductDetailClient

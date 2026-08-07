@@ -75,16 +75,15 @@ h1, h2, h3, h4, h5, h6 {
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getPublicSettings();
 
-  const siteName = s['site_name'] || 'Glass Eyewear';
+  const siteName = s['site_name'] || 'MITOO';
   const title = s['seo_title'] || `${siteName} - Kính Mắt Thời Trang Cao Cấp`;
   const description = s['seo_description'] || s['site_description'] || 'Cửa hàng kính mắt thời trang cao cấp - Đa dạng kiểu dáng, chất liệu. Thử kính ảo AI. Miễn phí vận chuyển toàn quốc.';
-  const keywords = s['seo_keywords'] || 'kính mắt, kính thời trang, kính cận, kính râm, mắt kính, glass eyewear';
+  const keywords = s['seo_keywords'] || 'kính mắt, kính thời trang, kính cận, kính râm, mắt kính, mitoo';
 
   // Keep the browser and Google on one first-party endpoint. The endpoint
   // proxies the configured image and returns 200 bytes, avoiding stale 307s
   // and malformed /storage/storage/... URLs.
-  const faviconVersion = encodeURIComponent(s['site_favicon'] || 'default-v2');
-  const faviconUrl = `/favicon.ico?v=${faviconVersion}`;
+  const faviconUrl = '/favicon.ico';
 
   const ogImage = s['site_logo']
     ? resolveMediaUrl(s['site_logo'], PUBLIC_API)
@@ -162,7 +161,7 @@ export default async function RootLayout({
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'WebSite',
-              name: settings['site_name'] || 'Glass Eyewear',
+              name: settings['site_name'] || 'MITOO',
               url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
               potentialAction: {
                 '@type': 'SearchAction',
@@ -183,7 +182,7 @@ export default async function RootLayout({
               '@context': 'https://schema.org',
               '@type': 'Organization',
               '@id': `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/#organization`,
-              name: settings['site_name'] || 'Glass Eyewear',
+              name: settings['site_name'] || 'MITOO',
               url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
               logo: settings['site_logo']
                 ? resolveMediaUrl(settings['site_logo'], PUBLIC_API)

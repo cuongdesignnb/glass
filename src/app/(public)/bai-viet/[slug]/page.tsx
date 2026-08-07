@@ -112,7 +112,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   const ogImage = article.thumbnail ? buildImageUrl(article.thumbnail) : undefined;
   const settings = await getPublicSettings();
-  const siteName = settings['site_name'] || 'Glass Eyewear';
+  const siteName = settings['site_name'] || 'MITOO';
 
   return await generateMeta({
     title: article.meta_title || article.title,
@@ -137,7 +137,7 @@ export default async function ArticleDetailPage({ params }: { params: Promise<{ 
     : '';
 
   const settings = await getPublicSettings();
-  const siteName = settings['site_name'] || 'Glass Eyewear';
+  const siteName = settings['site_name'] || 'MITOO';
 
   // Schema: Article
   const articleSchema = await generateArticleSchema({

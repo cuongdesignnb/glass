@@ -229,9 +229,9 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
                   )}
                   <div className="article-featured__meta">
                     <div className="article-featured__author">
-                      <div className="article-featured__avatar">{getInitials(featuredArticle.author || 'Glass')}</div>
+                      <div className="article-featured__avatar">{getInitials(featuredArticle.author || 'MITOO')}</div>
                       <div>
-                        <div className="article-featured__author-name">{featuredArticle.author || 'Glass Team'}</div>
+                        <div className="article-featured__author-name">{featuredArticle.author || 'MITOO'}</div>
                         <div className="article-featured__date">{formatDateVi(featuredArticle.published_at || featuredArticle.created_at)}</div>
                       </div>
                     </div>
@@ -280,7 +280,7 @@ export default function ArticleListingClient({ initialArticles, initialPaginatio
                         <div className="article-card__meta">
                           <div className="article-card__author-avatar">{getInitials(article.author || 'G')}</div>
                           <div>
-                            <div className="article-card__author-name">{article.author || 'Glass Team'}</div>
+                            <div className="article-card__author-name">{article.author || 'MITOO'}</div>
                             <div className="article-card__date">{formatDateVi(article.published_at || article.created_at)}</div>
                           </div>
                         </div>

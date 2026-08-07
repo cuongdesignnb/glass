@@ -36,11 +36,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${APP_URL}/voucher`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.5 },
   ];
 
-  const [products, articles, collections] = await Promise.all([
+  const [products, articles, collections, categories] = await Promise.all([
     fetchAll<any>('/public/products?per_page=1000'),
     fetchAll<any>('/public/articles?per_page=1000&published_only=1'),
     fetchAll<any>('/public/collections'),
+    fetchAll<any>('/public/categories?tree=false'),
   ]);
+
+  const categoryUrls: MetadataRoute.Sitemap = Array.isArray(categories)
+    ? categories.filter((category) => category?.slug && category?.is_active !== false).map((category) => ({
+        url: `${APP_URL}/danh-muc/${category.slug}`,
+        lastModified: category.updated_at ? new Date(category.updated_at) : new Date(),
+        changeFrequency: 'weekly' as const,
+        priority: 0.78,
+      }))
+    : [];
 
   const productUrls: MetadataRoute.Sitemap = Array.isArray(products)
     ? products.filter((product) => product?.slug).map((product) => ({
@@ -71,5 +81,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         }))
     : [];
 
-  return [...staticPages, ...collectionUrls, ...productUrls, ...articleUrls];
+  return [...staticPages, ...categoryUrls, ...collectionUrls, ...productUrls, ...articleUrls];
 }

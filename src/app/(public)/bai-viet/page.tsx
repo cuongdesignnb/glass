@@ -5,12 +5,17 @@ import { articleApiParams, articleListingUrl, normalizeArticleSearchParams, type
 import ArticleListingClient from './ArticleListingClient';
 import './articles.css';
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({ searchParams = {} }: { searchParams?: RawSearchParams }): Promise<Metadata> {
+  const rawKeys = Object.keys(searchParams).filter((key) => key !== 'page');
+  const filters = normalizeArticleSearchParams(searchParams);
+  const isFacetUrl = rawKeys.length > 0;
+  const canonicalUrl = isFacetUrl ? '/bai-viet' : articleListingUrl(filters);
   return await generateMeta({
     title: 'Bài Viết & Kiến Thức Kính Mắt',
     description: 'Khám phá xu hướng kính mắt mới nhất, mẹo chăm sóc, kiến thức chuyên sâu và đánh giá từ các chuyên gia. Cập nhật liên tục.',
     keywords: 'bài viết kính mắt, kiến thức kính, xu hướng kính, chăm sóc kính, tư vấn kính mắt',
-    url: '/bai-viet',
+    url: canonicalUrl,
+    robots: isFacetUrl ? { index: false, follow: true } : { index: true, follow: true },
   });
 }
 
@@ -40,7 +45,7 @@ export default async function ArticlesPage({ searchParams = {} }: { searchParams
   const collectionSchema = generateCollectionPageSchema({
     name: 'Bài Viết & Kiến Thức Kính Mắt',
     description: 'Khám phá xu hướng kính mắt mới nhất, mẹo chăm sóc và kiến thức chuyên sâu.',
-    url: '/bai-viet',
+    url: canonicalUrl,
   });
 
   return (

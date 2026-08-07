@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Media;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -76,6 +77,26 @@ class ImageSeoMetadataTest extends TestCase
         ])->assertOk()
             ->assertJsonPath('alt', 'Gọng kính MITOO màu vàng')
             ->assertJsonPath('caption', 'Thiết kế kim loại thanh mảnh.');
+    }
+
+    public function test_ico_upload_keeps_original_bytes_and_rejects_invalid_signature(): void
+    {
+        config(['filesystems.default' => 'public']);
+        Sanctum::actingAs($this->createAdmin());
+
+        $valid = UploadedFile::fake()->createWithContent('mitoo.ico', "\x00\x00\x01\x00\x01\x00\x10\x10\x00\x00\x01\x00\x20\x00");
+        $response = $this->post('/api/media/upload', [
+            'file' => $valid,
+            'folder' => 'favicon',
+            'alt' => 'MITOO favicon',
+        ])->assertCreated();
+
+        $media = Media::findOrFail($response->json('id'));
+        $this->assertSame('image/x-icon', $media->mime_type);
+        $this->assertStringStartsWith("\x00\x00\x01\x00", file_get_contents(storage_path('app/public/'.$media->path)));
+
+        $invalid = UploadedFile::fake()->createWithContent('broken.ico', 'not-an-ico');
+        $this->post('/api/media/upload', ['file' => $invalid])->assertStatus(422);
     }
 
     private function createAdmin(): User

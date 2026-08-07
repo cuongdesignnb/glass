@@ -87,7 +87,7 @@ export function DynamicCategories({ initialData }: { initialData?: any[] }) {
   return (
     <div className="categories-grid">
       {categories.map((category: any) => (
-        <Link key={category.slug || category.id} href={`/san-pham?category=${category.slug}`} className="category-card">
+        <Link key={category.slug || category.id} href={`/danh-muc/${encodeURIComponent(category.slug)}`} className="category-card">
           <div className="category-card__emoji">
             {category.icon ? (
               <Image src={category.icon.startsWith('http') ? category.icon : `${API_BASE}${category.icon}`} alt="" width={48} height={48} style={{ objectFit: 'contain' }} />

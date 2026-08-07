@@ -5,14 +5,19 @@ import { publicApi } from '@/lib/api';
 import { normalizeProductSearchParams, productApiParams, productListingUrl, type RawSearchParams } from '@/lib/listing-params';
 import ProductListingClient from './ProductListingClient';
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({ searchParams = {} }: { searchParams?: RawSearchParams }): Promise<Metadata> {
   const settings = await getPublicSettings();
-  const siteName = settings['site_name'] || 'Glass Eyewear';
+  const siteName = settings['site_name'] || 'MITOO';
+  const rawKeys = Object.keys(searchParams).filter((key) => key !== 'page');
+  const filters = normalizeProductSearchParams(searchParams);
+  const isFacetUrl = rawKeys.length > 0;
+  const canonicalUrl = isFacetUrl ? '/san-pham' : productListingUrl(filters);
   return await generateMeta({
     title: 'Bộ Sưu Tập Kính Mắt',
     description: 'Khám phá bộ sưu tập kính mắt thời trang cao cấp. Kính cận, kính râm, kính thời trang đa dạng kiểu dáng. Miễn phí vận chuyển.',
     keywords: `kính mắt, kính cận, kính râm, kính thời trang, mắt kính, ${siteName.toLowerCase()}, mua kính online`,
-    url: '/san-pham',
+    url: canonicalUrl,
+    robots: isFacetUrl ? { index: false, follow: true } : { index: true, follow: true },
   });
 }
 
@@ -43,7 +48,7 @@ export default async function ProductListingPage({ searchParams = {} }: { search
   const collectionSchema = generateCollectionPageSchema({
     name: 'Bộ Sưu Tập Kính Mắt',
     description: 'Khám phá bộ sưu tập kính mắt thời trang cao cấp.',
-    url: '/san-pham',
+    url: canonicalUrl,
   });
 
   return (

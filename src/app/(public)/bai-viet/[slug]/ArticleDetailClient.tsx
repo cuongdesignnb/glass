@@ -116,9 +116,9 @@ export default function ArticleDetailClient({ article, related, processedContent
           {/* Meta */}
           <div className="article-hero__meta">
             <div className="article-hero__author">
-              <div className="article-hero__avatar">{getInitials(article.author || 'Glass')}</div>
+              <div className="article-hero__avatar">{getInitials(article.author || 'MITOO')}</div>
               <div>
-                <div className="article-hero__author-name">{article.author || 'Glass Team'}</div>
+                <div className="article-hero__author-name">{article.author || 'MITOO'}</div>
                 <div className="article-hero__author-role">Chuyên gia kính mắt</div>
               </div>
             </div>
@@ -340,7 +340,7 @@ export default function ArticleDetailClient({ article, related, processedContent
                     <div className="article-card__meta">
                       <div className="article-card__author-avatar">{getInitials(rel.author || 'G')}</div>
                       <div>
-                        <div className="article-card__author-name">{rel.author || 'Glass Team'}</div>
+                        <div className="article-card__author-name">{rel.author || 'MITOO'}</div>
                         <div className="article-card__date">{formatDateVi(rel.published_at || rel.created_at)}</div>
                       </div>
                     </div>

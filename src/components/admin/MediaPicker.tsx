@@ -172,7 +172,7 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
             <input type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Tìm ảnh..." style={{ background: 'none', border: 'none', outline: 'none', color: '#fff', fontSize: '0.875rem', width: '100%' }} />
           </div>
-          <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleFileInput} style={{ display: 'none' }} />
+          <input ref={fileInputRef} type="file" accept="image/*,.ico,image/x-icon,image/vnd.microsoft.icon" multiple onChange={handleFileInput} style={{ display: 'none' }} />
           <button
             className="admin-btn admin-btn--primary admin-btn--sm"
             onClick={() => fileInputRef.current?.click()}

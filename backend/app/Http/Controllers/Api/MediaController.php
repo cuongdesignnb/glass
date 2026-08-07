@@ -54,6 +54,19 @@ class MediaController extends Controller
         $mimeType = $file->getMimeType();
         $ext = strtolower($file->getClientOriginalExtension());
 
+        // ICO files must keep their original bytes: Intervention cannot safely
+        // transcode them and browsers require the ICO header to remain intact.
+        $isIco = $ext === 'ico';
+        if ($isIco) {
+            $header = @file_get_contents($file->getRealPath(), false, null, 0, 4);
+            if ($header !== "\x00\x00\x01\x00") {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'file' => 'The uploaded ICO file has an invalid ICO signature.',
+                ]);
+            }
+            $mimeType = 'image/x-icon';
+        }
+
         // Generate unique filename
         $baseName = pathinfo($originalName, PATHINFO_FILENAME);
         // Sanitize baseName - loại bỏ ký tự đặc biệt
@@ -70,14 +83,14 @@ class MediaController extends Controller
         // Xác định loại file
         $isImage = str_starts_with($mimeType, 'image/');
         $isWebP = ($mimeType === 'image/webp' || $ext === 'webp');
-        $skipConvert = in_array($mimeType, ['image/svg+xml', 'image/x-icon']);
+        $skipConvert = $isIco || in_array($mimeType, ['image/svg+xml', 'image/x-icon', 'image/vnd.microsoft.icon']);
 
         if ($isImage && $isWebP) {
             // === WebP: Lưu trực tiếp, KHÔNG cần Intervention Image ===
             $webpFilename = "{$baseName}-{$timestamp}.webp";
             $relativePath = "uploads/{$month}/{$webpFilename}";
 
-            $file->storeAs("public/uploads/{$month}", $webpFilename);
+            $file->storeAs("uploads/{$month}", $webpFilename, 'public');
 
             $fullPath = storage_path("app/public/{$relativePath}");
             $url = "/storage/{$relativePath}";
@@ -145,7 +158,7 @@ class MediaController extends Controller
                 $newFilename = "{$baseName}-{$timestamp}.{$origExt}";
                 $relativePath = "uploads/{$month}/{$newFilename}";
 
-                $file->storeAs("public/uploads/{$month}", $newFilename);
+                $file->storeAs("uploads/{$month}", $newFilename, 'public');
 
                 $width = null;
                 $height = null;
@@ -171,11 +184,11 @@ class MediaController extends Controller
             }
         } else {
             // === Non-image files (SVG, ICO, PDF, etc.) → Lưu nguyên ===
-            $fileExt = $file->getClientOriginalExtension();
+            $fileExt = $isIco ? 'ico' : $file->getClientOriginalExtension();
             $newFilename = "{$baseName}-{$timestamp}.{$fileExt}";
             $relativePath = "uploads/{$month}/{$newFilename}";
 
-            $file->storeAs("public/uploads/{$month}", $newFilename);
+            $file->storeAs("uploads/{$month}", $newFilename, 'public');
 
             $media = Media::create([
                 'filename' => $newFilename,

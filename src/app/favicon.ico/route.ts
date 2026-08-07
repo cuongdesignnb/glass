@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { resolveMediaUrl } from '@/lib/media';
 import { getFreshPublicSettings } from '@/lib/settings';
 
@@ -23,23 +23,33 @@ async function imageResponse(response: Response, sourceUrl: string): Promise<Nex
   const contentType = response.headers.get('content-type')?.split(';')[0]?.trim();
   const body = await response.arrayBuffer();
   if (!body.byteLength) return null;
+  const inferredType = inferContentType(sourceUrl);
+  if (!contentType?.startsWith('image/')) {
+    // A favicon URL must not proxy an HTML error page as an image. ICO files
+    // are commonly served as application/octet-stream, so verify their magic.
+    if (inferredType !== 'image/x-icon' || body.byteLength < 4) return null;
+    const bytes = new Uint8Array(body.slice(0, 4));
+    if (!(bytes[0] === 0 && bytes[1] === 0 && bytes[2] === 1 && bytes[3] === 0)) return null;
+  }
 
   return new NextResponse(body, {
     status: 200,
     headers: {
-      'Content-Type': contentType?.startsWith('image/') ? contentType : inferContentType(sourceUrl),
+      'Content-Type': contentType?.startsWith('image/') ? contentType : inferredType,
       'Cache-Control': CACHE_CONTROL,
       'X-Content-Type-Options': 'nosniff',
     },
   });
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
+  let configured = false;
   try {
     const settings = await getFreshPublicSettings();
     const faviconPath = settings['site_favicon']?.trim();
 
     if (faviconPath) {
+      configured = true;
       const sourceUrl = resolveMediaUrl(faviconPath);
       const upstream = await fetch(sourceUrl, { cache: 'no-store', redirect: 'follow' });
       const response = await imageResponse(upstream, sourceUrl);
@@ -50,18 +60,8 @@ export async function GET(request: NextRequest) {
     console.error('Error fetching configured favicon:', error);
   }
 
-  // Always return the fallback bytes with 200 instead of redirecting to an old URL.
-  const fallbackUrl = new URL('/icons/icon-192x192.png', request.url);
-  try {
-    const fallback = await fetch(fallbackUrl, { cache: 'force-cache' });
-    const response = await imageResponse(fallback, fallbackUrl.toString());
-    if (response) return response;
-  } catch (error) {
-    console.error('Error fetching fallback favicon:', error);
-  }
-
   return new NextResponse(null, {
-    status: 404,
-    headers: { 'Cache-Control': 'no-store' },
+    status: configured ? 502 : 404,
+    headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' },
   });
 }

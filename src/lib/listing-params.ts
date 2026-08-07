@@ -98,19 +98,7 @@ export function productListingUrl(filters: ProductListingFilters): string {
 
 export function productCategoryUrl(category: { slug?: unknown } | null | undefined): string {
   const slug = token(String(category?.slug || ''));
-  return slug ? productListingUrl({
-    gender: '',
-    color: '',
-    face_shape: '',
-    frame_style: '',
-    material: '',
-    category_slug: slug,
-    price_min: '',
-    price_max: '',
-    sort: 'newest',
-    search: '',
-    page: '1',
-  }) : '/san-pham';
+  return slug ? `/danh-muc/${encodeURIComponent(slug)}` : '/san-pham';
 }
 
 export function normalizeArticleSearchParams(raw: RawSearchParams = {}): ArticleListingFilters {

@@ -8,10 +8,16 @@ interface SEOProps {
   ogImage?: string;
   url?: string;
   type?: 'website' | 'article' | 'product';
+  robots?: Metadata['robots'];
 }
 
-const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'Glass Eyewear';
+const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || 'MITOO';
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+function removeBrandSuffix(title: string, siteName: string): string {
+  const escaped = siteName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return title.trim().replace(new RegExp(`\\s*(?:[|–—-])\\s*${escaped}\\s*$`, 'i'), '').trim();
+}
 
 export async function generateMeta({
   title,
@@ -20,16 +26,20 @@ export async function generateMeta({
   ogImage,
   url,
   type = 'website',
+  robots,
 }: SEOProps): Promise<Metadata> {
   const settings = await getPublicSettings();
   const siteName = settings['site_name'] || APP_NAME;
 
-  const fullTitle = `${title} | ${siteName}`;
+  const cleanTitle = removeBrandSuffix(title, siteName);
+  const fullTitle = `${cleanTitle} | ${siteName}`;
   const fullUrl = url ? `${APP_URL}${url}` : APP_URL;
   const imageUrl = ogImage || `${APP_URL}/og-default.jpg`;
 
   return {
-    title: fullTitle,
+    // The root layout owns the title template. Returning a clean title here
+    // prevents nested pages from producing "MITOO | MITOO".
+    title: cleanTitle,
     description,
     keywords,
     openGraph: {
@@ -50,10 +60,7 @@ export async function generateMeta({
     alternates: {
       canonical: fullUrl,
     },
-    robots: {
-      index: true,
-      follow: true,
-    },
+    robots: robots || { index: true, follow: true },
   };
 }
 

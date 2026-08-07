@@ -84,7 +84,7 @@ export default function Footer() {
     ];
   }
 
-  const siteName = settings['site_name'] || 'Glass Eyewear';
+  const siteName = settings['site_name'] || 'MITOO';
   const showSocial = settings['footer_show_social'] !== '0';
   const showMenus = settings['footer_show_menus'] !== '0';
   const showContact = settings['footer_show_contact'] !== '0';

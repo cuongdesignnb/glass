@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const page = await getPage(slug);
   if (!page) return {};
   const settings = await getPublicSettings();
-  const siteName = settings['site_name'] || 'Glass Eyewear';
+  const siteName = settings['site_name'] || 'MITOO';
   return await generateMeta({
     title: page.meta_title || page.title,
     description: page.meta_desc || `${page.title} - ${siteName}`,
@@ -52,7 +52,7 @@ export default async function StaticPage({ params }: { params: Promise<{ slug: s
   if (!page) return notFound();
 
   const settings = await getPublicSettings();
-  const siteName = settings['site_name'] || 'Glass Eyewear';
+  const siteName = settings['site_name'] || 'MITOO';
 
   const breadcrumbItems = [
     { name: 'Trang chủ', url: '/' },
