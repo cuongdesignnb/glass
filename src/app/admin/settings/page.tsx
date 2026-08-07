@@ -37,6 +37,10 @@ import {
 } from "react-icons/fi";
 import toast from "react-hot-toast";
 import { invalidateSettings } from "@/lib/useSettings";
+import {
+  flattenAdminSettings,
+  persistAdminSetting,
+} from "@/lib/admin-settings-persistence";
 
 export default function AdminSettingsPage() {
   const { token } = useToken();
@@ -49,6 +53,7 @@ export default function AdminSettingsPage() {
   const [revealedKeys, setRevealedKeys] = useState<Set<string>>(new Set());
   const [editorInsertFn, setEditorInsertFn] = useState<((url: string) => void) | null>(null);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
+  const [savingFavicon, setSavingFavicon] = useState(false);
 
   useEffect(() => {
     if (token) loadSettings();
@@ -59,15 +64,7 @@ export default function AdminSettingsPage() {
     setLoading(true);
     try {
       const data = await adminApi.getSettings(token!);
-      const flat: Record<string, string> = {};
-      Object.values(data).forEach((group: any) => {
-        if (typeof group === "object") {
-          Object.entries(group).forEach(([key, value]) => {
-            flat[key] = value as string;
-          });
-        }
-      });
-      setSettings(flat);
+      setSettings(flattenAdminSettings(data));
     } catch (err) {
       console.error(err);
     } finally {
@@ -77,6 +74,37 @@ export default function AdminSettingsPage() {
 
   const updateSetting = (key: string, value: string) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const persistSetting = async (key: string, value: string, group: string) => {
+    if (!token) throw new Error("Phiên đăng nhập đã hết hạn.");
+
+    await persistAdminSetting(
+      {
+        updateSettings: (items) => adminApi.updateSettings(token, items),
+        getSettings: () => adminApi.getSettings(token),
+      },
+      { key, value, group },
+      invalidateSettings,
+    );
+    updateSetting(key, value);
+  };
+
+  const persistFavicon = async (url: string, successMessage: string) => {
+    if (!token) return false;
+
+    setSavingFavicon(true);
+    try {
+      await persistSetting("site_favicon", url.trim(), "general");
+      toast.success(successMessage);
+      return true;
+    } catch {
+      // Do not log settings: the authenticated response can contain secrets.
+      toast.error("Không thể lưu favicon. Vui lòng thử lại.");
+      return false;
+    } finally {
+      setSavingFavicon(false);
+    }
   };
 
   const handleFaviconUpload = async (file: File) => {
@@ -94,18 +122,8 @@ export default function AdminSettingsPage() {
       const url = typeof media?.url === "string" ? media.url.trim() : "";
       if (!url) throw new Error("Upload response did not contain a media URL");
 
-      // Persist immediately so the new favicon is connected even if the user
-      // leaves the settings page without pressing the global Save button.
-      await adminApi.updateSettings(token, [{
-        key: "site_favicon",
-        value: url,
-        group: "general",
-      }]);
-      updateSetting("site_favicon", url);
-      invalidateSettings();
-      toast.success("Đã tải lên và gắn favicon mới");
+      await persistFavicon(url, "Đã tải lên và gắn favicon mới");
     } catch (error: any) {
-      console.error(error);
       toast.error(error?.message || "Không thể tải favicon lên");
     } finally {
       setUploadingFavicon(false);
@@ -862,13 +880,13 @@ export default function AdminSettingsPage() {
           {field.key === "site_favicon" && (
             <label
               className="admin-btn admin-btn--primary admin-btn--sm"
-              style={{ marginRight: "8px", cursor: uploadingFavicon ? "wait" : "pointer" }}
+              style={{ marginRight: "8px", cursor: uploadingFavicon || savingFavicon ? "wait" : "pointer" }}
             >
-              <FiUpload /> {uploadingFavicon ? "Đang tải lên..." : "Tải favicon lên"}
+              <FiUpload /> {uploadingFavicon || savingFavicon ? "Đang lưu favicon..." : "Tải favicon lên"}
               <input
                 type="file"
                 accept="image/png,image/jpeg,image/webp,image/svg+xml,image/x-icon,.ico"
-                disabled={uploadingFavicon}
+                disabled={uploadingFavicon || savingFavicon}
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   event.target.value = "";
@@ -914,7 +932,14 @@ export default function AdminSettingsPage() {
                 {settings[field.key]}
               </span>
               <button
-                onClick={() => updateSetting(field.key, "")}
+                type="button"
+                onClick={() => {
+                  if (field.key === "site_favicon") {
+                    void persistFavicon("", "Đã xoá favicon");
+                  } else {
+                    updateSetting(field.key, "");
+                  }
+                }}
                 style={{
                   color: "rgba(255,255,255,0.3)",
                   background: "none",
@@ -1841,6 +1866,8 @@ export default function AdminSettingsPage() {
         onSelect={(url) => {
           if (mediaTarget === "editor" && editorInsertFn) {
             editorInsertFn(url.startsWith("http") ? url : `${process.env.NEXT_PUBLIC_API_URL?.replace("/api", "")}${url}`);
+          } else if (mediaTarget === "site_favicon") {
+            void persistFavicon(url, "Đã chọn favicon từ Media Library");
           } else {
             updateSetting(mediaTarget, url);
           }
