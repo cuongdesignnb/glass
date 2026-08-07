@@ -9,6 +9,7 @@ import {
   type StoredCartItem,
 } from '../src/lib/cart-storage.ts';
 import { shouldRenderLayoutNewsletter } from '../src/components/layout/newsletter-visibility.ts';
+import { flattenSettings } from '../src/lib/settingsUtils.ts';
 import {
   articleListingUrl,
   normalizeArticleSearchParams,
@@ -155,6 +156,11 @@ test('critical public listings are server seeded without mount refetches', () =>
   const articlePage = read('src/app/(public)/bai-viet/page.tsx');
   const articleClient = read('src/app/(public)/bai-viet/ArticleListingClient.tsx');
   const chatWidget = read('src/components/layout/ChatWidget.tsx');
+  const safeSettings = flattenSettings({ general: {
+    site_name: 'MITOO',
+    site_logo: '/storage/logo.webp',
+    merchant_service_account_json: '{"type":"service_account","private_key":"-----BEGIN PRIVATE KEY----- fake"}',
+  }});
 
   assert.match(home, /<HomeHero settings=\{settings\}/);
   assert.match(productPage, /Promise\.all/);
@@ -162,6 +168,9 @@ test('critical public listings are server seeded without mount refetches', () =>
   assert.doesNotMatch(productClient, /publicApi|getProducts|getProductAttributes|getCategories/);
   assert.doesNotMatch(articleClient, /publicApi|getArticles|getArticleCategories/);
   assert.doesNotMatch(chatWidget, /setTimeout\(loadScript|window\.addEventListener\(['"]scroll/);
+  assert.equal(safeSettings.site_name, 'MITOO');
+  assert.equal(safeSettings.site_logo, '/storage/logo.webp');
+  assert.equal(safeSettings.merchant_service_account_json, undefined);
 });
 
 test('listing pagination and product category breadcrumbs expose crawlable canonical URLs', () => {

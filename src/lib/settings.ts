@@ -1,4 +1,5 @@
 import { cache } from 'react';
+import { flattenSettings } from './settingsUtils';
 
 const INTERNAL_API = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 const API_HOST = process.env.API_HOST || '';
@@ -12,15 +13,7 @@ async function loadPublicSettings(cacheMode: 'revalidate' | 'no-store'): Promise
       : await fetch(`${INTERNAL_API}/public/settings`, { next: { revalidate: 300 }, headers });
     if (!res.ok) return {};
     const data = await res.json();
-    const flat: Record<string, string> = {};
-    Object.values(data).forEach((group: any) => {
-      if (typeof group === 'object' && group !== null) {
-        Object.entries(group).forEach(([key, value]) => {
-          flat[key] = value as string;
-        });
-      }
-    });
-    return flat;
+    return flattenSettings(data);
   } catch {
     return {};
   }

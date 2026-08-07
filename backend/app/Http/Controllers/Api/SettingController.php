@@ -10,6 +10,28 @@ use Illuminate\Validation\ValidationException;
 
 class SettingController extends Controller
 {
+    private const PUBLIC_SETTING_KEYS = [
+        'site_name', 'site_description', 'site_logo', 'site_favicon', 'site_url',
+        'contact_phone', 'contact_email', 'contact_address',
+        'seo_title', 'seo_description', 'seo_keywords',
+        'social_facebook', 'social_instagram', 'social_youtube', 'social_tiktok',
+        'zalo_oa_id', 'zalo_phone', 'zalo_welcome', 'chat_zalo_icon',
+        'chat_messenger_icon', 'messenger_page_id',
+        'hero_image', 'hero_image_mobile', 'hero_title', 'hero_subtitle',
+        'hero_cta_text', 'hero_tag', 'hero_overlay', 'hero_text_color', 'hero_desc_color',
+        'homepage_style_collection', 'homepage_collections_eyebrow',
+        'homepage_collections_title', 'homepage_collections_description', 'homepage_collections_cta',
+        'stat_customers', 'stat_products', 'stat_brands', 'stat_rating',
+        'brand_color',
+        'custom_font_name', 'custom_font_url', 'custom_font_format', 'custom_font_enabled',
+        'footer_menus', 'footer_bottom_links', 'footer_privacy_url', 'footer_terms_url',
+        'footer_show_social', 'footer_show_menus', 'footer_show_contact',
+        'footer_opening_hours', 'footer_description', 'footer_copyright',
+        'about_seo_title', 'about_seo_description', 'about_seo_keywords',
+        'about_banner', 'about_title', 'about_content', 'about_faqs',
+        'payment_free_shipping_threshold', 'payment_shipping_fee',
+    ];
+
     public function index(Request $request)
     {
         if ($request->filled('group')) {
@@ -30,19 +52,8 @@ class SettingController extends Controller
         return response()->json($settings);
     }
 
-    /**
-     * Filter out sensitive settings for public endpoints
-     */
     private function filterSensitiveSettings(array $settings): array
     {
-        $sensitiveKeys = [
-            'openai_api_key',
-            'vpost_token',
-            'vpost_password',
-            'vpost_user',
-            'sepay_api_key',
-        ];
-
         $isGrouped = false;
         foreach ($settings as $key => $value) {
             if (is_array($value)) {
@@ -55,7 +66,7 @@ class SettingController extends Controller
             foreach ($settings as $group => $items) {
                 if (is_array($items)) {
                     foreach ($items as $key => $value) {
-                        if ($this->isSensitiveKey($key, $sensitiveKeys)) {
+                        if (!$this->isPublicSetting($key, $value)) {
                             unset($settings[$group][$key]);
                         }
                     }
@@ -63,7 +74,7 @@ class SettingController extends Controller
             }
         } else {
             foreach ($settings as $key => $value) {
-                if ($this->isSensitiveKey($key, $sensitiveKeys)) {
+                if (!$this->isPublicSetting($key, $value)) {
                     unset($settings[$key]);
                 }
             }
@@ -72,25 +83,25 @@ class SettingController extends Controller
         return $settings;
     }
 
-    /**
-     * Determine if a setting key is sensitive
-     */
-    private function isSensitiveKey(string $key, array $sensitiveKeys): bool
+    private function isPublicSetting(string $key, mixed $value): bool
     {
-        $keyLower = strtolower($key);
-        
-        if (in_array($keyLower, $sensitiveKeys)) {
+        if (!in_array($key, self::PUBLIC_SETTING_KEYS, true)) {
+            return false;
+        }
+
+        if (is_array($value)) {
+            foreach ($value as $item) {
+                if (!$this->isPublicSetting($key, $item)) return false;
+            }
             return true;
         }
-        
-        $keywords = ['api_key', 'secret', 'password', 'token'];
-        foreach ($keywords as $kw) {
-            if (str_contains($keyLower, $kw)) {
-                return true;
-            }
-        }
-        
-        return false;
+
+        if (!is_string($value)) return true;
+
+        return !preg_match(
+            '/-----BEGIN\s+(?:[A-Z0-9 ]+\s+)?PRIVATE KEY-----|["\']private_key["\']\s*[:=]|["\']type["\']\s*:\s*["\']service_account["\']/i',
+            $value
+        );
     }
 
     /**
