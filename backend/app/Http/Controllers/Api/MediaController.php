@@ -10,6 +10,41 @@ use Intervention\Image\Laravel\Facades\Image;
 
 class MediaController extends Controller
 {
+    private function validateIcoFile(\Illuminate\Http\UploadedFile $file): void
+    {
+        $contents = @file_get_contents($file->getRealPath());
+        $fileSize = is_string($contents) ? strlen($contents) : 0;
+
+        if ($fileSize < 6) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'file' => 'The uploaded ICO file is truncated.',
+            ]);
+        }
+
+        $reserved = unpack('vreserved', substr($contents, 0, 2))['reserved'];
+        $type = unpack('vtype', substr($contents, 2, 2))['type'];
+        $imageCount = unpack('vimage_count', substr($contents, 4, 2))['image_count'];
+        $directoryEnd = 6 + ($imageCount * 16);
+
+        if ($reserved !== 0 || $type !== 1 || $imageCount < 1 || $fileSize < $directoryEnd) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'file' => 'The uploaded ICO directory is invalid.',
+            ]);
+        }
+
+        for ($index = 0; $index < $imageCount; $index++) {
+            $entry = 6 + ($index * 16);
+            $bytesInRes = unpack('Vbytes_in_res', substr($contents, $entry + 8, 4))['bytes_in_res'];
+            $imageOffset = unpack('Vimage_offset', substr($contents, $entry + 12, 4))['image_offset'];
+
+            if ($bytesInRes <= 0 || $imageOffset < $directoryEnd || $imageOffset >= $fileSize || $imageOffset + $bytesInRes > $fileSize) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'file' => 'The uploaded ICO image payload is out of bounds.',
+                ]);
+            }
+        }
+    }
+
     /**
      * List all media files
      */
@@ -58,12 +93,7 @@ class MediaController extends Controller
         // transcode them and browsers require the ICO header to remain intact.
         $isIco = $ext === 'ico';
         if ($isIco) {
-            $header = @file_get_contents($file->getRealPath(), false, null, 0, 4);
-            if ($header !== "\x00\x00\x01\x00") {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'file' => 'The uploaded ICO file has an invalid ICO signature.',
-                ]);
-            }
+            $this->validateIcoFile($file);
             $mimeType = 'image/x-icon';
         }
 

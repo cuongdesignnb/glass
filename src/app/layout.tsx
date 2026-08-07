@@ -99,12 +99,8 @@ export async function generateMetadata(): Promise<Metadata> {
     keywords,
     manifest: '/manifest.json',
     icons: {
-      icon: [
-        { url: faviconUrl, type: 'image/x-icon', sizes: 'any' },
-        { url: faviconUrl, type: 'image/png', sizes: '32x32' },
-      ],
+      icon: [{ url: faviconUrl, sizes: 'any' }],
       shortcut: [faviconUrl],
-      apple: [{ url: faviconUrl, sizes: '180x180', type: 'image/png' }],
     },
     openGraph: {
       title,

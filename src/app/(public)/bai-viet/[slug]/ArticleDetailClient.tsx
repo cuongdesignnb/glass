@@ -119,7 +119,9 @@ export default function ArticleDetailClient({ article, related, processedContent
               <div className="article-hero__avatar">{getInitials(article.author || 'MITOO')}</div>
               <div>
                 <div className="article-hero__author-name">{article.author || 'MITOO'}</div>
-                <div className="article-hero__author-role">Chuyên gia kính mắt</div>
+                {article.author_role && (
+                  <div className="article-hero__author-role">{article.author_role}</div>
+                )}
               </div>
             </div>
             <div className="article-hero__info">

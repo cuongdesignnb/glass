@@ -18,7 +18,7 @@ This release consolidates the public entity as MITOO, removes duplicate structur
 
 ## Favicon architecture
 
-1. Upload an ICO through Admin Settings or Media Library. The backend validates the ICO signature (`00 00 01 00`) and stores the original bytes as `image/x-icon`; it never transcodes ICO data to WebP.
+1. Upload an ICO through Admin Settings or Media Library. The backend validates the complete ICO structure (reserved/type fields, at least one directory entry, directory length, positive payload sizes, and in-file payload offsets) and stores the original bytes as `image/x-icon`; it never transcodes ICO data to WebP.
 2. Save the resulting media URL in the `site_favicon` setting.
 3. The document head, manifest, and crawler-facing endpoint all advertise the stable URL `/favicon.ico` without query-string cache keys.
 4. `/favicon.ico` reads the current public setting on every revalidation window and proxies the configured image bytes. A configured broken source returns `502`; an unset source returns `404`. The old legacy icon is never silently served.

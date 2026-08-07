@@ -79,12 +79,13 @@ class ImageSeoMetadataTest extends TestCase
             ->assertJsonPath('caption', 'Thiết kế kim loại thanh mảnh.');
     }
 
-    public function test_ico_upload_keeps_original_bytes_and_rejects_invalid_signature(): void
+    public function test_valid_ico_upload_preserves_original_bytes(): void
     {
         config(['filesystems.default' => 'public']);
         Sanctum::actingAs($this->createAdmin());
 
-        $valid = UploadedFile::fake()->createWithContent('mitoo.ico', "\x00\x00\x01\x00\x01\x00\x10\x10\x00\x00\x01\x00\x20\x00");
+        $validBytes = $this->validIcoBytes();
+        $valid = UploadedFile::fake()->createWithContent('mitoo.ico', $validBytes);
         $response = $this->post('/api/media/upload', [
             'file' => $valid,
             'folder' => 'favicon',
@@ -93,10 +94,34 @@ class ImageSeoMetadataTest extends TestCase
 
         $media = Media::findOrFail($response->json('id'));
         $this->assertSame('image/x-icon', $media->mime_type);
-        $this->assertStringStartsWith("\x00\x00\x01\x00", file_get_contents(storage_path('app/public/'.$media->path)));
+        $this->assertSame($validBytes, file_get_contents(storage_path('app/public/'.$media->path)));
+    }
 
-        $invalid = UploadedFile::fake()->createWithContent('broken.ico', 'not-an-ico');
-        $this->post('/api/media/upload', ['file' => $invalid])->assertStatus(422);
+    public function test_invalid_ico_structures_are_rejected(): void
+    {
+        config(['filesystems.default' => 'public']);
+        Sanctum::actingAs($this->createAdmin());
+
+        $invalidFixtures = [
+            'invalid magic' => 'BAD!'.substr($this->validIcoBytes(), 4),
+            'zero image count' => "\x00\x00\x01\x00\x00\x00".substr($this->validIcoBytes(), 6),
+            'truncated directory' => "\x00\x00\x01\x00\x01\x00".str_repeat("\x00", 8),
+            'invalid offset' => $this->validIcoBytes(21, 4),
+            'payload out of bounds' => $this->validIcoBytes(22, 5),
+        ];
+
+        foreach ($invalidFixtures as $label => $bytes) {
+            $this->post('/api/media/upload', [
+                'file' => UploadedFile::fake()->createWithContent($label.'.ico', $bytes),
+            ])->assertStatus(422, $label);
+        }
+    }
+
+    private function validIcoBytes(int $imageOffset = 22, int $bytesInRes = 4): string
+    {
+        return "\x00\x00\x01\x00\x01\x00"
+            . pack('C4vvVV', 1, 1, 0, 0, 1, 32, $bytesInRes, $imageOffset)
+            . "\x00\x00\x00\x00";
     }
 
     private function createAdmin(): User
