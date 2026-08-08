@@ -12,6 +12,16 @@ import toast from 'react-hot-toast';
 
 const RichEditor = dynamic(() => import('@/components/admin/RichEditor'), { ssr: false });
 
+function plainText(value: unknown): string {
+  if (typeof value !== 'string') return '';
+  return value
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export default function AdminCategoriesPage() {
   const { token } = useToken();
   const { data: categories, isLoading, mutate: refresh } = useAdminCategories(token);
@@ -19,6 +29,7 @@ export default function AdminCategoriesPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [generatingDescription, setGeneratingDescription] = useState(false);
+  const [showSeoFields, setShowSeoFields] = useState(false);
   const [showMediaPicker, setShowMediaPicker] = useState<'image' | 'icon' | 'editor' | null>(null);
   const [editorInsertFn, setEditorInsertFn] = useState<((url: string, alt?: string, caption?: string) => void) | null>(null);
   const [form, setForm] = useState({
@@ -69,7 +80,13 @@ export default function AdminCategoriesPage() {
         throw new Error('AI không trả về mô tả danh mục.');
       }
 
-      setForm(prev => ({ ...prev, description: data.content }));
+      setForm(prev => ({
+        ...prev,
+        description: data.content,
+        meta_title: data.meta_title || prev.meta_title,
+        meta_desc: data.meta_desc || prev.meta_desc,
+      }));
+      setShowSeoFields(true);
       toast.success('Đã sinh mô tả danh mục chuẩn SEO. Hãy kiểm tra rồi lưu danh mục.', { id: requestToast });
     } catch (err: any) {
       toast.error(`Lỗi AI: ${err?.message || 'Không thể sinh mô tả danh mục'}`, { id: requestToast });
@@ -106,6 +123,7 @@ export default function AdminCategoriesPage() {
   const resetForm = () => {
     setEditingId(null);
     setShowForm(false);
+    setShowSeoFields(false);
     setForm({ name: '', description: '', image: '', icon: '', parent_id: '', order: 0, is_active: true, meta_title: '', meta_desc: '' });
   };
 
@@ -130,7 +148,18 @@ export default function AdminCategoriesPage() {
               <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)' }}>({cat.products_count} sản phẩm)</span>
             )}
           </div>
-          {cat.description && <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>{cat.description}</div>}
+          {plainText(cat.description) && (
+            <div
+              style={{
+                fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px',
+                maxWidth: 'min(900px, 100%)', overflow: 'hidden', textOverflow: 'ellipsis',
+                display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+              }}
+              title={plainText(cat.description)}
+            >
+              {plainText(cat.description)}
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', gap: '4px' }}>
           <button className="admin-table__action" onClick={() => handleEdit(cat)} title="Sửa"><FiEdit2 /></button>
@@ -247,17 +276,21 @@ export default function AdminCategoriesPage() {
                   </label>
                 </div>
               </div>
-              <details style={{ color: 'rgba(255,255,255,0.5)' }}>
+              <details
+                open={showSeoFields}
+                onToggle={event => setShowSeoFields(event.currentTarget.open)}
+                style={{ color: 'rgba(255,255,255,0.5)' }}
+              >
                 <summary style={{ cursor: 'pointer', fontSize: '0.875rem', marginBottom: '12px' }}>SEO (tùy chọn)</summary>
                 <div className="admin-form__row">
                   <div className="admin-form__group">
-                    <label className="admin-form__label">Meta Title</label>
-                    <input className="admin-form__input" value={form.meta_title}
+                    <label className="admin-form__label">Meta Title (tối đa 60 ký tự) <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 400 }}>{form.meta_title.length}/60</span></label>
+                    <input className="admin-form__input" value={form.meta_title} maxLength={60}
                       onChange={e => setForm({ ...form, meta_title: e.target.value })} />
                   </div>
                   <div className="admin-form__group">
-                    <label className="admin-form__label">Meta Description</label>
-                    <input className="admin-form__input" value={form.meta_desc}
+                    <label className="admin-form__label">Meta Description (tối đa 160 ký tự) <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 400 }}>{form.meta_desc.length}/160</span></label>
+                    <textarea className="admin-form__input" value={form.meta_desc} maxLength={160} rows={3}
                       onChange={e => setForm({ ...form, meta_desc: e.target.value })} />
                   </div>
                 </div>

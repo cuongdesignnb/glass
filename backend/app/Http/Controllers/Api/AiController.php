@@ -371,6 +371,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                     . "Giai thich ro danh muc phu hop voi ai, phong cach va nhu cau nao, cach chon san pham trong danh muc. "
                     . "Chi dung thong tin tu ten danh muc va tu khoa duoc cung cap, khong bia gia, thong so, thuong hieu hoac cam ket cu the. "
                     . "Dat tu khoa tu nhien, uu tien gia tri cho nguoi dung va khong lap tu khoa qua muc. "
+                    . "Phai tra ve JSON hop le, khong markdown, gom dung 3 truong: content (HTML), meta_title (toi da 60 ky tu), meta_desc (toi da 160 ky tu). "
                     . $linkInstruction;
             }
         }
@@ -444,6 +445,43 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                 ]);
             }
 
+            if ($type === 'category_description') {
+                $cleaned = trim($rawContent);
+                $cleaned = preg_replace('/^```json\s*/i', '', $cleaned);
+                $cleaned = preg_replace('/\s*```$/i', '', $cleaned);
+                $categoryData = json_decode($cleaned, true);
+
+                if (is_array($categoryData) && isset($categoryData['content'])) {
+                    $rawContent = (string) $categoryData['content'];
+                } else {
+                    $categoryData = [];
+                }
+
+                $rawContent = preg_replace('/^```(?:html)?\s*/i', '', $rawContent);
+                $rawContent = preg_replace('/\s*```$/i', '', $rawContent);
+                $rawContent = $this->normalizeMarkdownToHtml($rawContent);
+                $categoryContent = $this->enforceSeoAnchorTargets($rawContent, $seoAnchors);
+                $fallbackDescription = $this->limitSeoField($categoryContent, 160);
+                $metaTitle = $this->limitSeoField(
+                    $categoryData['meta_title'] ?? '',
+                    60,
+                    (string) $request->topic
+                );
+                $metaDescription = $this->limitSeoField(
+                    $categoryData['meta_desc'] ?? '',
+                    160,
+                    $fallbackDescription
+                );
+
+                return response()->json([
+                    'success' => true,
+                    'content' => $categoryContent,
+                    'meta_title' => $metaTitle,
+                    'meta_desc' => $metaDescription,
+                    'usage' => $result['usage'] ?? null,
+                ]);
+            }
+
             if ($type === 'product_description') {
                 $rawContent = preg_replace('/^```(?:html)?\s*/i', '', $rawContent);
                 $rawContent = preg_replace('/\s*```$/i', '', $rawContent);
@@ -473,7 +511,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
 
         $request->validate([
             'topic' => 'required|string|max:500',
-            'type' => 'nullable|string|in:article,product_description,category_description,seo',
+            'type' => 'nullable|string|in:article,product_description,seo',
             'keywords' => 'nullable|string',
             'tone' => 'nullable|string|in:professional,casual,luxury',
             'length' => 'nullable|string|in:short,medium,long',
@@ -567,18 +605,11 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                     . "Bat buoc tra ve HTML semantic gom <h2>, <h3>, <p>, <ul><li>, <strong>, <em>; khong dung <h1> vi trang san pham da co tieu de H1. "
                     . "Chi dung thong tin duoc cung cap, khong tu bia thong so. Dat tu khoa voi mat do tu nhien, uu tien gia tri cho nguoi mua. "
                     . $linkInstruction
-                : ($type === 'category_description'
-                    ? "Ban la chuyen gia SEO cho danh muc san pham kinh mat. Viet bang tieng Viet, giong van {$tone}, do dai {$lengthGuide}. "
-                        . "Tra ve HTML semantic gom <h2>, <h3>, <p>, <ul><li>, <strong>, <em>; khong dung <h1> vi trang danh muc da co tieu de H1. "
-                        . "Giai thich ro danh muc phu hop voi ai, phong cach va nhu cau nao, cach chon san pham trong danh muc. "
-                        . "Chi dung thong tin tu ten danh muc va tu khoa duoc cung cap, khong bia gia, thong so, thuong hieu hoac cam ket cu the. "
-                        . "Dat tu khoa tu nhien, uu tien gia tri cho nguoi dung va khong lap tu khoa qua muc. "
-                        . $linkInstruction
                 : "Ban la content writer chuyen nghiep cho nganh thoi trang kinh mat. "
                     . "Viet bai viet chat luong cao, hap dan, voi giong van {$tone}. Do dai: {$lengthGuide}. "
                     . "Viet bang tieng Viet. Cau truc: dung <h2> cho phan chinh, <h3> cho phan phu, "
                     . "noi dung trong <p>, danh sach <ul><li>, nhan manh bang <strong>, <em>. "
-                    . $linkInstruction);
+                    . $linkInstruction;
         }
 
         if ($existingContentForPrompt !== '') {
@@ -1339,6 +1370,18 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             . "--- BEGIN EXISTING CONTENT ---\n"
             . $existingContent
             . "\n--- END EXISTING CONTENT ---\n";
+    }
+
+    private function limitSeoField(mixed $value, int $maxLength, string $fallback = ''): string
+    {
+        $text = trim((string) ($value ?? ''));
+        $text = html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = trim((string) preg_replace('/\s+/u', ' ', $text));
+        if ($text === '') {
+            $text = trim($fallback);
+        }
+
+        return mb_substr($text, 0, $maxLength);
     }
 
     private function getSeoAnchorOpportunities(

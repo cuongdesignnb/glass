@@ -6,6 +6,7 @@ import { publicApi } from '@/lib/api';
 import { generateBreadcrumbSchema, generateMeta } from '@/lib/seo';
 import { formatPrice } from '@/lib/constants';
 import { productApiParams, normalizeProductSearchParams, type RawSearchParams } from '@/lib/listing-params';
+import CategoryDescription from './CategoryDescription';
 import '../../san-pham/products.css';
 
 export const revalidate = 300;
@@ -74,7 +75,7 @@ export default async function CategoryPage({ params, searchParams = {} }: Props)
   return <div style={{ paddingTop: 'var(--header-height)' }}>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionSchema) }} />
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(generateBreadcrumbSchema(breadcrumb)) }} />
-    <header className="products-header"><div className="container"><h1 className="heading-lg">{category.name}</h1>{category.description && <div className="category-description">{containsHtml(category.description) ? <div dangerouslySetInnerHTML={{ __html: category.description }} /> : <p>{category.description}</p>}</div>}</div></header>
+    <header className="products-header"><div className="container"><h1 className="heading-lg">{category.name}</h1>{category.description && <CategoryDescription content={category.description} isHtml={containsHtml(category.description)} />}</div></header>
     <main className="container" style={{ paddingTop: 'var(--space-2xl)', paddingBottom: 'var(--space-4xl)' }}>
       {products.length === 0 ? <p>Chưa có sản phẩm trong danh mục này.</p> : <div className="product-grid">
         {products.map((product: any, index: number) => <Link key={product.id} href={`/san-pham/${product.slug}`} className="product-card">

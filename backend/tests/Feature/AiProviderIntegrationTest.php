@@ -405,7 +405,11 @@ class AiProviderIntegrationTest extends TestCase
                 'choices' => [[
                     'message' => [
                         'role' => 'assistant',
-                        'content' => '<h2>Kinh can</h2><p>Mo ta danh muc toi uu cho nguoi dung.</p><ul><li>De chon san pham</li></ul>',
+                        'content' => json_encode([
+                            'content' => '<h2>Kinh can</h2><p>Mo ta danh muc toi uu cho nguoi dung.</p><ul><li>De chon san pham</li></ul>',
+                            'meta_title' => 'Kinh can dep, chuan SEO | MITOO',
+                            'meta_desc' => 'Kham pha danh muc kinh can MITOO voi nhieu lua chon phong cach, de deo va phu hop nhu cau hang ngay.',
+                        ]),
                     ],
                 ]],
             ]),
@@ -422,13 +426,18 @@ class AiProviderIntegrationTest extends TestCase
         $this->assertSame(200, $response->getStatusCode());
         $this->assertStringContainsString('<h2>Kinh can</h2>', $payload['content']);
         $this->assertStringContainsString('<ul><li>', $payload['content']);
+        $this->assertSame('Kinh can dep, chuan SEO | MITOO', $payload['meta_title']);
+        $this->assertLessThanOrEqual(60, mb_strlen($payload['meta_title']));
+        $this->assertLessThanOrEqual(160, mb_strlen($payload['meta_desc']));
 
         Http::assertSent(function (HttpRequest $request) {
             $systemPrompt = (string) ($request['messages'][0]['content'] ?? '');
 
             return str_contains($systemPrompt, 'danh muc san pham kinh mat')
                 && str_contains($systemPrompt, 'HTML semantic')
-                && str_contains($systemPrompt, 'khong dung <h1>');
+                && str_contains($systemPrompt, 'khong dung <h1>')
+                && str_contains($systemPrompt, 'meta_title')
+                && str_contains($systemPrompt, 'meta_desc');
         });
     }
 
