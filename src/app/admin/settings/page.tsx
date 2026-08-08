@@ -153,6 +153,26 @@ export default function AdminSettingsPage() {
         group: getGroup(key),
       }));
       await adminApi.updateSettings(token, settingsArray);
+
+      // Read the persisted values back without cache. This prevents showing a
+      // success toast when a media setting was only updated in local state and
+      // keeps the form in sync with the database after saving.
+      const persistedSettings = flattenAdminSettings(await adminApi.getSettings(token));
+      const testimonialImageKeys = [
+        "homepage_testimonial_1_image",
+        "homepage_testimonial_2_image",
+        "homepage_testimonial_3_image",
+      ];
+      const missingImages = testimonialImageKeys.filter(
+        (key) => (persistedSettings[key] || "") !== (settings[key] || ""),
+      );
+      if (missingImages.length > 0) {
+        throw new Error(
+          `KhÃ´ng thá»ƒ xÃ¡c nháº­n áº£nh Ä‘Ã¡nh giÃ¡ Ä‘Ã£ lÆ°u: ${missingImages.join(", ")}`,
+        );
+      }
+
+      setSettings(persistedSettings);
       invalidateSettings();
       toast.success("Đã lưu thay đổi!", { id: savingToast });
     } catch (err: any) {

@@ -6,7 +6,7 @@ import { adminApi, publicApi } from '@/lib/api';
 import { useAdminCategories, invalidateAdmin } from '@/lib/useAdmin';
 import { useToken } from '@/lib/useToken';
 import { GENDERS, FACE_SHAPES, FRAME_STYLES, MATERIALS, COLORS } from '@/lib/constants';
-import { FiSave, FiArrowLeft, FiImage, FiX, FiPlus, FiTrash2, FiLink } from 'react-icons/fi';
+import { FiSave, FiArrowLeft, FiImage, FiX, FiPlus, FiTrash2, FiLink, FiCpu, FiZap } from 'react-icons/fi';
 import dynamic from 'next/dynamic';
 import MediaPicker from '@/components/admin/MediaPicker';
 import toast from 'react-hot-toast';
@@ -24,6 +24,8 @@ export default function ProductFormPage() {
 
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(!!isEdit);
+  const [generatingAi, setGeneratingAi] = useState(false);
+  const [aiImageCount, setAiImageCount] = useState(2);
   const [activeTab, setActiveTab] = useState('basic');
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [mediaPickerTarget, setMediaPickerTarget] = useState<'thumbnail' | 'gallery' | 'color_variant' | 'og_image' | 'editor'>('thumbnail');
@@ -162,6 +164,83 @@ export default function ProductFormPage() {
       toast.error('Lỗi: ' + (err.message || 'Không thể lưu sản phẩm')); 
     }
     finally { setSaving(false); }
+  };
+
+  type ProductAiMode = 'new' | 'new_images' | 'rewrite' | 'rewrite_images';
+
+  const handleProductAiGenerate = async (mode: ProductAiMode) => {
+    if (!token || !form.name.trim()) {
+      toast.error('Vui lòng nhập tên sản phẩm trước khi dùng AI.');
+      return;
+    }
+
+    const isRewrite = mode.startsWith('rewrite');
+    const withImages = mode.endsWith('_images');
+    if (isRewrite && !form.content.trim()) {
+      toast.error('Sản phẩm chưa có nội dung để viết lại.');
+      return;
+    }
+
+    setGeneratingAi(true);
+    const requestToast = toast.loading(withImages
+      ? 'AI đang viết nội dung và sinh ảnh...'
+      : isRewrite ? 'AI đang viết lại nội dung sản phẩm...'
+        : 'AI đang viết nội dung sản phẩm...');
+
+    try {
+      const descriptorKeywords = [
+        form.meta_keywords,
+        form.brand,
+        ...form.gender,
+        ...form.frame_styles,
+        ...form.materials,
+        ...form.colors,
+      ].filter(Boolean).join(', ');
+
+      const basePayload = {
+        topic: form.name.trim(),
+        type: 'product_description',
+        keywords: descriptorKeywords || undefined,
+        tone: 'professional',
+        length: 'medium',
+        product_id: isEdit ? Number(params?.id) : undefined,
+        existing_content: isRewrite ? form.content : undefined,
+      };
+
+      const data = withImages
+        ? await adminApi.aiGenerateContentWithImages(token, {
+          ...basePayload,
+          image_count: aiImageCount,
+        })
+        : await adminApi.aiGenerateContent(token, basePayload);
+
+      if (!data?.content) {
+        throw new Error('AI không trả về nội dung sản phẩm.');
+      }
+
+      setForm(prev => {
+        const next = { ...prev, content: data.content };
+        if (data.thumbnail) {
+          next.thumbnail = data.thumbnail;
+          next.thumbnail_alt = data.thumbnail_alt || prev.thumbnail_alt || prev.name;
+          next.thumbnail_caption = data.thumbnail_caption || '';
+          next.og_image = data.thumbnail;
+        }
+        return next;
+      });
+
+      toast.success(
+        `${isRewrite ? 'Đã viết lại' : 'Đã viết'} nội dung sản phẩm${data.images?.length ? ` và sinh ${data.images.length} ảnh inline` : ''}.`,
+        { id: requestToast },
+      );
+      if (Array.isArray(data.warnings) && data.warnings.length > 0) {
+        toast.error(`Cảnh báo sinh ảnh: ${data.warnings.join(' | ')}`, { duration: 7000 });
+      }
+    } catch (err: any) {
+      toast.error(`Lỗi AI: ${err?.message || 'Không thể sinh nội dung'}`, { id: requestToast });
+    } finally {
+      setGeneratingAi(false);
+    }
   };
 
   const toggleArray = (arr: string[], value: string): string[] => {
@@ -375,7 +454,63 @@ export default function ProductFormPage() {
                   onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Mô tả ngắn gọn về sản phẩm..." rows={3} />
               </div>
               <div className="admin-form__group">
-                <label className="admin-form__label">Nội dung chi tiết</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                  <label className="admin-form__label" style={{ marginBottom: 0 }}>Nội dung chi tiết</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: 'rgba(255,255,255,0.62)', fontSize: '0.75rem' }}>
+                      Ảnh inline
+                      <input
+                        type="number"
+                        min={0}
+                        max={10}
+                        value={aiImageCount}
+                        onChange={event => setAiImageCount(Math.max(0, Math.min(10, Number(event.target.value) || 0)))}
+                        disabled={generatingAi}
+                        style={{ width: '52px', padding: '5px 7px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.16)', background: 'rgba(255,255,255,0.06)', color: '#fff', textAlign: 'center' }}
+                        title="Số ảnh minh họa chèn vào nội dung; ảnh thumbnail được sinh riêng"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn--secondary admin-btn--sm"
+                      onClick={() => handleProductAiGenerate('new')}
+                      disabled={generatingAi}
+                      title="Tạo nội dung HTML SEO mới, không sinh ảnh"
+                    >
+                      <FiCpu /> Viết bài mới
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn--primary admin-btn--sm"
+                      onClick={() => handleProductAiGenerate('new_images')}
+                      disabled={generatingAi}
+                      title="Tạo nội dung HTML SEO mới và sinh ảnh thumbnail/inline"
+                    >
+                      <FiZap /> Viết bài mới + sinh ảnh
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn--secondary admin-btn--sm"
+                      onClick={() => handleProductAiGenerate('rewrite')}
+                      disabled={generatingAi}
+                      title="Viết lại nội dung hiện có, không sinh ảnh"
+                    >
+                      <FiCpu /> Viết lại bài đã có
+                    </button>
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn--primary admin-btn--sm"
+                      onClick={() => handleProductAiGenerate('rewrite_images')}
+                      disabled={generatingAi}
+                      title="Viết lại nội dung hiện có và sinh ảnh thumbnail/inline"
+                    >
+                      <FiZap /> Viết lại bài đã có + sinh ảnh
+                    </button>
+                  </div>
+                </div>
+                <p style={{ margin: '0 0 12px', color: 'rgba(255,255,255,0.48)', fontSize: '0.75rem' }}>
+                  AI trả về HTML có cấu trúc SEO, chèn liên kết nội bộ đúng trang đích khi phù hợp; ảnh sinh ra được gắn alt và chú thích.
+                </p>
                 <RichEditor
                   content={form.content}
                   onChange={(html: string) => setForm(prev => ({ ...prev, content: html }))}

@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AiController;
 use App\Http\Controllers\Api\SettingController;
 use App\Models\Article;
 use App\Models\Media;
+use App\Models\Product;
 use App\Models\Setting;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Client\Request as HttpRequest;
@@ -288,6 +289,111 @@ class AiProviderIntegrationTest extends TestCase
                 && str_contains($systemPrompt, 'gọng kính mặt tròn')
                 && !str_contains($systemPrompt, 'cach-ve-sinh-kinh-ap-trong');
         });
+    }
+
+    public function test_product_rewrite_prompt_preserves_context_and_excludes_self_from_internal_links(): void
+    {
+        Setting::setValue('openai_api_key', 'test-key', 'api');
+
+        $currentProduct = Product::create([
+            'name' => 'Gong kinh Titan MS005',
+            'slug' => 'gong-kinh-titan-ms005',
+            'meta_keywords' => 'gong kinh titan MS005',
+            'is_active' => true,
+        ]);
+        Product::create([
+            'name' => 'Kinh Titan dang vuong',
+            'slug' => 'kinh-titan-dang-vuong',
+            'meta_keywords' => 'kinh titan dang vuong',
+            'brand' => 'MITOO',
+            'is_active' => true,
+        ]);
+
+        Http::fake([
+            'https://modelapi.vn/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => '<h2>Gong kinh Titan MS005</h2><p>Noi dung da duoc cai thien.</p>',
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $response = (new AiController)->generateContent(Request::create('/ai/content', 'POST', [
+            'topic' => 'Gong kinh Titan MS005',
+            'type' => 'product_description',
+            'keywords' => 'gong kinh titan, gong kinh MS005',
+            'length' => 'short',
+            'product_id' => $currentProduct->id,
+            'existing_content' => '<p>Noi dung cu cua san pham.</p>',
+        ]));
+
+        $payload = $response->getData(true);
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertStringContainsString('<h2>Gong kinh Titan MS005</h2>', $payload['content']);
+
+        Http::assertSent(function (HttpRequest $request) use ($currentProduct) {
+            $systemPrompt = (string) ($request['messages'][0]['content'] ?? '');
+
+            return str_contains($systemPrompt, 'CHE DO VIET LAI NOI DUNG HIEN CO')
+                && str_contains($systemPrompt, 'Noi dung cu cua san pham')
+                && str_contains($systemPrompt, '/san-pham/kinh-titan-dang-vuong')
+                && !str_contains($systemPrompt, '/san-pham/'.$currentProduct->slug);
+        });
+    }
+
+    public function test_product_image_mode_returns_alt_caption_and_inline_image_markup(): void
+    {
+        Setting::setValue('openai_api_key', 'test-key', 'api');
+        $product = Product::create([
+            'name' => 'Gong kinh Titan MS005',
+            'slug' => 'gong-kinh-titan-ms005',
+            'is_active' => true,
+        ]);
+        $png = $this->tinyPng();
+
+        Http::fake(function (HttpRequest $request) use ($png) {
+            if ($request->url() === 'https://modelapi.vn/v1/chat/completions') {
+                return Http::response([
+                    'choices' => [[
+                        'message' => [
+                            'role' => 'assistant',
+                            'content' => '<h2>Phom kinh vuong</h2><p>Mo ta san pham.</p>',
+                        ],
+                    ]],
+                ]);
+            }
+
+            if ($request->url() === 'https://api.openai.com/v1/images/generations') {
+                return Http::response(['data' => [['b64_json' => base64_encode($png)]]]);
+            }
+
+            return Http::response([], 404);
+        });
+
+        $response = (new AiController)->generateContentWithImages(Request::create('/ai/content-with-images', 'POST', [
+            'topic' => $product->name,
+            'type' => 'product_description',
+            'product_id' => $product->id,
+            'image_count' => 1,
+            'length' => 'short',
+        ]));
+
+        $payload = $response->getData(true);
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame(1, count($payload['images']));
+        $this->assertStringContainsString('alt="Phom kinh vuong"', $payload['content']);
+        $this->assertStringContainsString('<figcaption', $payload['content']);
+        $this->assertStringContainsString('>Phom kinh vuong</figcaption>', $payload['content']);
+        $this->assertNotEmpty($payload['thumbnail']);
+        $this->rememberGeneratedFile($payload['thumbnail']);
+        $this->rememberGeneratedFile($payload['images'][0]['url']);
+        $this->assertDatabaseHas('media', [
+            'url' => $payload['images'][0]['url'],
+            'alt' => 'Phom kinh vuong',
+            'caption' => 'Phom kinh vuong',
+        ]);
     }
 
     public function test_provider_gateway_error_remains_json_and_exposes_original_status(): void

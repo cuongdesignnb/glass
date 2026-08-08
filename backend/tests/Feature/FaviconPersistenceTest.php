@@ -35,6 +35,30 @@ class FaviconPersistenceTest extends TestCase
             ->assertJsonPath('general.site_favicon', $expected);
     }
 
+    public function test_homepage_testimonial_images_survive_admin_and_public_read_back(): void
+    {
+        Sanctum::actingAs($this->createAdmin());
+        $settings = [
+            ['key' => 'homepage_testimonial_1_image', 'value' => '/storage/uploads/test/customer-1.webp', 'group' => 'homepage'],
+            ['key' => 'homepage_testimonial_2_image', 'value' => '/storage/uploads/test/customer-2.webp', 'group' => 'homepage'],
+            ['key' => 'homepage_testimonial_3_image', 'value' => '/storage/uploads/test/customer-3.webp', 'group' => 'homepage'],
+        ];
+
+        $this->putJson('/api/settings', ['settings' => $settings])->assertOk();
+
+        foreach ($settings as $setting) {
+            $adminResponse = $this->getJson('/api/settings')
+                ->assertOk()
+                ->assertJsonPath("homepage.{$setting['key']}", $setting['value']);
+            $this->assertStringContainsString('no-store', $adminResponse->headers->get('Cache-Control'));
+
+            $publicResponse = $this->getJson('/api/public/settings')
+                ->assertOk()
+                ->assertJsonPath("homepage.{$setting['key']}", $setting['value']);
+            $this->assertStringContainsString('no-store', $publicResponse->headers->get('Cache-Control'));
+        }
+    }
+
     public function test_uploaded_ico_can_be_persisted_and_read_back_as_favicon(): void
     {
         Storage::fake('public');

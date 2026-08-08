@@ -21,7 +21,10 @@ class MenuController extends Controller
             ->orderBy('order')
             ->get();
 
-        return response()->json($menus);
+        return response()->json($menus, 200, [
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+        ]);
     }
 
     /**
@@ -34,7 +37,10 @@ class MenuController extends Controller
             ->orderBy('order')
             ->get();
 
-        return response()->json($menus);
+        return response()->json($menus, 200, [
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+        ]);
     }
 
     /**

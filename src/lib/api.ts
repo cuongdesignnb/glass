@@ -119,7 +119,10 @@ export const publicApi = {
 
   // Menus
   getMenus: (position = "header") =>
-    fetchApi(`/public/menus?position=${position}`),
+    fetchApi(`/public/menus?position=${encodeURIComponent(position)}&fresh=${Date.now()}`, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" },
+    }),
 
   // Settings
   getSettings: (group?: string) => {
@@ -446,7 +449,12 @@ export const adminApi = {
     fetchApi(`/media/${id}`, { method: "DELETE", token }),
 
   // Menus
-  getMenus: (token: string) => fetchApi("/menus/all", { token }),
+  getMenus: (token: string) =>
+    fetchApi(`/menus/all?fresh=${Date.now()}`, {
+      token,
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" },
+    }),
   createMenu: (token: string, data: any) =>
     fetchApi("/menus", { method: "POST", body: JSON.stringify(data), token }),
   updateMenu: (token: string, id: number, data: any) =>
@@ -478,7 +486,14 @@ export const adminApi = {
     fetchApi(`/banners/${id}`, { method: "DELETE", token }),
 
   // Settings
-  getSettings: (token: string) => fetchApi("/settings", { token }),
+  // Settings are editable at runtime. Always bypass browser/proxy caches so
+  // the admin page reads back the value that was just persisted.
+  getSettings: (token: string) =>
+    fetchApi(`/settings?fresh=${Date.now()}`, {
+      token,
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" },
+    }),
   updateSettings: (token: string, settings: any[]) =>
     fetchApi("/settings", {
       method: "PUT",
@@ -696,6 +711,8 @@ export const adminApi = {
       length?: string;
       full_article?: boolean;
       category_id?: number;
+      existing_content?: string;
+      product_id?: number;
     },
   ) =>
     fetchApi("/ai/content", {
@@ -714,6 +731,8 @@ export const adminApi = {
       image_count?: number;
       full_article?: boolean;
       category_id?: number;
+      existing_content?: string;
+      product_id?: number;
     },
   ) =>
     fetchApi("/ai/content-with-images", {

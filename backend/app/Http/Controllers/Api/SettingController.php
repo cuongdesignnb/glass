@@ -50,7 +50,10 @@ class SettingController extends Controller
             $settings = $this->filterSensitiveSettings($settings);
         }
 
-        return response()->json($settings);
+        return response()->json($settings, 200, [
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+        ]);
     }
 
     private function filterSensitiveSettings(array $settings): array

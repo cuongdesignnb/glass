@@ -289,6 +289,8 @@ Generate ONE realistic photo of this person wearing these exact glasses.
             'tone' => 'nullable|string|in:professional,casual,luxury',
             'length' => 'nullable|string|in:short,medium,long',
             'full_article' => 'nullable|boolean',
+            'existing_content' => 'nullable|string|max:60000',
+            'product_id' => 'nullable|integer|exists:products,id',
         ]);
 
         try {
@@ -308,6 +310,10 @@ Generate ONE realistic photo of this person wearing these exact glasses.
         $tone = (string) ($request->input('tone') ?? 'professional');
         $length = (string) ($request->input('length') ?? 'medium');
         $keywords = (string) ($request->input('keywords') ?? '');
+        $productIdValue = $request->input('product_id');
+        $productId = $productIdValue === null ? null : (int) $productIdValue;
+        $existingContent = trim((string) ($request->input('existing_content') ?? ''));
+        $existingContentForPrompt = mb_substr($existingContent, 0, 24000);
 
         $lengthGuide = match($length) {
             'short' => '500-800 từ',
@@ -318,7 +324,13 @@ Generate ONE realistic photo of this person wearing these exact glasses.
         // Build target-bound SEO anchor opportunities from related articles and products.
         $categoryIdValue = $request->input('category_id');
         $categoryId = $categoryIdValue === null ? null : (int) $categoryIdValue;
-        $seoAnchors = $this->getSeoAnchorOpportunities($categoryId, $this->seoAnchorTargetCount($length), $request->topic, $keywords);
+        $seoAnchors = $this->getSeoAnchorOpportunities(
+            $categoryId,
+            $this->seoAnchorTargetCount($length),
+            $request->topic,
+            $keywords,
+            $productId
+        );
         $linkInstruction = $this->buildSeoAnchorInstruction($seoAnchors);
 
         if ($fullArticle) {
@@ -348,6 +360,16 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                 default => "Bạn là content writer chuyên nghiệp cho ngành thời trang kính mắt. Viết bài viết chất lượng cao, hấp dẫn, với giọng văn {$tone}. Độ dài: {$lengthGuide}. Viết bằng tiếng Việt. Sử dụng HTML formatting (h2, h3, p, ul, li, strong, em).",
             };
             $systemPrompt = $basePrompt . $linkInstruction;
+            if ($type === 'product_description') {
+                $systemPrompt = "Ban la chuyen gia viet mo ta chi tiet san pham kinh mat. Viet bang tieng Viet, giong van {$tone}, do dai {$lengthGuide}. "
+                    . "Bat buoc tra ve HTML semantic gom <h2>, <h3>, <p>, <ul><li>, <strong>, <em>; khong dung <h1> vi trang san pham da co tieu de H1. "
+                    . "Chi dung thong tin duoc cung cap, khong tu bia thong so. Dat tu khoa voi mat do tu nhien, uu tien gia tri cho nguoi mua. "
+                    . $linkInstruction;
+            }
+        }
+
+        if ($existingContentForPrompt !== '') {
+            $systemPrompt .= $this->buildExistingContentInstruction($existingContentForPrompt);
         }
 
         $userPrompt = $fullArticle
@@ -415,6 +437,12 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                 ]);
             }
 
+            if ($type === 'product_description') {
+                $rawContent = preg_replace('/^```(?:html)?\s*/i', '', $rawContent);
+                $rawContent = preg_replace('/\s*```$/i', '', $rawContent);
+                $rawContent = $this->normalizeMarkdownToHtml($rawContent);
+            }
+
             return response()->json([
                 'success' => true,
                 'content' => $this->enforceSeoAnchorTargets($rawContent, $seoAnchors),
@@ -445,6 +473,8 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             'image_count' => 'nullable|integer|min:0|max:10',
             'full_article' => 'nullable|boolean',
             'category_id' => 'nullable|integer|exists:article_categories,id',
+            'existing_content' => 'nullable|string|max:60000',
+            'product_id' => 'nullable|integer|exists:products,id',
         ]);
 
         try {
@@ -484,6 +514,10 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
         $tone = (string) ($request->input('tone') ?? 'professional');
         $length = (string) ($request->input('length') ?? 'medium');
         $keywords = (string) ($request->input('keywords') ?? '');
+        $productIdValue = $request->input('product_id');
+        $productId = $productIdValue === null ? null : (int) $productIdValue;
+        $existingContent = trim((string) ($request->input('existing_content') ?? ''));
+        $existingContentForPrompt = mb_substr($existingContent, 0, 24000);
 
         $lengthGuide = match ($length) {
             'short' => '500-800 tu',
@@ -493,7 +527,13 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
 
         $categoryIdValue = $request->input('category_id');
         $categoryId = $categoryIdValue === null ? null : (int) $categoryIdValue;
-        $seoAnchors = $this->getSeoAnchorOpportunities($categoryId, $this->seoAnchorTargetCount($length), $request->topic, $keywords);
+        $seoAnchors = $this->getSeoAnchorOpportunities(
+            $categoryId,
+            $this->seoAnchorTargetCount($length),
+            $request->topic,
+            $keywords,
+            $productId
+        );
         $linkInstruction = $this->buildSeoAnchorInstruction($seoAnchors);
 
         if ($fullArticle) {
@@ -515,11 +555,20 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                 . "  \"tags\": [\"tag1\", \"tag2\", \"tag3\"]\n"
                 . "}";
         } else {
-            $systemPrompt = "Ban la content writer chuyen nghiep cho nganh thoi trang kinh mat. "
-                . "Viet bai viet chat luong cao, hap dan, voi giong van {$tone}. Do dai: {$lengthGuide}. "
-                . "Viet bang tieng Viet. Cau truc: dung <h2> cho phan chinh, <h3> cho phan phu, "
-                . "noi dung trong <p>, danh sach <ul><li>, nhan manh bang <strong>, <em>. "
-                . $linkInstruction;
+            $systemPrompt = $type === 'product_description'
+                ? "Ban la chuyen gia viet mo ta chi tiet san pham kinh mat. Viet bang tieng Viet, giong van {$tone}, do dai {$lengthGuide}. "
+                    . "Bat buoc tra ve HTML semantic gom <h2>, <h3>, <p>, <ul><li>, <strong>, <em>; khong dung <h1> vi trang san pham da co tieu de H1. "
+                    . "Chi dung thong tin duoc cung cap, khong tu bia thong so. Dat tu khoa voi mat do tu nhien, uu tien gia tri cho nguoi mua. "
+                    . $linkInstruction
+                : "Ban la content writer chuyen nghiep cho nganh thoi trang kinh mat. "
+                    . "Viet bai viet chat luong cao, hap dan, voi giong van {$tone}. Do dai: {$lengthGuide}. "
+                    . "Viet bang tieng Viet. Cau truc: dung <h2> cho phan chinh, <h3> cho phan phu, "
+                    . "noi dung trong <p>, danh sach <ul><li>, nhan manh bang <strong>, <em>. "
+                    . $linkInstruction;
+        }
+
+        if ($existingContentForPrompt !== '') {
+            $systemPrompt .= $this->buildExistingContentInstruction($existingContentForPrompt);
         }
 
         $userPrompt = $fullArticle
@@ -1263,7 +1312,28 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
         return $instruction;
     }
 
-    private function getSeoAnchorOpportunities(?int $categoryId, int $limit, string $topic, string $keywords = ''): array
+    private function buildExistingContentInstruction(string $existingContent): string
+    {
+        if (trim($existingContent) === '') {
+            return '';
+        }
+
+        return "\n\nCHE DO VIET LAI NOI DUNG HIEN CO:\n"
+            . "- Giu dung thong tin san pham da co, chi cai thien cau truc, tinh huu ich, kha nang doc va SEO.\n"
+            . "- Khong bia them thong so ky thuat, gia, chinh sach hoac cam ket chua duoc cung cap.\n"
+            . "- Tra ve toan bo noi dung HTML moi, khong giai thich ngoai noi dung.\n"
+            . "--- BEGIN EXISTING CONTENT ---\n"
+            . $existingContent
+            . "\n--- END EXISTING CONTENT ---\n";
+    }
+
+    private function getSeoAnchorOpportunities(
+        ?int $categoryId,
+        int $limit,
+        string $topic,
+        string $keywords = '',
+        ?int $excludeProductId = null
+    ): array
     {
         $articleQuery = Article::where('is_published', true)
             ->whereNotNull('slug')
@@ -1272,10 +1342,15 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
 
         $articles = $articleQuery->latest('id')->limit(100)->get();
 
-        $products = Product::where('is_active', true)
+        $productsQuery = Product::where('is_active', true)
             ->whereNotNull('slug')
             ->where('slug', '!=', '')
-            ->latest('id')
+            ->when($excludeProductId !== null, static function ($query) use ($excludeProductId) {
+                $query->where('id', '!=', $excludeProductId);
+            })
+            ->latest('id');
+
+        $products = $productsQuery
             ->limit(100)
             ->get(['name', 'slug', 'brand', 'meta_keywords', 'frame_styles', 'materials', 'gender']);
 
