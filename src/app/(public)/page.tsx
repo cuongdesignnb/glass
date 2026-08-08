@@ -91,13 +91,18 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="section">
+      <section className="category-showcase">
         <div className="container">
-          <div className="section__header">
-            <span className="section__tag">Danh Mục</span>
-            <h2 className="section__title">Sản Phẩm Theo Danh Mục</h2>
-            <p className="section__subtitle">Tìm kiếm kiểu kính phù hợp với phong cách và nhu cầu của bạn</p>
-          </div>
+          <header className="category-showcase__header">
+            <span className="category-showcase__eyebrow">Danh Mục</span>
+            <h2 className="category-showcase__title">Sản Phẩm Theo Danh Mục</h2>
+            <p className="category-showcase__subtitle">Tìm kiếm kiểu kính phù hợp với phong cách và nhu cầu của bạn</p>
+            <div className="category-showcase__divider" aria-hidden="true">
+              <span />
+              <i>✦</i>
+              <span />
+            </div>
+          </header>
           <DynamicCategories initialData={categories} />
         </div>
       </section>

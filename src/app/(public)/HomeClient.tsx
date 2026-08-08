@@ -71,11 +71,16 @@ export function DynamicCategories({ initialData }: { initialData?: any[] }) {
 
   if (loading) {
     return (
-      <div className="categories-grid">
-        {[1, 2, 3, 4].map((item) => (
-          <div key={item} className="category-card" style={{ opacity: 0.3, pointerEvents: 'none' }}>
-            <div className="category-card__emoji"><RiGlassesLine /></div>
-            <h3 className="category-card__name">Đang tải...</h3>
+      <div className="category-showcase__grid" aria-busy="true">
+        {[1, 2, 3, 4, 5, 6].map((item) => (
+          <div key={item} className="category-card category-card--loading">
+            <div className="category-card__visual">
+              <RiGlassesLine className="category-card__fallback" aria-hidden="true" />
+            </div>
+            <div className="category-card__content">
+              <h3 className="category-card__name">Đang tải...</h3>
+              <p className="category-card__desc">Khám phá ngay</p>
+            </div>
           </div>
         ))}
       </div>
@@ -85,22 +90,33 @@ export function DynamicCategories({ initialData }: { initialData?: any[] }) {
   if (categories.length === 0) return null;
 
   return (
-    <div className="categories-grid">
+    <div className="category-showcase__grid">
       {categories.map((category: any) => (
         <Link key={category.slug || category.id} href={`/danh-muc/${encodeURIComponent(category.slug)}`} className="category-card">
-          <div className="category-card__emoji">
-            {category.icon ? (
-              <Image src={category.icon.startsWith('http') ? category.icon : `${API_BASE}${category.icon}`} alt="" width={48} height={48} style={{ objectFit: 'contain' }} />
-            ) : category.image ? (
-              <Image src={category.image.startsWith('http') ? category.image : `${API_BASE}${category.image}`} alt="" width={48} height={48} style={{ objectFit: 'contain', borderRadius: '8px' }} />
-            ) : (
-              <RiGlassesLine style={{ fontSize: '2.5rem', color: 'var(--color-brand)' }} />
-            )}
+          <div className="category-card__visual">
+            {(() => {
+              const imageSource = getImageUrl(category.image || category.icon);
+
+              return imageSource ? (
+                <Image
+                  src={imageSource}
+                  alt={category.name}
+                  fill
+                  sizes="(max-width: 768px) 40vw, (max-width: 1200px) 22vw, 240px"
+                  className="category-card__image"
+                />
+              ) : (
+                <RiGlassesLine className="category-card__fallback" aria-hidden="true" />
+              );
+            })()}
           </div>
-          <h3 className="category-card__name">{category.name}</h3>
-          <p className="category-card__desc">{category.description || 'Khám phá ngay'}</p>
-          <span className="category-card__count">{category.products_count || 0} sản phẩm</span>
-          <div className="category-card__arrow"><FiArrowRight /></div>
+          <div className="category-card__content">
+            <h3 className="category-card__name">{category.name}</h3>
+            <p className="category-card__desc">{category.description || 'Khám phá ngay'}</p>
+            <span className="category-card__accent" aria-hidden="true" />
+            <span className="category-card__count">{category.products_count || 0} SẢN PHẨM</span>
+            <span className="category-card__arrow" aria-hidden="true"><FiArrowRight /></span>
+          </div>
         </Link>
       ))}
     </div>
