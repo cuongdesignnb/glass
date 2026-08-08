@@ -1204,7 +1204,6 @@ export default function ProductDetailClient({
 
       {/* Related Products */}
       <RelatedProducts
-        categoryId={product.category_id}
         currentProductId={product.id}
         apiMediaUrl={apiMediaUrl}
       />
@@ -1214,11 +1213,9 @@ export default function ProductDetailClient({
 
 /* ── Related Products Slider ── */
 function RelatedProducts({
-  categoryId,
   currentProductId,
   apiMediaUrl,
 }: {
-  categoryId: number;
   currentProductId: number;
   apiMediaUrl: string;
 }) {
@@ -1226,17 +1223,17 @@ function RelatedProducts({
   const sliderRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!categoryId) return;
+    if (!currentProductId) return;
     publicApi
-      .getProducts({ category_id: String(categoryId), per_page: "12" })
+      .getRelatedProducts(currentProductId, { per_page: "10" })
       .then((res: any) => {
-        const items = (res.data || res).filter(
+        const items = (Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : []).filter(
           (p: any) => p.id !== currentProductId,
         );
-        setProducts(items.slice(0, 10));
+        setProducts(items);
       })
       .catch(() => {});
-  }, [categoryId, currentProductId]);
+  }, [currentProductId]);
 
   if (products.length === 0) return null;
 

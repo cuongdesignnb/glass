@@ -80,6 +80,10 @@ export const publicApi = {
     return fetchApi(`/public/products${query}`);
   },
   getProduct: (slug: string) => fetchApi(`/public/products/${slug}`),
+  getRelatedProducts: (productId: number | string, params?: Record<string, string>) => {
+    const query = params ? "?" + new URLSearchParams(params).toString() : "";
+    return fetchApi(`/public/products/${encodeURIComponent(String(productId))}/related${query}`);
+  },
   getProductAttributes: () => fetchApi("/public/product-attributes"),
 
   // Search

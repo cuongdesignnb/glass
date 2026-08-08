@@ -1,12 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { adminApi } from '@/lib/api';
 import { useAdminCategories, invalidateAdmin } from '@/lib/useAdmin';
 import { useToken } from '@/lib/useToken';
+import { resolveMediaUrl } from '@/lib/media';
 import MediaPicker from '@/components/admin/MediaPicker';
 import { FiPlus, FiEdit2, FiTrash2, FiSave, FiFolder, FiFolderPlus, FiX, FiChevronRight, FiImage } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+
+const RichEditor = dynamic(() => import('@/components/admin/RichEditor'), { ssr: false });
 
 export default function AdminCategoriesPage() {
   const { token } = useToken();
@@ -14,7 +18,8 @@ export default function AdminCategoriesPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [showMediaPicker, setShowMediaPicker] = useState<'image' | 'icon' | null>(null);
+  const [showMediaPicker, setShowMediaPicker] = useState<'image' | 'icon' | 'editor' | null>(null);
+  const [editorInsertFn, setEditorInsertFn] = useState<((url: string, alt?: string, caption?: string) => void) | null>(null);
   const [form, setForm] = useState({
     name: '', description: '', image: '', icon: '', parent_id: '',
     order: 0, is_active: true, meta_title: '', meta_desc: '',
@@ -139,8 +144,17 @@ export default function AdminCategoriesPage() {
               </div>
               <div className="admin-form__group">
                 <label className="admin-form__label">Mô tả</label>
-                <textarea className="admin-form__input" value={form.description}
-                  onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Mô tả danh mục" rows={2} />
+                <div style={{ background: '#13132B', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+                  <RichEditor
+                    content={form.description}
+                    onChange={(html) => setForm(prev => ({ ...prev, description: html }))}
+                    placeholder="Soạn thảo mô tả danh mục chuẩn SEO..."
+                    onMediaPick={(insertFn) => {
+                      setEditorInsertFn(() => insertFn);
+                      setShowMediaPicker('editor');
+                    }}
+                  />
+                </div>
               </div>
               <div className="admin-form__row" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
                 <div className="admin-form__group">
@@ -228,9 +242,16 @@ export default function AdminCategoriesPage() {
       <MediaPicker
         isOpen={!!showMediaPicker}
         onClose={() => setShowMediaPicker(null)}
-        onSelect={(url) => {
+        onSelect={(url, item) => {
           if (showMediaPicker === 'image') setForm(f => ({ ...f, image: url }));
           else if (showMediaPicker === 'icon') setForm(f => ({ ...f, icon: url }));
+          else if (showMediaPicker === 'editor' && editorInsertFn) {
+            editorInsertFn(
+              resolveMediaUrl(url),
+              item?.alt || form.name,
+              item?.caption || '',
+            );
+          }
         }}
       />
     </>

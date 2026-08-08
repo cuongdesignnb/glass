@@ -12,6 +12,16 @@ export const revalidate = 300;
 
 type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<RawSearchParams> | RawSearchParams };
 
+function plainText(value: unknown): string {
+  return typeof value === 'string'
+    ? value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    : '';
+}
+
+function containsHtml(value: string): boolean {
+  return /<\/?[a-z][\s\S]*?>/i.test(value);
+}
+
 async function loadCategory(slug: string) {
   try { return await publicApi.getCategory(slug); } catch { return null; }
 }
@@ -21,7 +31,7 @@ export async function generateMetadata({ params, searchParams = {} }: Props): Pr
   const category = await loadCategory(slug);
   if (!category || category.is_active === false) return { title: 'Category not found', robots: { index: false, follow: false } };
   const title = category.meta_title || `${category.name} | Kính mắt MITOO`;
-  const description = category.meta_desc || category.description || `Khám phá sản phẩm ${category.name} chính hãng tại MITOO.`;
+  const description = category.meta_desc || plainText(category.description) || `Khám phá sản phẩm ${category.name} chính hãng tại MITOO.`;
   const resolved = searchParams instanceof Promise ? await searchParams : searchParams;
   const page = typeof resolved?.page === 'string' ? resolved.page : Array.isArray(resolved?.page) ? resolved.page[0] : '';
   const url = `/danh-muc/${encodeURIComponent(category.slug)}${page && page !== '1' ? `?page=${encodeURIComponent(page)}` : ''}`;
@@ -49,7 +59,7 @@ export default async function CategoryPage({ params, searchParams = {} }: Props)
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
     name: category.name,
-    description: category.description || `Sản phẩm ${category.name}`,
+    description: plainText(category.description) || `Sản phẩm ${category.name}`,
     url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://mitoo.vn'}${canonical}`,
     mainEntity: {
       '@type': 'ItemList',
@@ -64,7 +74,7 @@ export default async function CategoryPage({ params, searchParams = {} }: Props)
   return <div style={{ paddingTop: 'var(--header-height)' }}>
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionSchema) }} />
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(generateBreadcrumbSchema(breadcrumb)) }} />
-    <header className="products-header"><div className="container"><h1 className="heading-lg">{category.name}</h1>{category.description && <p style={{ color: 'var(--color-text-muted)', marginTop: 8 }}>{category.description}</p>}</div></header>
+    <header className="products-header"><div className="container"><h1 className="heading-lg">{category.name}</h1>{category.description && <div className="category-description">{containsHtml(category.description) ? <div dangerouslySetInnerHTML={{ __html: category.description }} /> : <p>{category.description}</p>}</div>}</div></header>
     <main className="container" style={{ paddingTop: 'var(--space-2xl)', paddingBottom: 'var(--space-4xl)' }}>
       {products.length === 0 ? <p>Chưa có sản phẩm trong danh mục này.</p> : <div className="product-grid">
         {products.map((product: any, index: number) => <Link key={product.id} href={`/san-pham/${product.slug}`} className="product-card">

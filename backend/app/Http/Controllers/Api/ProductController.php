@@ -148,6 +148,97 @@ class ProductController extends Controller
     }
 
     /**
+     * Public: Get products related to a product's categories.
+     *
+     * Related products must share one of the current product's primary or
+     * secondary categories. Products without categories fall back to the
+     * current product's brand/JSON attributes instead of returning arbitrary
+     * newest products.
+     */
+    public function related(Request $request, string $slugOrId)
+    {
+        $product = Product::with('categories')
+            ->where(function ($query) use ($slugOrId) {
+                $query->where('slug', $slugOrId)
+                    ->orWhere('id', is_numeric($slugOrId) ? $slugOrId : 0);
+            })
+            ->firstOrFail();
+
+        $perPage = min(max((int) $request->get('per_page', 10), 1), 24);
+        $categoryIds = collect([$product->category_id])
+            ->merge($product->categories->pluck('id'))
+            ->filter(fn ($id) => (int) $id > 0)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $query = Product::with('category')
+            ->active()
+            ->where('products.id', '<>', $product->id);
+
+        if ($categoryIds->isNotEmpty()) {
+            $query->where(function ($categoryQuery) use ($categoryIds) {
+                $categoryQuery->whereIn('products.category_id', $categoryIds->all())
+                    ->orWhereHas('categories', function ($pivotQuery) use ($categoryIds) {
+                        $pivotQuery->whereIn('categories.id', $categoryIds->all());
+                    });
+            });
+        } else {
+            $query->where(function ($similarityQuery) use ($product) {
+                $hasSimilarityRule = false;
+
+                if (filled($product->brand)) {
+                    $similarityQuery->where('brand', $product->brand);
+                    $hasSimilarityRule = true;
+                }
+
+                foreach (['gender', 'face_shapes', 'frame_styles', 'materials'] as $attribute) {
+                    $values = $product->{$attribute};
+                    $values = is_array($values) ? $values : (filled($values) ? [$values] : []);
+                    $values = array_values(array_filter($values, 'is_scalar'));
+
+                    if (empty($values)) {
+                        continue;
+                    }
+
+                    $similarityQuery->orWhere(function ($attributeQuery) use ($attribute, $values) {
+                        foreach ($values as $value) {
+                            $attributeQuery->orWhereJsonContains($attribute, $value);
+                        }
+                    });
+                    $hasSimilarityRule = true;
+                }
+
+                if (!$hasSimilarityRule) {
+                    $similarityQuery->whereRaw('1 = 0');
+                }
+            });
+        }
+
+        // Prefer the primary category, then the strongest catalogue signals.
+        if ($product->category_id) {
+            $query->orderByRaw('CASE WHEN products.category_id = ? THEN 0 ELSE 1 END', [(int) $product->category_id]);
+        }
+        if (filled($product->brand)) {
+            $query->orderByRaw('CASE WHEN products.brand = ? THEN 0 ELSE 1 END', [$product->brand]);
+        }
+        $products = $query
+            ->orderByDesc('is_featured')
+            ->orderByDesc('sold')
+            ->orderByDesc('created_at')
+            ->limit($perPage)
+            ->get();
+
+        return response()->json([
+            'data' => $products,
+            'meta' => [
+                'total' => $products->count(),
+                'per_page' => $perPage,
+            ],
+        ]);
+    }
+
+    /**
      * Get raw product detail data without caching
      */
     private function getProductDetailData(string $slugOrId)

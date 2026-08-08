@@ -43,6 +43,7 @@ Route::post('/webhook/viettelpost', [ShippingController::class, 'webhook']);
 // ==========================================
 Route::prefix('public')->group(function () {
     Route::get('/products', [ProductController::class, 'index']);
+    Route::get('/products/{slugOrId}/related', [ProductController::class, 'related']);
     Route::get('/products/{slugOrId}', [ProductController::class, 'show']);
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/categories/{slugOrId}', [CategoryController::class, 'show']);
