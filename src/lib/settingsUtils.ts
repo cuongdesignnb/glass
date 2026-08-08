@@ -7,6 +7,7 @@ export const PUBLIC_SETTING_KEYS = new Set([
   'chat_messenger_icon', 'messenger_page_id',
   'hero_image', 'hero_image_mobile', 'hero_title', 'hero_subtitle',
   'hero_cta_text', 'hero_tag', 'hero_overlay', 'hero_text_color', 'hero_desc_color',
+  'homepage_testimonial_1_image', 'homepage_testimonial_2_image', 'homepage_testimonial_3_image',
   'homepage_style_collection', 'homepage_collections_eyebrow',
   'homepage_collections_title', 'homepage_collections_description', 'homepage_collections_cta',
   'stat_customers', 'stat_products', 'stat_brands', 'stat_rating',

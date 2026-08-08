@@ -75,11 +75,26 @@
 }
 
 /* ---- Category Showcase ---- */
+.homepage-top-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.homepage-featured-products {
+  padding-top: clamp(30px, 3vw, 46px);
+  padding-bottom: clamp(38px, 4vw, 58px);
+}
+
 .category-showcase {
   position: relative;
   overflow: hidden;
   padding: clamp(76px, 8vw, 108px) 0 clamp(84px, 9vw, 116px);
   background: linear-gradient(180deg, var(--color-bg) 0%, #fcfaf6 100%);
+}
+
+.category-showcase--top {
+  padding-top: clamp(30px, 3vw, 46px);
 }
 
 .category-showcase__header {
@@ -305,9 +320,22 @@
 }
 
 @media (max-width: 768px) {
+  .homepage-top-sections {
+    gap: 12px;
+  }
+
+  .homepage-featured-products {
+    padding-top: 26px;
+    padding-bottom: 38px;
+  }
+
   .category-showcase {
     padding-top: 72px;
     padding-bottom: 82px;
+  }
+
+  .category-showcase--top {
+    padding-top: 28px;
   }
 
   .category-showcase__title {
@@ -981,6 +1009,14 @@
   font-size: 0.8125rem;
   font-weight: 700;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.testimonial-card__avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .testimonial-card__name {

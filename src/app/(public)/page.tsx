@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { FiArrowRight, FiTruck, FiShield, FiRefreshCw, FiAward, FiEye, FiCamera, FiPhone, FiCircle, FiSquare, FiHeart, FiMaximize } from 'react-icons/fi';
 import { publicApi } from '@/lib/api';
 import { getPublicSettings } from '@/lib/settings';
+import { resolveMediaUrl } from '@/lib/media';
 import { DynamicCategories, DynamicProducts, DynamicVouchers, DynamicStats, DynamicConsultButton } from './HomeClient';
 import HomeCollections from './HomeCollections';
 import HomeHero from './HomeHero';
@@ -57,10 +58,46 @@ export default async function HomePage() {
     ? collectionsRes.filter((collection: any) => collection.is_active !== false && collection.slug && collection.name)
     : [];
   const vouchers = Array.isArray(vouchersRes) ? vouchersRes : [];
+  const testimonialsWithImages = testimonials.map((testimonial, index) => ({
+    ...testimonial,
+    image: settings[`homepage_testimonial_${index + 1}_image`] || '',
+  }));
 
   return (
     <>
       <HomeHero settings={settings} />
+
+      <div className="homepage-top-sections">
+        <section className="section homepage-featured-products" style={{ background: 'var(--color-bg-warm)' }}>
+          <div className="container">
+            <div className="section__header">
+              <span className="section__tag">Nổi Bật</span>
+              <h2 className="section__title">Sản Phẩm Được Yêu Thích</h2>
+              <p className="section__subtitle">Những mẫu kính được khách hàng yêu thích và đánh giá cao nhất</p>
+            </div>
+            <DynamicProducts initialData={products} />
+            <div style={{ textAlign: 'center', marginTop: 'var(--space-3xl)' }}>
+              <Link href="/san-pham" className="btn btn-secondary btn-lg">Xem Tất Cả Sản Phẩm <FiArrowRight /></Link>
+            </div>
+          </div>
+        </section>
+
+        <section className="category-showcase category-showcase--top">
+          <div className="container">
+            <header className="category-showcase__header">
+              <span className="category-showcase__eyebrow">Danh Mục</span>
+              <h2 className="category-showcase__title">Sản Phẩm Theo Danh Mục</h2>
+              <p className="category-showcase__subtitle">Tìm kiếm kiểu kính phù hợp với phong cách và nhu cầu của bạn</p>
+              <div className="category-showcase__divider" aria-hidden="true">
+                <span />
+                <i>✦</i>
+                <span />
+              </div>
+            </header>
+            <DynamicCategories initialData={categories} />
+          </div>
+        </section>
+      </div>
 
       <section className="trust-badges">
         <div className="container">
@@ -75,36 +112,6 @@ export default async function HomePage() {
 
       <section className="section voucher-home-section" style={{ paddingTop: 'var(--space-lg)', paddingBottom: 'var(--space-lg)' }}>
         <div className="container"><DynamicVouchers initialData={vouchers} /></div>
-      </section>
-
-      <section className="section" style={{ background: 'var(--color-bg-warm)' }}>
-        <div className="container">
-          <div className="section__header">
-            <span className="section__tag">Nổi Bật</span>
-            <h2 className="section__title">Sản Phẩm Được Yêu Thích</h2>
-            <p className="section__subtitle">Những mẫu kính được khách hàng yêu thích và đánh giá cao nhất</p>
-          </div>
-          <DynamicProducts initialData={products} />
-          <div style={{ textAlign: 'center', marginTop: 'var(--space-3xl)' }}>
-            <Link href="/san-pham" className="btn btn-secondary btn-lg">Xem Tất Cả Sản Phẩm <FiArrowRight /></Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="category-showcase">
-        <div className="container">
-          <header className="category-showcase__header">
-            <span className="category-showcase__eyebrow">Danh Mục</span>
-            <h2 className="category-showcase__title">Sản Phẩm Theo Danh Mục</h2>
-            <p className="category-showcase__subtitle">Tìm kiếm kiểu kính phù hợp với phong cách và nhu cầu của bạn</p>
-            <div className="category-showcase__divider" aria-hidden="true">
-              <span />
-              <i>✦</i>
-              <span />
-            </div>
-          </header>
-          <DynamicCategories initialData={categories} />
-        </div>
       </section>
 
       <HomeCollections
@@ -183,11 +190,18 @@ export default async function HomePage() {
             <p className="section__subtitle">Hơn 10,000 khách hàng đã tin tưởng và yêu thích sản phẩm của chúng tôi</p>
           </div>
           <div className="testimonials-grid">
-            {testimonials.map((t, i) => (
+            {testimonialsWithImages.map((t, i) => (
               <div key={i} className="testimonial-card">
                 <div className="testimonial-card__stars">{'★'.repeat(t.rating)}</div>
                 <p className="testimonial-card__text">"{t.text}"</p>
-                <div className="testimonial-card__author"><div className="testimonial-card__avatar">{t.avatar}</div><div><div className="testimonial-card__name">{t.name}</div><div className="testimonial-card__since">{t.since}</div></div></div>
+                <div className="testimonial-card__author">
+                  <div className="testimonial-card__avatar">
+                    {t.image ? (
+                      <img src={resolveMediaUrl(t.image)} alt={`Ảnh khách hàng ${t.name}`} loading="lazy" />
+                    ) : t.avatar}
+                  </div>
+                  <div><div className="testimonial-card__name">{t.name}</div><div className="testimonial-card__since">{t.since}</div></div>
+                </div>
               </div>
             ))}
           </div>

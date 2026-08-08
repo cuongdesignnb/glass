@@ -331,6 +331,25 @@ export default function AdminSettingsPage() {
         isToggle: true,
       },
       {
+        key: "homepage_testimonial_1_image",
+        label: "Ảnh khách hàng 1",
+        isImage: true,
+        section: "Ảnh Đánh Giá Khách Hàng",
+        hint: "Chọn ảnh từ Media Library. Để trống sẽ hiển thị chữ viết tắt tên khách hàng.",
+      },
+      {
+        key: "homepage_testimonial_2_image",
+        label: "Ảnh khách hàng 2",
+        isImage: true,
+        hint: "Chọn ảnh từ Media Library. Để trống sẽ hiển thị chữ viết tắt tên khách hàng.",
+      },
+      {
+        key: "homepage_testimonial_3_image",
+        label: "Ảnh khách hàng 3",
+        isImage: true,
+        hint: "Chọn ảnh từ Media Library. Để trống sẽ hiển thị chữ viết tắt tên khách hàng.",
+      },
+      {
         key: "homepage_face_finder",
         label: "Hiển thị section Chọn Kính Theo Khuôn Mặt",
         isToggle: true,
