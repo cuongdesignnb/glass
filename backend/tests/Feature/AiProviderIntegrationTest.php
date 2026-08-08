@@ -396,6 +396,42 @@ class AiProviderIntegrationTest extends TestCase
         ]);
     }
 
+    public function test_category_description_mode_returns_semantic_seo_content(): void
+    {
+        Setting::setValue('openai_api_key', 'test-key', 'api');
+
+        Http::fake([
+            'https://modelapi.vn/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => '<h2>Kinh can</h2><p>Mo ta danh muc toi uu cho nguoi dung.</p><ul><li>De chon san pham</li></ul>',
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $response = (new AiController)->generateContent(Request::create('/ai/content', 'POST', [
+            'topic' => 'Kinh can',
+            'type' => 'category_description',
+            'keywords' => 'kinh can, danh muc kinh mat',
+            'length' => 'short',
+        ]));
+
+        $payload = $response->getData(true);
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertStringContainsString('<h2>Kinh can</h2>', $payload['content']);
+        $this->assertStringContainsString('<ul><li>', $payload['content']);
+
+        Http::assertSent(function (HttpRequest $request) {
+            $systemPrompt = (string) ($request['messages'][0]['content'] ?? '');
+
+            return str_contains($systemPrompt, 'danh muc san pham kinh mat')
+                && str_contains($systemPrompt, 'HTML semantic')
+                && str_contains($systemPrompt, 'khong dung <h1>');
+        });
+    }
+
     public function test_provider_gateway_error_remains_json_and_exposes_original_status(): void
     {
         Setting::setValue('openai_api_key', 'test-key', 'api');

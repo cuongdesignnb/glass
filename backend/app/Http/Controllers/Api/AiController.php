@@ -284,7 +284,7 @@ Generate ONE realistic photo of this person wearing these exact glasses.
 
         $request->validate([
             'topic' => 'required|string|max:500',
-            'type' => 'nullable|string|in:article,product_description,seo',
+            'type' => 'nullable|string|in:article,product_description,category_description,seo',
             'keywords' => 'nullable|string',
             'tone' => 'nullable|string|in:professional,casual,luxury',
             'length' => 'nullable|string|in:short,medium,long',
@@ -364,6 +364,13 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                 $systemPrompt = "Ban la chuyen gia viet mo ta chi tiet san pham kinh mat. Viet bang tieng Viet, giong van {$tone}, do dai {$lengthGuide}. "
                     . "Bat buoc tra ve HTML semantic gom <h2>, <h3>, <p>, <ul><li>, <strong>, <em>; khong dung <h1> vi trang san pham da co tieu de H1. "
                     . "Chi dung thong tin duoc cung cap, khong tu bia thong so. Dat tu khoa voi mat do tu nhien, uu tien gia tri cho nguoi mua. "
+                    . $linkInstruction;
+            } elseif ($type === 'category_description') {
+                $systemPrompt = "Ban la chuyen gia SEO cho danh muc san pham kinh mat. Viet bang tieng Viet, giong van {$tone}, do dai {$lengthGuide}. "
+                    . "Tra ve HTML semantic gom <h2>, <h3>, <p>, <ul><li>, <strong>, <em>; khong dung <h1> vi trang danh muc da co tieu de H1. "
+                    . "Giai thich ro danh muc phu hop voi ai, phong cach va nhu cau nao, cach chon san pham trong danh muc. "
+                    . "Chi dung thong tin tu ten danh muc va tu khoa duoc cung cap, khong bia gia, thong so, thuong hieu hoac cam ket cu the. "
+                    . "Dat tu khoa tu nhien, uu tien gia tri cho nguoi dung va khong lap tu khoa qua muc. "
                     . $linkInstruction;
             }
         }
@@ -466,7 +473,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
 
         $request->validate([
             'topic' => 'required|string|max:500',
-            'type' => 'nullable|string|in:article,product_description,seo',
+            'type' => 'nullable|string|in:article,product_description,category_description,seo',
             'keywords' => 'nullable|string',
             'tone' => 'nullable|string|in:professional,casual,luxury',
             'length' => 'nullable|string|in:short,medium,long',
@@ -560,11 +567,18 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                     . "Bat buoc tra ve HTML semantic gom <h2>, <h3>, <p>, <ul><li>, <strong>, <em>; khong dung <h1> vi trang san pham da co tieu de H1. "
                     . "Chi dung thong tin duoc cung cap, khong tu bia thong so. Dat tu khoa voi mat do tu nhien, uu tien gia tri cho nguoi mua. "
                     . $linkInstruction
+                : ($type === 'category_description'
+                    ? "Ban la chuyen gia SEO cho danh muc san pham kinh mat. Viet bang tieng Viet, giong van {$tone}, do dai {$lengthGuide}. "
+                        . "Tra ve HTML semantic gom <h2>, <h3>, <p>, <ul><li>, <strong>, <em>; khong dung <h1> vi trang danh muc da co tieu de H1. "
+                        . "Giai thich ro danh muc phu hop voi ai, phong cach va nhu cau nao, cach chon san pham trong danh muc. "
+                        . "Chi dung thong tin tu ten danh muc va tu khoa duoc cung cap, khong bia gia, thong so, thuong hieu hoac cam ket cu the. "
+                        . "Dat tu khoa tu nhien, uu tien gia tri cho nguoi dung va khong lap tu khoa qua muc. "
+                        . $linkInstruction
                 : "Ban la content writer chuyen nghiep cho nganh thoi trang kinh mat. "
                     . "Viet bai viet chat luong cao, hap dan, voi giong van {$tone}. Do dai: {$lengthGuide}. "
                     . "Viet bang tieng Viet. Cau truc: dung <h2> cho phan chinh, <h3> cho phan phu, "
                     . "noi dung trong <p>, danh sach <ul><li>, nhan manh bang <strong>, <em>. "
-                    . $linkInstruction;
+                    . $linkInstruction);
         }
 
         if ($existingContentForPrompt !== '') {

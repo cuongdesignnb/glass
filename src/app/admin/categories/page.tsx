@@ -7,7 +7,7 @@ import { useAdminCategories, invalidateAdmin } from '@/lib/useAdmin';
 import { useToken } from '@/lib/useToken';
 import { resolveMediaUrl } from '@/lib/media';
 import MediaPicker from '@/components/admin/MediaPicker';
-import { FiPlus, FiEdit2, FiTrash2, FiSave, FiFolder, FiFolderPlus, FiX, FiChevronRight, FiImage } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiSave, FiFolder, FiFolderPlus, FiX, FiChevronRight, FiImage, FiZap } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
 const RichEditor = dynamic(() => import('@/components/admin/RichEditor'), { ssr: false });
@@ -18,6 +18,7 @@ export default function AdminCategoriesPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [generatingDescription, setGeneratingDescription] = useState(false);
   const [showMediaPicker, setShowMediaPicker] = useState<'image' | 'icon' | 'editor' | null>(null);
   const [editorInsertFn, setEditorInsertFn] = useState<((url: string, alt?: string, caption?: string) => void) | null>(null);
   const [form, setForm] = useState({
@@ -41,6 +42,40 @@ export default function AdminCategoriesPage() {
       invalidateAdmin('/admin/categories');
       refresh();
     } catch (err: any) { toast.error('Lỗi: ' + (err.message || 'Không thể lưu')); }
+  };
+
+  const handleGenerateDescription = async () => {
+    if (!token || !form.name.trim()) {
+      toast.error('Vui lòng nhập tên danh mục trước khi dùng AI.');
+      return;
+    }
+
+    if (form.description.trim() && !window.confirm('Nội dung mô tả hiện tại sẽ được thay thế bằng nội dung AI. Tiếp tục?')) {
+      return;
+    }
+
+    setGeneratingDescription(true);
+    const requestToast = toast.loading('AI đang viết mô tả danh mục chuẩn SEO...');
+    try {
+      const data = await adminApi.aiGenerateContent(token, {
+        topic: form.name.trim(),
+        type: 'category_description',
+        keywords: `${form.name.trim()}, danh mục kính mắt, sản phẩm kính mắt`,
+        tone: 'professional',
+        length: 'short',
+      });
+
+      if (!data?.content) {
+        throw new Error('AI không trả về mô tả danh mục.');
+      }
+
+      setForm(prev => ({ ...prev, description: data.content }));
+      toast.success('Đã sinh mô tả danh mục chuẩn SEO. Hãy kiểm tra rồi lưu danh mục.', { id: requestToast });
+    } catch (err: any) {
+      toast.error(`Lỗi AI: ${err?.message || 'Không thể sinh mô tả danh mục'}`, { id: requestToast });
+    } finally {
+      setGeneratingDescription(false);
+    }
   };
 
   const handleEdit = (cat: any) => {
@@ -143,7 +178,21 @@ export default function AdminCategoriesPage() {
                 </div>
               </div>
               <div className="admin-form__group">
-                <label className="admin-form__label">Mô tả</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                  <label className="admin-form__label" style={{ marginBottom: 0 }}>Mô tả danh mục sản phẩm</label>
+                  <button
+                    type="button"
+                    className="admin-btn admin-btn--primary admin-btn--sm"
+                    onClick={handleGenerateDescription}
+                    disabled={generatingDescription}
+                    title="Sinh HTML semantic chuẩn SEO cho mô tả danh mục sản phẩm"
+                  >
+                    <FiZap /> {generatingDescription ? 'Đang sinh...' : 'Sinh mô tả SEO bằng AI'}
+                  </button>
+                </div>
+                <p style={{ margin: '0 0 12px', color: 'rgba(255,255,255,0.48)', fontSize: '0.75rem' }}>
+                  AI tạo cấu trúc HTML với H2/H3, đoạn văn và danh sách; hãy rà soát nội dung trước khi lưu.
+                </p>
                 <div style={{ background: '#13132B', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden' }}>
                   <RichEditor
                     content={form.description}
