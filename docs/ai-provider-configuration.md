@@ -679,10 +679,12 @@ Không để model tự nghĩ URL hoặc ghép anchor tùy ý. Glass làm theo c
 1. Đọc tối đa 100 bài đã xuất bản và 100 sản phẩm đang hoạt động.
 2. Tính điểm liên quan giữa chủ đề/từ khóa hiện tại với title, meta keywords và thuộc tính sản phẩm.
 3. Chỉ đưa các cặp đã chọn vào prompt theo dạng `URL -> danh sách anchor được phép`.
-4. Cho phép model dùng từ 0 đến số link mục tiêu; độ đúng quan trọng hơn số lượng.
-5. Sau khi model trả HTML, backend duyệt lại toàn bộ thẻ `<a>`.
-6. Link `/bai-viet/...` hoặc `/san-pham/...` không nằm trong danh sách được phép sẽ bị gỡ nhưng giữ nguyên chữ.
-7. Anchor gắn sai URL sẽ được thay bằng anchor canonical của chính URL đó.
+4. Ưu tiên 1 đến số link mục tiêu nếu có câu văn phù hợp; chỉ dùng 0 khi không có ngữ cảnh tự nhiên, không nhồi link để đủ số lượng.
+5. Prompt yêu cầu model viết câu đang nói đúng chủ đề trang đích rồi mới gắn một cụm anchor 2-8 từ tự nhiên, không dùng CTA chung chung.
+6. Sau khi model trả HTML, backend duyệt lại toàn bộ thẻ `<a>` và giữ tối đa một link cho mỗi URL.
+7. Nếu model đã viết đúng cụm anchor trong đoạn `<p>` hoặc `<li>` nhưng quên `href`, backend chỉ liên kết chính cụm chữ đã có; không tự tạo một câu hoặc một link đứng riêng.
+8. Link `/bai-viet/...` hoặc `/san-pham/...` không nằm trong danh sách được phép sẽ bị gỡ nhưng giữ nguyên chữ.
+9. Anchor gắn sai URL sẽ được thay bằng anchor canonical của chính URL đó.
 
 Ví dụ dữ liệu đưa vào prompt:
 

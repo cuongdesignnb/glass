@@ -424,12 +424,12 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                 if (!$articleData || !isset($articleData['content'])) {
                     return response()->json([
                         'success' => true,
-                        'content' => $this->enforceSeoAnchorTargets($rawContent, $seoAnchors),
+                        'content' => $this->applySeoAnchorTargets($rawContent, $seoAnchors),
                         'usage' => $result['usage'] ?? null,
                     ]);
                 }
 
-                $articleData['content'] = $this->enforceSeoAnchorTargets((string) $articleData['content'], $seoAnchors);
+                $articleData['content'] = $this->applySeoAnchorTargets((string) $articleData['content'], $seoAnchors);
 
                 return response()->json([
                     'success' => true,
@@ -460,7 +460,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                 $rawContent = preg_replace('/^```(?:html)?\s*/i', '', $rawContent);
                 $rawContent = preg_replace('/\s*```$/i', '', $rawContent);
                 $rawContent = $this->normalizeMarkdownToHtml($rawContent);
-                $categoryContent = $this->enforceSeoAnchorTargets($rawContent, $seoAnchors);
+                $categoryContent = $this->applySeoAnchorTargets($rawContent, $seoAnchors);
                 $fallbackDescription = $this->limitSeoField($categoryContent, 160);
                 $metaTitle = $this->limitSeoField(
                     $categoryData['meta_title'] ?? '',
@@ -490,7 +490,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
 
             return response()->json([
                 'success' => true,
-                'content' => $this->enforceSeoAnchorTargets($rawContent, $seoAnchors),
+                'content' => $this->applySeoAnchorTargets($rawContent, $seoAnchors),
                 'usage' => $result['usage'] ?? null,
             ]);
         } catch (\Exception $e) {
@@ -665,7 +665,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             $content = preg_replace('/\s*```$/i', '', $content);
             $content = $this->normalizeMarkdownToHtml($content);
             $content = preg_replace('/\[IMG:[^\]]*\]/', '', $content);
-            $content = $this->enforceSeoAnchorTargets($content, $seoAnchors);
+            $content = $this->applySeoAnchorTargets($content, $seoAnchors);
 
             $headings = $this->extractArticleHeadings($content, $articleMeta['title'] ?? $request->topic);
             $h1Heading = null;
@@ -1339,10 +1339,10 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
         $targetCount = count($anchors);
         $instruction = "\nSEO INTERNAL LINKS / ANCHOR TEXT TU NHIEN:\n";
         $instruction .= "- Chi chen link khi noi dung cau dang de cap dung chu de cua trang dich; khong duoc ep link vao ngu canh khac.\n";
-        $instruction .= "- Co the dung tu 0 den {$targetCount} link. Do chinh xac giua anchor va trang dich quan trong hon so luong link.\n";
+        $instruction .= "- Uu tien 1 den {$targetCount} link neu co cau van phu hop; chi dung 0 khi khong co ngu canh tu nhien. Do chinh xac va do tu nhien quan trong hon so luong link.\n";
         $instruction .= "- Phan bo deu trong than bai, khong dat lien tiep trong cung mot doan.\n";
         $instruction .= "- Moi URL chi dung mot lan. Khong nhai lai mot anchor text.\n";
-        $instruction .= "- Viet cau van tu nhien truoc, sau do gan link vao cum tu phu hop. Khong viet kieu danh sach link, khong dung 'xem them', 'doc them', 'tai day'.\n";
+        $instruction .= "- Chu dong viet cau van dang noi dung ve trang dich, sau do gan link vao mot cum tu 2-8 tu doc tu nhien. Khong viet kieu danh sach link, khong dung 'xem them', 'doc them', 'tai day'.\n";
         $instruction .= "- Moi cum anchor goi y ben duoi chi thuoc URL cung dong. Tuyet doi khong doi, tron hoac gan anchor cua dong nay sang URL dong khac.\n";
         $instruction .= "- Chi dung nguyen van mot trong cac anchor goi y cua URL dich; he thong se hau kiem va sua link neu ghep sai.\n";
         $instruction .= "- Neu anchor la san pham, chi chen khi cau van dang noi ve nhu cau, phong cach, chat lieu, kieu dang hoac lua chon kinh phu hop.\n";
@@ -1591,6 +1591,154 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             },
             $html
         );
+    }
+
+    /**
+     * Keep model-provided links target-bound, then link a natural phrase that
+     * the model already used in a paragraph when it omitted the href. This
+     * never invents a sentence or adds a standalone CTA; it only turns an
+     * existing, target-relevant phrase into one internal link per URL.
+     */
+    private function applySeoAnchorTargets(string $html, array $anchors): string
+    {
+        $html = $this->enforceSeoAnchorTargets($html, $anchors);
+
+        if ($html === '' || empty($anchors) || ! class_exists(\DOMDocument::class)) {
+            return $html;
+        }
+
+        $previousUseInternalErrors = libxml_use_internal_errors(true);
+        $dom = new \DOMDocument('1.0', 'UTF-8');
+        $loaded = $dom->loadHTML(
+            '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body><div id="seo-anchor-root">' .
+                $html .
+                '</div></body></html>',
+            LIBXML_NOERROR | LIBXML_NOWARNING
+        );
+
+        if (! $loaded) {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previousUseInternalErrors);
+            return $html;
+        }
+
+        $root = $dom->getElementById('seo-anchor-root');
+        if (! $root instanceof \DOMElement) {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previousUseInternalErrors);
+            return $html;
+        }
+
+        $xpath = new \DOMXPath($dom);
+        $textNodes = $xpath->query(
+            './/*[self::p or self::li]//text()[not(ancestor::a)]',
+            $root
+        );
+        if (! $textNodes instanceof \DOMNodeList || $textNodes->length === 0) {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previousUseInternalErrors);
+            return $html;
+        }
+
+        $linkedUrls = [];
+        foreach ($xpath->query('.//a[@href]', $root) ?: [] as $link) {
+            if ($link instanceof \DOMElement) {
+                $url = $this->normalizeSeoInternalUrl((string) $link->getAttribute('href'));
+                if ($url !== '') {
+                    $linkedUrls[$url] = true;
+                }
+            }
+        }
+
+        foreach ($anchors as $anchor) {
+            $url = $this->normalizeSeoInternalUrl((string) ($anchor['url'] ?? ''));
+            if ($url === '' || isset($linkedUrls[$url])) {
+                continue;
+            }
+
+            $phrases = array_values(array_filter(
+                array_map(
+                    static fn (mixed $value): string => trim(strip_tags((string) $value)),
+                    $anchor['anchor_texts'] ?? []
+                ),
+                fn (string $phrase): bool => $this->isNaturalSeoAnchorPhrase($phrase)
+            ));
+            usort($phrases, static fn (string $left, string $right): int => mb_strlen($right) <=> mb_strlen($left));
+
+            $linked = false;
+            foreach ($phrases as $phrase) {
+                foreach ($textNodes as $textNode) {
+                    if (! $textNode instanceof \DOMText || ! $textNode->parentNode) {
+                        continue;
+                    }
+
+                    $text = $textNode->nodeValue ?? '';
+                    if ($text === '' || ! preg_match('/' . preg_quote($phrase, '/') . '/iu', $text, $match, PREG_OFFSET_CAPTURE)) {
+                        continue;
+                    }
+
+                    $matchedText = (string) ($match[0][0] ?? '');
+                    $offset = (int) ($match[0][1] ?? -1);
+                    if ($matchedText === '' || $offset < 0) {
+                        continue;
+                    }
+
+                    $link = $dom->createElement('a');
+                    $link->setAttribute('href', (string) $anchor['url']);
+                    $link->appendChild($dom->createTextNode($matchedText));
+
+                    $fragment = $dom->createDocumentFragment();
+                    $prefix = substr($text, 0, $offset);
+                    $suffix = substr($text, $offset + strlen($matchedText));
+                    if ($prefix !== '') {
+                        $fragment->appendChild($dom->createTextNode($prefix));
+                    }
+                    $fragment->appendChild($link);
+                    if ($suffix !== '') {
+                        $fragment->appendChild($dom->createTextNode($suffix));
+                    }
+
+                    $textNode->parentNode->replaceChild($fragment, $textNode);
+                    $linkedUrls[$url] = true;
+                    $linked = true;
+                    break 2;
+                }
+            }
+
+            if (! $linked) {
+                continue;
+            }
+        }
+
+        $result = '';
+        foreach ($root->childNodes as $child) {
+            $result .= $dom->saveHTML($child);
+        }
+
+        libxml_clear_errors();
+        libxml_use_internal_errors($previousUseInternalErrors);
+
+        return $result !== '' ? $result : $html;
+    }
+
+    private function isNaturalSeoAnchorPhrase(string $phrase): bool
+    {
+        $phrase = trim($phrase);
+        if ($phrase === '' || mb_strlen($phrase) < 3 || mb_strlen($phrase) > 80) {
+            return false;
+        }
+
+        $wordCount = count(preg_split('/\s+/u', $phrase, -1, PREG_SPLIT_NO_EMPTY) ?: []);
+        if ($wordCount < 2 || $wordCount > 8) {
+            return false;
+        }
+
+        return ! in_array($this->normalizeSeoText($phrase), [
+            'xem them',
+            'doc them',
+            'tai day',
+            'click vao day',
+        ], true);
     }
 
     private function normalizeSeoInternalUrl(string $url): string

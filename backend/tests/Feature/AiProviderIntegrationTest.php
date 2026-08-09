@@ -343,6 +343,53 @@ class AiProviderIntegrationTest extends TestCase
         });
     }
 
+    public function test_natural_related_phrase_is_linked_once_without_forcing_a_standalone_anchor(): void
+    {
+        Setting::setValue('openai_api_key', 'test-key', 'api');
+
+        $currentProduct = Product::create([
+            'name' => 'Gong kinh Titan MS005',
+            'slug' => 'gong-kinh-titan-ms005',
+            'meta_keywords' => 'gong kinh titan',
+            'is_active' => true,
+        ]);
+        Product::create([
+            'name' => 'Gong kinh Titan dang vuong',
+            'slug' => 'gong-kinh-titan-dang-vuong',
+            'meta_keywords' => 'gong kinh titan dang vuong',
+            'is_active' => true,
+        ]);
+
+        Http::fake([
+            'https://modelapi.vn/v1/chat/completions' => Http::response([
+                'choices' => [[
+                    'message' => [
+                        'role' => 'assistant',
+                        'content' => '<h2>Gong kinh Titan MS005</h2>'
+                            . '<p>Ban co the ket hop voi Gong kinh Titan dang vuong trong phong cach hang ngay.</p>',
+                    ],
+                ]],
+            ]),
+        ]);
+
+        $response = (new AiController)->generateContent(Request::create('/ai/content', 'POST', [
+            'topic' => $currentProduct->name,
+            'type' => 'product_description',
+            'keywords' => 'gong kinh titan',
+            'length' => 'short',
+            'product_id' => $currentProduct->id,
+        ]));
+
+        $payload = $response->getData(true);
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame(1, substr_count($payload['content'], 'href="/san-pham/gong-kinh-titan-dang-vuong"'));
+        $this->assertStringContainsString(
+            '<a href="/san-pham/gong-kinh-titan-dang-vuong">Gong kinh Titan dang vuong</a>',
+            $payload['content']
+        );
+        $this->assertStringNotContainsString('href="/san-pham/gong-kinh-titan-ms005"', $payload['content']);
+    }
+
     public function test_product_image_mode_returns_alt_caption_and_inline_image_markup(): void
     {
         Setting::setValue('openai_api_key', 'test-key', 'api');

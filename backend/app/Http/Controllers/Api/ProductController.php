@@ -9,6 +9,7 @@ use App\Models\ProductAddonPrice;
 use App\Helpers\VietnameseSlug;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
@@ -172,7 +173,7 @@ class ProductController extends Controller
             ->unique()
             ->values();
 
-        $query = Product::with('category')
+        $query = Product::with(['category', 'categories'])
             ->active()
             ->where('products.id', '<>', $product->id);
 
@@ -215,19 +216,47 @@ class ProductController extends Controller
             });
         }
 
-        // Prefer the primary category, then the strongest catalogue signals.
-        if ($product->category_id) {
-            $query->orderByRaw('CASE WHEN products.category_id = ? THEN 0 ELSE 1 END', [(int) $product->category_id]);
-        }
-        if (filled($product->brand)) {
-            $query->orderByRaw('CASE WHEN products.brand = ? THEN 0 ELSE 1 END', [$product->brand]);
-        }
+        // Rank the category-matched pool by several product signals instead
+        // of returning the newest products in the category.
         $products = $query
-            ->orderByDesc('is_featured')
-            ->orderByDesc('sold')
-            ->orderByDesc('created_at')
-            ->limit($perPage)
-            ->get();
+            ->get()
+            ->map(function (Product $candidate) use ($product): array {
+                return [
+                    'product' => $candidate,
+                    'score' => $this->relatedProductScore($product, $candidate),
+                ];
+            })
+            ->sort(function (array $left, array $right): int {
+                $scoreComparison = ($right['score'] ?? 0) <=> ($left['score'] ?? 0);
+                if ($scoreComparison !== 0) {
+                    return $scoreComparison;
+                }
+
+                $leftProduct = $left['product'];
+                $rightProduct = $right['product'];
+                $featuredComparison = (int) $rightProduct->is_featured <=> (int) $leftProduct->is_featured;
+                if ($featuredComparison !== 0) {
+                    return $featuredComparison;
+                }
+
+                $soldComparison = (int) $rightProduct->sold <=> (int) $leftProduct->sold;
+                if ($soldComparison !== 0) {
+                    return $soldComparison;
+                }
+
+                $createdComparison = strcmp(
+                    (string) ($rightProduct->created_at ?? ''),
+                    (string) ($leftProduct->created_at ?? '')
+                );
+                if ($createdComparison !== 0) {
+                    return $createdComparison;
+                }
+
+                return (int) $leftProduct->id <=> (int) $rightProduct->id;
+            })
+            ->take($perPage)
+            ->pluck('product')
+            ->values();
 
         return response()->json([
             'data' => $products,
@@ -236,6 +265,81 @@ class ProductController extends Controller
                 'per_page' => $perPage,
             ],
         ]);
+    }
+
+    /**
+     * Score related products using catalogue meaning, not just recency.
+     * Category overlap remains the strongest signal; the other signals make
+     * products within the same category useful and varied.
+     */
+    private function relatedProductScore(Product $source, Product $candidate): int
+    {
+        $sourceCategoryIds = $this->relatedProductCategoryIds($source);
+        $candidateCategoryIds = $this->relatedProductCategoryIds($candidate);
+        $sharedCategoryCount = count(array_intersect($sourceCategoryIds, $candidateCategoryIds));
+
+        $score = $sharedCategoryCount * 100;
+        if ($source->category_id && (int) $source->category_id === (int) $candidate->category_id) {
+            $score += 35;
+        }
+
+        if ($this->normalizeRelatedValue($source->brand) !== ''
+            && $this->normalizeRelatedValue($source->brand) === $this->normalizeRelatedValue($candidate->brand)) {
+            $score += 30;
+        }
+
+        foreach ([
+            'frame_styles' => 22,
+            'materials' => 18,
+            'face_shapes' => 14,
+            'gender' => 10,
+            'colors' => 6,
+        ] as $attribute => $weight) {
+            $sourceValues = $this->relatedProductAttributeValues($source, $attribute);
+            $candidateValues = $this->relatedProductAttributeValues($candidate, $attribute);
+            $sharedValues = count(array_intersect($sourceValues, $candidateValues));
+            $score += min($sharedValues, 2) * $weight;
+        }
+
+        $sourcePrice = (float) ($source->sale_price ?: $source->price);
+        $candidatePrice = (float) ($candidate->sale_price ?: $candidate->price);
+        if ($sourcePrice > 0 && $candidatePrice > 0) {
+            $priceRatio = min($sourcePrice, $candidatePrice) / max($sourcePrice, $candidatePrice);
+            $score += $priceRatio >= 0.85 ? 12 : ($priceRatio >= 0.65 ? 6 : 0);
+        }
+
+        return $score;
+    }
+
+    private function relatedProductCategoryIds(Product $product): array
+    {
+        $categoryIds = collect([(int) $product->category_id]);
+        if ($product->relationLoaded('categories')) {
+            $categoryIds = $categoryIds->merge($product->categories->pluck('id'));
+        }
+
+        return $categoryIds
+            ->filter(fn ($id) => (int) $id > 0)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function relatedProductAttributeValues(Product $product, string $attribute): array
+    {
+        $values = $product->{$attribute};
+        $values = is_array($values) ? $values : (filled($values) ? [$values] : []);
+
+        return array_values(array_unique(array_filter(array_map(
+            fn ($value) => $this->normalizeRelatedValue($value),
+            $values
+        ))));
+    }
+
+    private function normalizeRelatedValue(mixed $value): string
+    {
+        return trim((string) preg_replace('/\s+/u', ' ', Str::ascii(mb_strtolower(trim((string) $value)))));
     }
 
     /**
