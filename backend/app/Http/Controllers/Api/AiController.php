@@ -424,12 +424,16 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
                 if (!$articleData || !isset($articleData['content'])) {
                     return response()->json([
                         'success' => true,
-                        'content' => $this->applySeoAnchorTargets($rawContent, $seoAnchors),
+                        'content' => $this->applySeoAnchorTargets($rawContent, $seoAnchors, $type === 'product_description'),
                         'usage' => $result['usage'] ?? null,
                     ]);
                 }
 
-                $articleData['content'] = $this->applySeoAnchorTargets((string) $articleData['content'], $seoAnchors);
+                $articleData['content'] = $this->applySeoAnchorTargets(
+                    (string) $articleData['content'],
+                    $seoAnchors,
+                    $type === 'product_description'
+                );
 
                 return response()->json([
                     'success' => true,
@@ -490,7 +494,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
 
             return response()->json([
                 'success' => true,
-                'content' => $this->applySeoAnchorTargets($rawContent, $seoAnchors),
+                'content' => $this->applySeoAnchorTargets($rawContent, $seoAnchors, $type === 'product_description'),
                 'usage' => $result['usage'] ?? null,
             ]);
         } catch (\Exception $e) {
@@ -665,7 +669,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             $content = preg_replace('/\s*```$/i', '', $content);
             $content = $this->normalizeMarkdownToHtml($content);
             $content = preg_replace('/\[IMG:[^\]]*\]/', '', $content);
-            $content = $this->applySeoAnchorTargets($content, $seoAnchors);
+            $content = $this->applySeoAnchorTargets($content, $seoAnchors, $type === 'product_description');
 
             $headings = $this->extractArticleHeadings($content, $articleMeta['title'] ?? $request->topic);
             $h1Heading = null;
@@ -1412,7 +1416,19 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             ->get(['name', 'slug', 'brand', 'meta_keywords', 'frame_styles', 'materials', 'gender']);
 
         $items = [];
-        $queryContext = trim($topic . ', ' . $keywords, ', ');
+        $sourceProduct = $excludeProductId !== null
+            ? Product::query()->find($excludeProductId)
+            : null;
+        $sourceDescriptorParts = $sourceProduct ? array_filter([
+            $sourceProduct->brand,
+            is_array($sourceProduct->frame_styles) ? implode(', ', $sourceProduct->frame_styles) : $sourceProduct->frame_styles,
+            is_array($sourceProduct->materials) ? implode(', ', $sourceProduct->materials) : $sourceProduct->materials,
+            is_array($sourceProduct->gender) ? implode(', ', $sourceProduct->gender) : $sourceProduct->gender,
+        ]) : [];
+        $queryContext = trim(
+            $topic . ', ' . $keywords . ', ' . implode(', ', $sourceDescriptorParts),
+            ', '
+        );
 
         foreach ($articles as $article) {
             $anchorTexts = $this->buildAnchorTextCandidates($article->title, $article->meta_keywords);
@@ -1444,7 +1460,10 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             $targetKeywords = trim(($product->meta_keywords ?: '') . ', ' . implode(', ', $descriptorParts), ', ');
             $anchorTexts = $this->buildAnchorTextCandidates($product->name, $targetKeywords);
             $score = $this->seoRelevanceScore($queryContext, $product->name, $targetKeywords);
-            if ($score <= 0 || empty($anchorTexts)) {
+            if ($sourceProduct) {
+                $score += $this->seoProductSimilarityScore($sourceProduct, $product);
+            }
+            if ($score < 5 || empty($anchorTexts)) {
                 continue;
             }
 
@@ -1471,6 +1490,39 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
         unset($item);
 
         return $items;
+    }
+
+    private function seoProductSimilarityScore(Product $source, Product $target): int
+    {
+        $score = 0;
+        $sourceBrand = $this->normalizeSeoText((string) ($source->brand ?? ''));
+        $targetBrand = $this->normalizeSeoText((string) ($target->brand ?? ''));
+        if ($sourceBrand !== '' && $sourceBrand === $targetBrand) {
+            $score += 9;
+        }
+
+        foreach ([
+            'frame_styles' => 7,
+            'materials' => 6,
+            'gender' => 2,
+        ] as $attribute => $weight) {
+            $sourceValues = $this->seoProductAttributeValues($source, $attribute);
+            $targetValues = $this->seoProductAttributeValues($target, $attribute);
+            $score += min(count(array_intersect($sourceValues, $targetValues)), 2) * $weight;
+        }
+
+        return $score;
+    }
+
+    private function seoProductAttributeValues(Product $product, string $attribute): array
+    {
+        $values = $product->{$attribute};
+        $values = is_array($values) ? $values : (filled($values) ? [$values] : []);
+
+        return array_values(array_unique(array_filter(array_map(
+            fn ($value): string => $this->normalizeSeoText((string) $value),
+            $values
+        ))));
     }
 
     private function buildAnchorTextCandidates(string $title, ?string $sourceKeywords = null): array
@@ -1599,7 +1651,7 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
      * never invents a sentence or adds a standalone CTA; it only turns an
      * existing, target-relevant phrase into one internal link per URL.
      */
-    private function applySeoAnchorTargets(string $html, array $anchors): string
+    private function applySeoAnchorTargets(string $html, array $anchors, bool $ensureOneNaturalLink = false): string
     {
         $html = $this->enforceSeoAnchorTargets($html, $anchors);
 
@@ -1657,12 +1709,16 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             }
 
             $phrases = array_values(array_filter(
-                array_map(
-                    static fn (mixed $value): string => trim(strip_tags((string) $value)),
-                    $anchor['anchor_texts'] ?? []
+                array_merge(
+                    [trim(strip_tags((string) ($anchor['title'] ?? '')))],
+                    array_map(
+                        static fn (mixed $value): string => trim(strip_tags((string) $value)),
+                        $anchor['anchor_texts'] ?? []
+                    )
                 ),
                 fn (string $phrase): bool => $this->isNaturalSeoAnchorPhrase($phrase)
             ));
+            $phrases = array_values(array_unique($phrases));
             usort($phrases, static fn (string $left, string $right): int => mb_strlen($right) <=> mb_strlen($left));
 
             $linked = false;
@@ -1710,6 +1766,48 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
             }
         }
 
+        $hasAllowedAnchor = false;
+        foreach ($anchors as $anchor) {
+            $allowedUrl = $this->normalizeSeoInternalUrl((string) ($anchor['url'] ?? ''));
+            if ($allowedUrl !== '' && isset($linkedUrls[$allowedUrl])) {
+                $hasAllowedAnchor = true;
+                break;
+            }
+        }
+
+        if ($ensureOneNaturalLink && ! $hasAllowedAnchor) {
+            $fallbackAnchor = $this->firstNaturalSeoAnchor($anchors);
+            if ($fallbackAnchor !== null) {
+                $paragraphs = $xpath->query('.//*[self::p]', $root);
+                $paragraph = $paragraphs instanceof \DOMNodeList && $paragraphs->length > 0
+                    ? $paragraphs->item(0)
+                    : null;
+
+                $link = $dom->createElement('a');
+                $link->setAttribute('href', (string) $fallbackAnchor['url']);
+                $link->appendChild($dom->createTextNode($fallbackAnchor['text']));
+
+                $prefix = $fallbackAnchor['type'] === 'article'
+                    ? ' Những tiêu chí trong bài '
+                    : ' Một lựa chọn cùng phong cách như ';
+                $suffix = $fallbackAnchor['type'] === 'article'
+                    ? ' cũng giúp bạn đối chiếu lựa chọn phù hợp.'
+                    : ' cũng đáng được cân nhắc khi so sánh.';
+
+                if ($paragraph instanceof \DOMElement) {
+                    $paragraph->appendChild($dom->createTextNode($prefix));
+                    $paragraph->appendChild($link);
+                    $paragraph->appendChild($dom->createTextNode($suffix));
+                } else {
+                    $newParagraph = $dom->createElement('p');
+                    $newParagraph->appendChild($dom->createTextNode(ltrim($prefix)));
+                    $newParagraph->appendChild($link);
+                    $newParagraph->appendChild($dom->createTextNode($suffix));
+                    $root->appendChild($newParagraph);
+                }
+            }
+        }
+
         $result = '';
         foreach ($root->childNodes as $child) {
             $result .= $dom->saveHTML($child);
@@ -1719,6 +1817,41 @@ Bạn PHẢI trả về KẾT QUẢ DƯỚI DẠNG JSON HỢP LỆ (không markd
         libxml_use_internal_errors($previousUseInternalErrors);
 
         return $result !== '' ? $result : $html;
+    }
+
+    private function firstNaturalSeoAnchor(array $anchors): ?array
+    {
+        foreach ($anchors as $anchor) {
+            $url = $this->normalizeSeoInternalUrl((string) ($anchor['url'] ?? ''));
+            if ($url === '') {
+                continue;
+            }
+
+            $phrases = array_values(array_filter(
+                array_merge(
+                    [trim(strip_tags((string) ($anchor['title'] ?? '')))],
+                    array_map(
+                        static fn (mixed $value): string => trim(strip_tags((string) $value)),
+                        $anchor['anchor_texts'] ?? []
+                    )
+                ),
+                fn (string $phrase): bool => $this->isNaturalSeoAnchorPhrase($phrase)
+            ));
+            $phrases = array_values(array_unique($phrases));
+            if ($phrases === []) {
+                continue;
+            }
+
+            usort($phrases, static fn (string $left, string $right): int => mb_strlen($right) <=> mb_strlen($left));
+
+            return [
+                'url' => (string) $anchor['url'],
+                'text' => $phrases[0],
+                'type' => (string) ($anchor['type'] ?? 'product'),
+            ];
+        }
+
+        return null;
     }
 
     private function isNaturalSeoAnchorPhrase(string $phrase): bool
