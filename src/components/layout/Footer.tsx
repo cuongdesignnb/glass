@@ -18,7 +18,23 @@ interface FooterColumn {
 }
 
 const DEFAULT_BUSINESS_REGISTRATION_HTML =
-  '<a href="https://online.gov.vn/nen-tang/2eccae84-4b69-493f-bf7c-a308988725fe" target="_blank" rel="noopener noreferrer" title="Đã xác nhận với Bộ Công Thương"><img src="https://fileserver.online.gov.vn/uploads/Resources/iconxacnhan/DaThongBao.png" alt="Đã xác nhận" style="height:44px;" /></a>';
+  '<a href="https://online.gov.vn/nen-tang/2eccae84-4b69-493f-bf7c-a308988725fe" target="_blank" rel="noopener noreferrer" title="Đã xác nhận với Bộ Công Thương"><img src="/business-registration.svg" alt="Đã xác nhận với Bộ Công Thương" width="180" height="50" loading="lazy" decoding="async" /></a>';
+
+/**
+ * The official online.gov.vn image host is intermittently unavailable and a
+ * failed third-party image request can keep a page loading for a long time.
+ * Keep the official verification link, but serve the badge from this site so
+ * it is fast and reliable. This also repairs the HTML already saved in Admin.
+ */
+function normalizeBusinessRegistrationHtml(html: string): string {
+  return html
+    .replaceAll('http://online.gov.vn', 'https://online.gov.vn')
+    .replaceAll('http://fileserver.online.gov.vn', 'https://fileserver.online.gov.vn')
+    .replace(
+      /((?:src\s*=\s*)(["']))https:\/\/fileserver\.online\.gov\.vn\/uploads\/Resources\/iconxacnhan\/DaThongBao\.png(?:\?[^"']*)?\2/gi,
+      '$1/business-registration.svg$2',
+    );
+}
 
 const defaultColumns: FooterColumn[] = [
   {
@@ -93,9 +109,9 @@ export default function Footer() {
   const showContact = settings['footer_show_contact'] !== '0';
   const openingHours = settings['footer_opening_hours'] || '';
   const showBusinessRegistration = settings['footer_show_business_registration'] !== '0';
-  const businessRegistrationHtml = (settings['footer_business_registration_html'] || DEFAULT_BUSINESS_REGISTRATION_HTML)
-    .replaceAll('http://online.gov.vn', 'https://online.gov.vn')
-    .replaceAll('http://fileserver.online.gov.vn', 'https://fileserver.online.gov.vn');
+  const businessRegistrationHtml = normalizeBusinessRegistrationHtml(
+    settings['footer_business_registration_html'] || DEFAULT_BUSINESS_REGISTRATION_HTML,
+  );
 
   const toggleAccordion = (id: string) => {
     setOpenAccordion((prev) => (prev === id ? null : id));
