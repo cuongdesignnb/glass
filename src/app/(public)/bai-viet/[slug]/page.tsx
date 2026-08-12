@@ -79,6 +79,18 @@ function buildImageUrl(path: string) {
   return `${API_MEDIA_URL}${path}`;
 }
 
+function buildArticleFallbackImageUrl(slug: string, title: string) {
+  const appUrl = APP_URL.replace(/\/+$/, '');
+  return `${appUrl}/og/article/${encodeURIComponent(slug)}?title=${encodeURIComponent(title)}`;
+}
+
+function getArticleImage(article: any, slug: string): string {
+  const source = article.og_image || article.thumbnail;
+  return source
+    ? buildImageUrl(source)
+    : buildArticleFallbackImageUrl(slug, article.title || slug);
+}
+
 // Inject IDs into HTML headings for TOC (runs on server)
 function injectHeadingIds(html: string): string {
   let i = 0;
@@ -110,7 +122,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     return { title: 'Bài viết không tìm thấy' };
   }
 
-  const ogImage = article.thumbnail ? buildImageUrl(article.thumbnail) : undefined;
+  const ogImage = getArticleImage(article, article.slug || slug);
   const settings = await getPublicSettings();
   const siteName = settings['site_name'] || 'MITOO';
 
@@ -138,12 +150,21 @@ export default async function ArticleDetailPage({ params }: { params: Promise<{ 
 
   const settings = await getPublicSettings();
   const siteName = settings['site_name'] || 'MITOO';
+  const articleImage = getArticleImage(article, slug);
+  const articleForRender = {
+    ...article,
+    thumbnail: articleImage,
+    thumbnail_alt: article.thumbnail_alt || article.title,
+    thumbnail_caption: article.thumbnail_caption || (!article.og_image && !article.thumbnail
+      ? `Ảnh minh họa: ${article.title}`
+      : article.thumbnail_caption),
+  };
 
   // Schema: Article
   const articleSchema = await generateArticleSchema({
     title: article.title,
     description: article.excerpt || article.title,
-    image: article.thumbnail ? buildImageUrl(article.thumbnail) : undefined,
+    image: articleImage,
     author: article.author_name || article.author || siteName,
     publishedAt: article.published_at || article.created_at,
     updatedAt: article.updated_at,
@@ -171,7 +192,7 @@ export default async function ArticleDetailPage({ params }: { params: Promise<{ 
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
       <ArticleDetailClient
-        article={article}
+        article={articleForRender}
         related={related}
         processedContent={processedContent}
       />

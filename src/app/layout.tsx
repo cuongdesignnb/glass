@@ -87,7 +87,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const ogImage = s['site_logo']
     ? resolveMediaUrl(s['site_logo'], PUBLIC_API)
-    : `${APP_URL}/og-default.jpg`;
+    : undefined;
 
   return {
     metadataBase: new URL(APP_URL),
@@ -109,7 +109,7 @@ export async function generateMetadata(): Promise<Metadata> {
       siteName,
       locale: 'vi_VN',
       type: 'website',
-      images: [{ url: ogImage }],
+      ...(ogImage ? { images: [{ url: ogImage }] } : {}),
     },
     twitter: {
       card: 'summary_large_image',

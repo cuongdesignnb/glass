@@ -34,7 +34,6 @@ export async function generateMeta({
   const cleanTitle = removeBrandSuffix(title, siteName);
   const fullTitle = `${cleanTitle} | ${siteName}`;
   const fullUrl = url ? `${APP_URL}${url}` : APP_URL;
-  const imageUrl = ogImage || `${APP_URL}/og-default.jpg`;
 
   return {
     // The root layout owns the title template. Returning a clean title here
@@ -47,7 +46,9 @@ export async function generateMeta({
       description,
       url: fullUrl,
       siteName: siteName,
-      images: [{ url: imageUrl, width: 1200, height: 630 }],
+      ...(ogImage
+        ? { images: [{ url: ogImage, width: 1200, height: 630 }] }
+        : {}),
       locale: 'vi_VN',
       type: type === 'product' ? 'website' : type,
     },
@@ -55,7 +56,7 @@ export async function generateMeta({
       card: 'summary_large_image',
       title: fullTitle,
       description,
-      images: [imageUrl],
+      ...(ogImage ? { images: [ogImage] } : {}),
     },
     alternates: {
       canonical: fullUrl,
@@ -114,13 +115,21 @@ export async function generateArticleSchema(article: {
 }) {
   const settings = await getPublicSettings();
   const siteName = settings['site_name'] || APP_NAME;
+  const imageObject = article.image
+    ? {
+        '@type': 'ImageObject',
+        url: article.image,
+        width: 1200,
+        height: 630,
+      }
+    : undefined;
 
   return {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: article.title,
     description: article.description,
-    image: article.image,
+    image: imageObject ? [imageObject] : undefined,
     author: {
       '@type': 'Person',
       name: article.author || siteName,
@@ -133,6 +142,7 @@ export async function generateArticleSchema(article: {
     mainEntityOfPage: {
       '@type': 'WebPage',
       '@id': `${APP_URL}${article.url}`,
+      primaryImageOfPage: imageObject,
     },
   };
 }
