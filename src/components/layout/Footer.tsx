@@ -17,6 +17,9 @@ interface FooterColumn {
   links: FooterLink[];
 }
 
+const DEFAULT_BUSINESS_REGISTRATION_HTML =
+  '<a href="https://online.gov.vn/nen-tang/2eccae84-4b69-493f-bf7c-a308988725fe" target="_blank" rel="noopener noreferrer" title="Đã xác nhận với Bộ Công Thương"><img src="https://fileserver.online.gov.vn/uploads/Resources/iconxacnhan/DaThongBao.png" alt="Đã xác nhận" style="height:44px;" /></a>';
+
 const defaultColumns: FooterColumn[] = [
   {
     title: 'Sản Phẩm',
@@ -89,6 +92,10 @@ export default function Footer() {
   const showMenus = settings['footer_show_menus'] !== '0';
   const showContact = settings['footer_show_contact'] !== '0';
   const openingHours = settings['footer_opening_hours'] || '';
+  const showBusinessRegistration = settings['footer_show_business_registration'] !== '0';
+  const businessRegistrationHtml = (settings['footer_business_registration_html'] || DEFAULT_BUSINESS_REGISTRATION_HTML)
+    .replaceAll('http://online.gov.vn', 'https://online.gov.vn')
+    .replaceAll('http://fileserver.online.gov.vn', 'https://fileserver.online.gov.vn');
 
   const toggleAccordion = (id: string) => {
     setOpenAccordion((prev) => (prev === id ? null : id));
@@ -213,6 +220,13 @@ export default function Footer() {
             ))}
           </div>
         </div>
+        {showBusinessRegistration && businessRegistrationHtml && (
+          <div
+            className="footer__business-registration"
+            aria-label="Đã xác nhận với Bộ Công Thương"
+            dangerouslySetInnerHTML={{ __html: businessRegistrationHtml }}
+          />
+        )}
       </div>
     </footer>
   );

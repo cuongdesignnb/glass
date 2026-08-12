@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -33,6 +34,24 @@ class FaviconPersistenceTest extends TestCase
         $this->getJson('/api/public/settings')
             ->assertOk()
             ->assertJsonPath('general.site_favicon', $expected);
+    }
+
+    public function test_admin_settings_reads_always_reflect_latest_payment_values(): void
+    {
+        Cache::flush();
+        Sanctum::actingAs($this->createAdmin());
+
+        \App\Models\Setting::setValue('payment_sepay_bank_name', 'old-bank', 'payment');
+        $this->getJson('/api/settings')
+            ->assertOk()
+            ->assertJsonPath('payment.payment_sepay_bank_name', 'old-bank');
+
+        // Simulate a direct update that did not invalidate an old shared cache
+        // entry. Authenticated admin reads must still return the database value.
+        \App\Models\Setting::setValue('payment_sepay_bank_name', 'new-bank', 'payment');
+        $this->getJson('/api/settings')
+            ->assertOk()
+            ->assertJsonPath('payment.payment_sepay_bank_name', 'new-bank');
     }
 
     public function test_homepage_testimonial_images_survive_admin_and_public_read_back(): void

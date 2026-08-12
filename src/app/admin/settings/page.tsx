@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 const RichEditor = dynamic(() => import('@/components/admin/RichEditor'), { ssr: false });
 import { adminApi } from "@/lib/api";
@@ -45,6 +45,7 @@ import {
 export default function AdminSettingsPage() {
   const { token } = useToken();
   const [settings, setSettings] = useState<Record<string, string>>({});
+  const persistedSettingsRef = useRef<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
@@ -64,7 +65,9 @@ export default function AdminSettingsPage() {
     setLoading(true);
     try {
       const data = await adminApi.getSettings(token!);
-      setSettings(flattenAdminSettings(data));
+      const loadedSettings = flattenAdminSettings(data);
+      persistedSettingsRef.current = loadedSettings;
+      setSettings(loadedSettings);
     } catch (err) {
       console.error(err);
     } finally {
@@ -130,8 +133,9 @@ export default function AdminSettingsPage() {
     }
   };
 
-  const toggleSetting = (key: string) => {
-    updateSetting(key, settings[key] === "1" ? "0" : "1");
+  const toggleSetting = (key: string, defaultValue = "0") => {
+    const currentValue = settings[key] ?? defaultValue;
+    updateSetting(key, currentValue === "1" ? "0" : "1");
   };
 
   const toggleReveal = (key: string) => {
@@ -147,11 +151,23 @@ export default function AdminSettingsPage() {
     setSaving(true);
     const savingToast = toast.loading("Đang lưu cài đặt...");
     try {
-      const settingsArray = Object.entries(settings).map(([key, value]) => ({
-        key,
-        value,
-        group: getGroup(key),
-      }));
+      // Send only values changed in this form. Sending every setting on each
+      // save meant an unrelated stale/invalid integration value (for example
+      // an old AI provider URL) could reject a payment-only update.
+      const previousSettings = persistedSettingsRef.current;
+      const settingsArray = Object.entries(settings)
+        .filter(([key, value]) => (previousSettings[key] ?? "") !== value)
+        .map(([key, value]) => ({
+          key,
+          value,
+          group: getGroup(key),
+        }));
+
+      if (settingsArray.length === 0) {
+        toast.success("Không có thay đổi cần lưu.", { id: savingToast });
+        return;
+      }
+
       await adminApi.updateSettings(token, settingsArray);
 
       // Read the persisted values back without cache. This prevents showing a
@@ -172,6 +188,16 @@ export default function AdminSettingsPage() {
         );
       }
 
+      const failedSettings = settingsArray.filter(
+        ({ key, value }) => (persistedSettings[key] ?? "") !== value,
+      );
+      if (failedSettings.length > 0) {
+        throw new Error(
+          `Không thể xác nhận cài đặt đã lưu: ${failedSettings.map(({ key }) => key).join(", ")}`,
+        );
+      }
+
+      persistedSettingsRef.current = persistedSettings;
       setSettings(persistedSettings);
       invalidateSettings();
       toast.success("Đã lưu thay đổi!", { id: savingToast });
@@ -244,6 +270,7 @@ export default function AdminSettingsPage() {
     key: string;
     label: string;
     type?: string;
+    defaultValue?: string;
     placeholder?: string;
     isImage?: boolean;
     isToggle?: boolean;
@@ -853,6 +880,21 @@ export default function AdminSettingsPage() {
         isToggle: true,
         hint: "Bật để hiện số điện thoại, email, địa chỉ và giờ mở cửa ở chân trang.",
       },
+      {
+        key: "footer_show_business_registration",
+        label: "Hiển thị xác nhận Bộ Công Thương",
+        isToggle: true,
+        defaultValue: "1",
+        section: "Xác nhận Bộ Công Thương",
+        hint: "Bật để hiển thị huy hiệu xác nhận ở cuối chân trang. Nếu chưa lưu, hệ thống vẫn dùng mã mặc định.",
+      },
+      {
+        key: "footer_business_registration_html",
+        label: "Mã HTML xác nhận Bộ Công Thương",
+        isTextarea: true,
+        placeholder: '<a href="https://online.gov.vn/..." target="_blank"><img src="https://fileserver.online.gov.vn/..." alt="Đã xác nhận" style="height:44px;" /></a>',
+        hint: "Có thể dán mã HTML do online.gov.vn cung cấp. Mã này được hiển thị nguyên dạng ở footer; chỉ sử dụng mã từ nguồn tin cậy.",
+      },
     ],
   };
 
@@ -886,10 +928,11 @@ export default function AdminSettingsPage() {
 
   const renderField = (field: SettingField) => {
     if (field.isToggle) {
+      const toggleValue = settings[field.key] ?? field.defaultValue ?? "0";
       return (
         <button
           type="button"
-          onClick={() => toggleSetting(field.key)}
+          onClick={() => toggleSetting(field.key, field.defaultValue)}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -898,7 +941,7 @@ export default function AdminSettingsPage() {
             border: "none",
             cursor: "pointer",
             color:
-              settings[field.key] === "1"
+              toggleValue === "1"
                 ? "var(--color-gold)"
                 : "rgba(255,255,255,0.3)",
             fontSize: "1.5rem",
@@ -906,9 +949,9 @@ export default function AdminSettingsPage() {
             padding: 0,
           }}
         >
-          {settings[field.key] === "1" ? <FiToggleRight /> : <FiToggleLeft />}
+          {toggleValue === "1" ? <FiToggleRight /> : <FiToggleLeft />}
           <span style={{ fontSize: "0.875rem" }}>
-            {settings[field.key] === "1" ? "Đang bật" : "Đang tắt"}
+            {toggleValue === "1" ? "Đang bật" : "Đang tắt"}
           </span>
         </button>
       );

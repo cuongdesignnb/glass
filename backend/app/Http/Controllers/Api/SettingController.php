@@ -28,6 +28,7 @@ class SettingController extends Controller
         'footer_menus', 'footer_bottom_links', 'footer_privacy_url', 'footer_terms_url',
         'footer_show_social', 'footer_show_menus', 'footer_show_contact',
         'footer_opening_hours', 'footer_description', 'footer_copyright',
+        'footer_show_business_registration', 'footer_business_registration_html',
         'about_seo_title', 'about_seo_description', 'about_seo_keywords',
         'about_banner', 'about_title', 'about_content', 'about_faqs',
         'payment_free_shipping_threshold', 'payment_shipping_fee',
@@ -35,7 +36,16 @@ class SettingController extends Controller
 
     public function index(Request $request)
     {
-        if ($request->filled('group')) {
+        // Admin reads must always reflect the just-saved database values. The
+        // admin UI sends `fresh` on read-back; bypassing the shared cache here
+        // prevents an old cached settings snapshot from resetting the form.
+        $forceFresh = $request->has('fresh') || $request->user() !== null;
+
+        if ($forceFresh && $request->filled('group')) {
+            $settings = Setting::getByGroup($request->group);
+        } elseif ($forceFresh) {
+            $settings = Setting::getAllSettings();
+        } elseif ($request->filled('group')) {
             $group = $request->group;
             $settings = Cache::remember("glass_settings_group_{$group}", 3600, function() use ($group) {
                 return Setting::getByGroup($group);

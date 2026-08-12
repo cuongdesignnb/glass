@@ -1787,6 +1787,20 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--color-brand);
 }
 
+.footer__business-registration {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 18px 0 4px;
+  min-height: 62px;
+}
+
+.footer__business-registration img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
 /* Footer accordion icon — hidden on desktop */
 .footer__accordion-icon {
   display: none;
