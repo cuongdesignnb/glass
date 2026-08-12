@@ -18,7 +18,9 @@ interface FooterColumn {
 }
 
 const DEFAULT_BUSINESS_REGISTRATION_HTML =
-  '<a href="https://online.gov.vn/nen-tang/2eccae84-4b69-493f-bf7c-a308988725fe" target="_blank" rel="noopener noreferrer" title="Đã xác nhận với Bộ Công Thương"><img src="/business-registration.svg" alt="Đã xác nhận với Bộ Công Thương" width="180" height="50" loading="lazy" decoding="async" /></a>';
+  '<a href="https://online.gov.vn/nen-tang/2eccae84-4b69-493f-bf7c-a308988725fe" target="_blank" rel="noopener noreferrer" title="Đã xác nhận với Bộ Công Thương"><img src="/storage/uploads/2026-08/DaThongBao-1786553078.webp" alt="Đã xác nhận với Bộ Công Thương" style="height:44px;width:auto" loading="lazy" decoding="async" /></a>';
+
+const BUSINESS_REGISTRATION_IMAGE_PATH = '/storage/uploads/2026-08/DaThongBao-1786553078.webp';
 
 /**
  * The official online.gov.vn image host is intermittently unavailable and a
@@ -30,9 +32,11 @@ function normalizeBusinessRegistrationHtml(html: string): string {
   return html
     .replaceAll('http://online.gov.vn', 'https://online.gov.vn')
     .replaceAll('http://fileserver.online.gov.vn', 'https://fileserver.online.gov.vn')
+    .replaceAll('/business-registration.svg', BUSINESS_REGISTRATION_IMAGE_PATH)
+    .replaceAll('https://mitoo.vn/business-registration.svg', BUSINESS_REGISTRATION_IMAGE_PATH)
     .replace(
       /((?:src\s*=\s*)(["']))https:\/\/fileserver\.online\.gov\.vn\/uploads\/Resources\/iconxacnhan\/DaThongBao\.png(?:\?[^"']*)?\2/gi,
-      '$1/business-registration.svg$2',
+      (_match, prefix: string, quote: string) => `${prefix}${BUSINESS_REGISTRATION_IMAGE_PATH}${quote}`,
     );
 }
 
@@ -161,6 +165,14 @@ export default function Footer() {
               </div>
             )}
 
+            {showBusinessRegistration && businessRegistrationHtml && (
+              <div
+                className="footer__business-registration"
+                aria-label="Đã xác nhận với Bộ Công Thương"
+                dangerouslySetInnerHTML={{ __html: businessRegistrationHtml }}
+              />
+            )}
+
             {/* Social Icons */}
             {showSocial && (
               <div className="footer__social">
@@ -236,13 +248,6 @@ export default function Footer() {
             ))}
           </div>
         </div>
-        {showBusinessRegistration && businessRegistrationHtml && (
-          <div
-            className="footer__business-registration"
-            aria-label="Đã xác nhận với Bộ Công Thương"
-            dangerouslySetInnerHTML={{ __html: businessRegistrationHtml }}
-          />
-        )}
       </div>
     </footer>
   );

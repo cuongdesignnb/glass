@@ -1789,10 +1789,10 @@ h1, h2, h3, h4, h5, h6 {
 
 .footer__business-registration {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
-  padding: 18px 0 4px;
-  min-height: 62px;
+  padding: 16px 0 0;
+  min-height: 0;
 }
 
 .footer__business-registration img {

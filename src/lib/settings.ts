@@ -8,8 +8,9 @@ async function loadPublicSettings(cacheMode: 'revalidate' | 'no-store'): Promise
   try {
     const headers: Record<string, string> = { Accept: 'application/json' };
     if (API_HOST) headers['Host'] = API_HOST;
+    const freshQuery = cacheMode === 'no-store' ? `?fresh=${Date.now()}` : '';
     const res = cacheMode === 'no-store'
-      ? await fetch(`${INTERNAL_API}/public/settings`, { cache: 'no-store', headers })
+      ? await fetch(`${INTERNAL_API}/public/settings${freshQuery}`, { cache: 'no-store', headers })
       : await fetch(`${INTERNAL_API}/public/settings`, { next: { revalidate: 300 }, headers });
     if (!res.ok) return {};
     const data = await res.json();

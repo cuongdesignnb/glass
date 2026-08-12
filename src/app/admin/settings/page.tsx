@@ -892,7 +892,7 @@ export default function AdminSettingsPage() {
         key: "footer_business_registration_html",
         label: "Mã HTML xác nhận Bộ Công Thương",
         isTextarea: true,
-        placeholder: '<a href="https://online.gov.vn/..." target="_blank"><img src="/business-registration.svg" alt="Đã xác nhận" /></a>',
+        placeholder: '<a href="https://online.gov.vn/..." target="_blank"><img src="/storage/uploads/2026-08/DaThongBao-1786553078.webp" alt="Đã xác nhận" /></a>',
         hint: "Có thể dán mã HTML do online.gov.vn cung cấp. Huy hiệu DaThongBao.png sẽ được phục vụ từ máy chủ MITOO để tránh ảnh lỗi và chậm trang.",
       },
     ],

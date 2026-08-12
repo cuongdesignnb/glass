@@ -1,12 +1,15 @@
 import { Metadata } from 'next';
-import { getPublicSettings } from '@/lib/settings';
+import { getFreshPublicSettings } from '@/lib/settings';
 import { generateMeta, generateBreadcrumbSchema } from '@/lib/seo';
 import AboutClient from './AboutClient';
 
-export const revalidate = 60; // Revalidate dynamic content every 60 seconds
+// About content is editable from Admin Settings. Read it without Next's data
+// cache so a save is visible on the public page immediately.
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getPublicSettings();
+  const settings = await getFreshPublicSettings();
   const siteName = settings['site_name'] || 'Mitoo Eyewear';
   
   const title = settings['about_seo_title'] || `Về Chúng Tôi - ${siteName}`;
@@ -22,7 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AboutPage() {
-  const settings = await getPublicSettings();
+  const settings = await getFreshPublicSettings();
   const siteName = settings['site_name'] || 'Mitoo Eyewear';
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mitoo.vn';
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
