@@ -55,6 +55,7 @@ export default function AdminSettingsPage() {
   const [editorInsertFn, setEditorInsertFn] = useState<((url: string) => void) | null>(null);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const [savingFavicon, setSavingFavicon] = useState(false);
+  const [uploadingBusinessRegistrationImage, setUploadingBusinessRegistrationImage] = useState(false);
 
   useEffect(() => {
     if (token) loadSettings();
@@ -66,8 +67,22 @@ export default function AdminSettingsPage() {
     try {
       const data = await adminApi.getSettings(token!);
       const loadedSettings = flattenAdminSettings(data);
+      const legacyHtml = loadedSettings.footer_business_registration_html || "";
+      const readLegacyAttribute = (attribute: string) =>
+        legacyHtml.match(new RegExp(`${attribute}\\s*=\\s*["']([^"']+)["']`, "i"))?.[1]?.trim() || "";
+      const displaySettings = { ...loadedSettings };
+
+      if (!displaySettings.footer_business_registration_image) {
+        displaySettings.footer_business_registration_image = readLegacyAttribute("src");
+      }
+      if (!displaySettings.footer_business_registration_url) {
+        displaySettings.footer_business_registration_url = readLegacyAttribute("href");
+      }
+
+      // Keep the original snapshot separate so clicking Save can migrate
+      // legacy HTML values into the dedicated settings fields.
       persistedSettingsRef.current = loadedSettings;
-      setSettings(loadedSettings);
+      setSettings(displaySettings);
     } catch (err) {
       console.error(err);
     } finally {
@@ -130,6 +145,30 @@ export default function AdminSettingsPage() {
       toast.error(error?.message || "Không thể tải favicon lên");
     } finally {
       setUploadingFavicon(false);
+    }
+  };
+
+  const handleBusinessRegistrationImageUpload = async (file: File) => {
+    if (!token) return;
+
+    setUploadingBusinessRegistrationImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "footer");
+      formData.append("alt", settings["footer_business_registration_alt"] || "Huy hiệu xác nhận");
+
+      const uploaded = await adminApi.uploadMedia(token, formData);
+      const media = uploaded?.data || uploaded;
+      const url = typeof media?.url === "string" ? media.url.trim() : "";
+      if (!url) throw new Error("Upload response did not contain a media URL");
+
+      await persistSetting("footer_business_registration_image", url, "footer");
+      toast.success("Đã tải ảnh xác nhận Bộ Công Thương lên");
+    } catch (error: any) {
+      toast.error(error?.message || "Không thể tải ảnh xác nhận lên");
+    } finally {
+      setUploadingBusinessRegistrationImage(false);
     }
   };
 
@@ -886,14 +925,25 @@ export default function AdminSettingsPage() {
         isToggle: true,
         defaultValue: "1",
         section: "Xác nhận Bộ Công Thương",
-        hint: "Bật để hiển thị huy hiệu xác nhận ở cuối chân trang. Nếu chưa lưu, hệ thống vẫn dùng mã mặc định.",
+        hint: "Bật để hiển thị ảnh xác nhận ở cuối chân trang. Cần cấu hình ảnh và liên kết bên dưới.",
       },
       {
-        key: "footer_business_registration_html",
-        label: "Mã HTML xác nhận Bộ Công Thương",
-        isTextarea: true,
-        placeholder: '<a href="https://online.gov.vn/..." target="_blank"><img src="/storage/uploads/2026-08/DaThongBao-1786553078.webp" alt="Đã xác nhận" /></a>',
-        hint: "Có thể dán mã HTML do online.gov.vn cung cấp. Huy hiệu DaThongBao.png sẽ được phục vụ từ máy chủ MITOO để tránh ảnh lỗi và chậm trang.",
+        key: "footer_business_registration_image",
+        label: "Ảnh xác nhận Bộ Công Thương",
+        isImage: true,
+        hint: "Tải ảnh lên trực tiếp hoặc chọn ảnh đã có trong Media Library.",
+      },
+      {
+        key: "footer_business_registration_url",
+        label: "Liên kết khi bấm vào ảnh",
+        placeholder: "https://online.gov.vn/nen-tang/...",
+        hint: "Ảnh sẽ mở đúng liên kết này trong tab mới.",
+      },
+      {
+        key: "footer_business_registration_alt",
+        label: "Alt ảnh",
+        placeholder: "Đã xác nhận với Bộ Công Thương",
+        hint: "Mô tả ngắn cho khả năng truy cập và SEO hình ảnh.",
       },
     ],
   };
@@ -957,22 +1007,27 @@ export default function AdminSettingsPage() {
       );
     }
     if (field.isImage) {
+      const isBusinessRegistrationImage = field.key === "footer_business_registration_image";
+      const imageUploadBusy = uploadingFavicon || savingFavicon || uploadingBusinessRegistrationImage;
       return (
         <>
-          {field.key === "site_favicon" && (
+          {(field.key === "site_favicon" || isBusinessRegistrationImage) && (
             <label
               className="admin-btn admin-btn--primary admin-btn--sm"
-              style={{ marginRight: "8px", cursor: uploadingFavicon || savingFavicon ? "wait" : "pointer" }}
+              style={{ marginRight: "8px", cursor: imageUploadBusy ? "wait" : "pointer" }}
             >
-              <FiUpload /> {uploadingFavicon || savingFavicon ? "Đang lưu favicon..." : "Tải favicon lên"}
+              <FiUpload /> {imageUploadBusy ? "Đang tải lên..." : isBusinessRegistrationImage ? "Tải ảnh lên" : "Tải favicon lên"}
               <input
                 type="file"
-                accept="image/png,image/jpeg,image/webp,image/svg+xml,image/x-icon,.ico"
-                disabled={uploadingFavicon || savingFavicon}
+                accept={isBusinessRegistrationImage ? "image/png,image/jpeg,image/webp,image/svg+xml" : "image/png,image/jpeg,image/webp,image/svg+xml,image/x-icon,.ico"}
+                disabled={imageUploadBusy}
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   event.target.value = "";
-                  if (file) void handleFaviconUpload(file);
+                  if (file) {
+                    if (isBusinessRegistrationImage) void handleBusinessRegistrationImageUpload(file);
+                    else void handleFaviconUpload(file);
+                  }
                 }}
                 style={{ display: "none" }}
               />

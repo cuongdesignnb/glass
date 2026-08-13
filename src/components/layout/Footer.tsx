@@ -6,6 +6,7 @@ import { FiFacebook, FiInstagram, FiYoutube, FiMail, FiPhone, FiMapPin, FiChevro
 import { SiTiktok } from 'react-icons/si';
 import { RiGlassesLine } from 'react-icons/ri';
 import { useSettings } from '@/lib/useSettings';
+import { resolveMediaUrl } from '@/lib/media';
 
 interface FooterLink {
   label: string;
@@ -17,39 +18,14 @@ interface FooterColumn {
   links: FooterLink[];
 }
 
-const DEFAULT_BUSINESS_REGISTRATION_HTML =
-  '<a href="https://online.gov.vn/nen-tang/2eccae84-4b69-493f-bf7c-a308988725fe" target="_blank" rel="noopener noreferrer" title="Đã xác nhận với Bộ Công Thương"><img src="/storage/uploads/2026-08/DaThongBao-1786553078.webp" alt="Đã xác nhận với Bộ Công Thương" style="height:44px;width:auto" loading="lazy" decoding="async" /></a>';
+function readHtmlAttribute(html: string, attribute: string): string {
+  const match = html.match(new RegExp(`${attribute}\\s*=\\s*["']([^"']+)["']`, 'i'));
+  return match?.[1]?.trim() || '';
+}
 
-const BUSINESS_REGISTRATION_IMAGE_URL = 'https://mitoo.vn/storage/uploads/2026-08/DaThongBao-1786553078.webp';
-
-/**
- * The official online.gov.vn image host is intermittently unavailable and a
- * failed third-party image request can keep a page loading for a long time.
- * Keep the official verification link, but serve the badge from this site so
- * it is fast and reliable. This also repairs the HTML already saved in Admin.
- */
-function normalizeBusinessRegistrationHtml(html: string): string {
-  const normalized = html
-    .replaceAll('http://online.gov.vn', 'https://online.gov.vn')
-    .replaceAll('http://fileserver.online.gov.vn', 'https://fileserver.online.gov.vn')
-    .replaceAll('/business-registration.svg', BUSINESS_REGISTRATION_IMAGE_URL)
-    .replaceAll('https://mitoo.vn/business-registration.svg', BUSINESS_REGISTRATION_IMAGE_URL)
-    .replaceAll('/storage/uploads/2026-08/DaThongBao-1786553078.webp', BUSINESS_REGISTRATION_IMAGE_URL)
-    .replace(
-      /((?:src\s*=\s*)(["']))https:\/\/fileserver\.online\.gov\.vn\/uploads\/Resources\/iconxacnhan\/DaThongBao\.png(?:\?[^"']*)?\2/gi,
-      (_match, prefix: string, quote: string) => `${prefix}${BUSINESS_REGISTRATION_IMAGE_URL}${quote}`,
-    );
-
-  // Some older settings contain a truncated `<img>`/`<a>` fragment. Never
-  // inject malformed markup; use the complete first-party badge instead.
-  if (!/<a\b[^>]*>[\s\S]*?<img\b[^>]*\bsrc\s*=\s*["'][^"']+["'][^>]*\/?>(?:[\s\S]*?)<\/a>/i.test(normalized)) {
-    return DEFAULT_BUSINESS_REGISTRATION_HTML.replaceAll(
-      '/storage/uploads/2026-08/DaThongBao-1786553078.webp',
-      BUSINESS_REGISTRATION_IMAGE_URL,
-    );
-  }
-
-  return normalized;
+function normalizeBusinessRegistrationUrl(value: string): string {
+  const url = value.trim();
+  return /^(?:https?:\/\/|\/)/i.test(url) ? url : '';
 }
 
 const defaultColumns: FooterColumn[] = [
@@ -125,9 +101,14 @@ export default function Footer() {
   const showContact = settings['footer_show_contact'] !== '0';
   const openingHours = settings['footer_opening_hours'] || '';
   const showBusinessRegistration = settings['footer_show_business_registration'] !== '0';
-  const businessRegistrationHtml = normalizeBusinessRegistrationHtml(
-    settings['footer_business_registration_html'] || DEFAULT_BUSINESS_REGISTRATION_HTML,
+  const legacyBusinessRegistrationHtml = settings['footer_business_registration_html'] || '';
+  const legacyBusinessRegistrationImage = readHtmlAttribute(legacyBusinessRegistrationHtml, 'src');
+  const businessRegistrationImage = settings['footer_business_registration_image'] || legacyBusinessRegistrationImage.replace(/^http:\/\//i, 'https://');
+  const businessRegistrationUrl = normalizeBusinessRegistrationUrl(
+    settings['footer_business_registration_url'] || readHtmlAttribute(legacyBusinessRegistrationHtml, 'href'),
   );
+  const businessRegistrationAlt = settings['footer_business_registration_alt'] || 'Huy hiệu xác nhận';
+  const businessRegistrationImageSrc = businessRegistrationImage ? resolveMediaUrl(businessRegistrationImage) : '';
 
   const toggleAccordion = (id: string) => {
     setOpenAccordion((prev) => (prev === id ? null : id));
@@ -177,12 +158,25 @@ export default function Footer() {
               </div>
             )}
 
-            {showBusinessRegistration && businessRegistrationHtml && (
+            {showBusinessRegistration && businessRegistrationImageSrc && businessRegistrationUrl && (
               <div
                 className="footer__business-registration"
-                aria-label="Đã xác nhận với Bộ Công Thương"
-                dangerouslySetInnerHTML={{ __html: businessRegistrationHtml }}
-              />
+                aria-label={businessRegistrationAlt}
+              >
+                <a
+                  href={businessRegistrationUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={businessRegistrationAlt}
+                >
+                  <img
+                    src={businessRegistrationImageSrc}
+                    alt={businessRegistrationAlt}
+                    style={{ height: '44px', width: 'auto' }}
+                    decoding="async"
+                  />
+                </a>
+              </div>
             )}
 
             {/* Social Icons */}

@@ -29,6 +29,8 @@ class SettingController extends Controller
         'footer_show_social', 'footer_show_menus', 'footer_show_contact',
         'footer_opening_hours', 'footer_description', 'footer_copyright',
         'footer_show_business_registration', 'footer_business_registration_html',
+        'footer_business_registration_image', 'footer_business_registration_url',
+        'footer_business_registration_alt',
         'about_seo_title', 'about_seo_description', 'about_seo_keywords',
         'about_banner', 'about_title', 'about_content', 'about_faqs',
         'payment_free_shipping_threshold', 'payment_shipping_fee',
@@ -154,6 +156,15 @@ class SettingController extends Controller
 
         if ($value === '') {
             return;
+        }
+
+        if ($key === 'footer_business_registration_url') {
+            $scheme = strtolower((string) parse_url($value, PHP_URL_SCHEME));
+            if (!filter_var($value, FILTER_VALIDATE_URL) || !in_array($scheme, ['http', 'https'], true)) {
+                throw ValidationException::withMessages([
+                    'settings' => ['Footer registration URL phai la dia chi HTTP hoac HTTPS hop le.'],
+                ]);
+            }
         }
 
         if (in_array($key, ['openai_base_url', 'openai_image_base_url'], true)) {

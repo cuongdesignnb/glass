@@ -17,6 +17,8 @@ export const PUBLIC_SETTING_KEYS = new Set([
   'footer_show_social', 'footer_show_menus', 'footer_show_contact',
   'footer_opening_hours', 'footer_description', 'footer_copyright',
   'footer_show_business_registration', 'footer_business_registration_html',
+  'footer_business_registration_image', 'footer_business_registration_url',
+  'footer_business_registration_alt',
   'about_seo_title', 'about_seo_description', 'about_seo_keywords',
   'about_banner', 'about_title', 'about_content', 'about_faqs',
   'payment_free_shipping_threshold', 'payment_shipping_fee',
