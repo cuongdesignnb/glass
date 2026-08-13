@@ -20,7 +20,7 @@ interface FooterColumn {
 const DEFAULT_BUSINESS_REGISTRATION_HTML =
   '<a href="https://online.gov.vn/nen-tang/2eccae84-4b69-493f-bf7c-a308988725fe" target="_blank" rel="noopener noreferrer" title="Đã xác nhận với Bộ Công Thương"><img src="/storage/uploads/2026-08/DaThongBao-1786553078.webp" alt="Đã xác nhận với Bộ Công Thương" style="height:44px;width:auto" loading="lazy" decoding="async" /></a>';
 
-const BUSINESS_REGISTRATION_IMAGE_PATH = '/storage/uploads/2026-08/DaThongBao-1786553078.webp';
+const BUSINESS_REGISTRATION_IMAGE_URL = 'https://mitoo.vn/storage/uploads/2026-08/DaThongBao-1786553078.webp';
 
 /**
  * The official online.gov.vn image host is intermittently unavailable and a
@@ -29,15 +29,27 @@ const BUSINESS_REGISTRATION_IMAGE_PATH = '/storage/uploads/2026-08/DaThongBao-17
  * it is fast and reliable. This also repairs the HTML already saved in Admin.
  */
 function normalizeBusinessRegistrationHtml(html: string): string {
-  return html
+  const normalized = html
     .replaceAll('http://online.gov.vn', 'https://online.gov.vn')
     .replaceAll('http://fileserver.online.gov.vn', 'https://fileserver.online.gov.vn')
-    .replaceAll('/business-registration.svg', BUSINESS_REGISTRATION_IMAGE_PATH)
-    .replaceAll('https://mitoo.vn/business-registration.svg', BUSINESS_REGISTRATION_IMAGE_PATH)
+    .replaceAll('/business-registration.svg', BUSINESS_REGISTRATION_IMAGE_URL)
+    .replaceAll('https://mitoo.vn/business-registration.svg', BUSINESS_REGISTRATION_IMAGE_URL)
+    .replaceAll('/storage/uploads/2026-08/DaThongBao-1786553078.webp', BUSINESS_REGISTRATION_IMAGE_URL)
     .replace(
       /((?:src\s*=\s*)(["']))https:\/\/fileserver\.online\.gov\.vn\/uploads\/Resources\/iconxacnhan\/DaThongBao\.png(?:\?[^"']*)?\2/gi,
-      (_match, prefix: string, quote: string) => `${prefix}${BUSINESS_REGISTRATION_IMAGE_PATH}${quote}`,
+      (_match, prefix: string, quote: string) => `${prefix}${BUSINESS_REGISTRATION_IMAGE_URL}${quote}`,
     );
+
+  // Some older settings contain a truncated `<img>`/`<a>` fragment. Never
+  // inject malformed markup; use the complete first-party badge instead.
+  if (!/<a\b[^>]*>[\s\S]*?<img\b[^>]*\bsrc\s*=\s*["'][^"']+["'][^>]*\/?>(?:[\s\S]*?)<\/a>/i.test(normalized)) {
+    return DEFAULT_BUSINESS_REGISTRATION_HTML.replaceAll(
+      '/storage/uploads/2026-08/DaThongBao-1786553078.webp',
+      BUSINESS_REGISTRATION_IMAGE_URL,
+    );
+  }
+
+  return normalized;
 }
 
 const defaultColumns: FooterColumn[] = [
