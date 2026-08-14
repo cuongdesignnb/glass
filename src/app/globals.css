@@ -107,6 +107,10 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
 }
 
 body {
@@ -114,8 +118,22 @@ body {
   color: var(--color-text);
   background: var(--color-white);
   line-height: 1.7;
+  width: 100%;
+  max-width: 100%;
   overflow-x: hidden;
+  overscroll-behavior-x: none;
+  position: relative;
   letter-spacing: 0.01em;
+}
+
+/* Keep page-level layout inside the viewport. Components that intentionally
+   scroll horizontally (product sliders, tabs, etc.) keep their own overflow. */
+main,
+footer,
+main > *,
+footer > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 a {
@@ -995,7 +1013,17 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   align-items: center;
   gap: var(--space-3xl);
+  width: 100%;
+  min-width: 0;
   min-height: min(85vh, 700px);
+}
+
+.hero__bg > picture {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 /* Hero background images (responsive)
@@ -1218,6 +1246,8 @@ h1, h2, h3, h4, h5, h6 {
 
   .hero__content {
     max-width: 100%;
+    width: 100%;
+    min-width: 0;
     padding: var(--space-2xl) 0 var(--space-3xl);
     text-align: center;
   }

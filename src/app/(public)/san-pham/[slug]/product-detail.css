@@ -679,6 +679,13 @@
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-lg);
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .product-detail__main > * {
+    width: 100%;
+    max-width: 100%;
     min-width: 0;
   }
 
@@ -692,6 +699,8 @@
   .product-gallery__main {
     border-radius: 12px;
     aspect-ratio: 1;
+    width: 100%;
+    max-width: 100%;
   }
   .product-gallery__main img {
     width: 100%;
@@ -702,6 +711,7 @@
     gap: 6px;
     margin-top: 8px;
     padding-bottom: 4px;
+    max-width: 100%;
   }
   .product-gallery__thumb {
     width: 56px;
