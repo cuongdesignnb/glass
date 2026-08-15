@@ -21,6 +21,12 @@ export type ArticleListingFilters = {
   page: string;
 };
 
+export type ProductListingCanonicalPolicy = {
+  canonicalUrl: string;
+  isFacetUrl: boolean;
+  robots: { index: boolean; follow: boolean };
+};
+
 const PRODUCT_SORTS = new Set(['newest', 'price-asc', 'price-desc', 'popular', 'bestselling']);
 const ARTICLE_SORTS = new Set(['newest']);
 
@@ -94,6 +100,23 @@ export function productListingUrl(filters: ProductListingFilters): string {
   }
   const query = params.toString();
   return query ? `/san-pham?${query}` : '/san-pham';
+}
+
+/**
+ * Keep metadata and CollectionPage schema on the same canonical policy.
+ * Functional filters remain query based for UX, but are not SEO owners.
+ */
+export function productListingCanonicalPolicy(
+  rawSearchParams: RawSearchParams = {},
+): ProductListingCanonicalPolicy {
+  const filters = normalizeProductSearchParams(rawSearchParams);
+  const isFacetUrl = Object.keys(rawSearchParams).some((key) => key !== 'page');
+
+  return {
+    canonicalUrl: isFacetUrl ? '/san-pham' : productListingUrl(filters),
+    isFacetUrl,
+    robots: isFacetUrl ? { index: false, follow: true } : { index: true, follow: true },
+  };
 }
 
 export function productCategoryUrl(category: { slug?: unknown } | null | undefined): string {

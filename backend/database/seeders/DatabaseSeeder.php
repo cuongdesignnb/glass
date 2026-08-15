@@ -179,10 +179,10 @@ class DatabaseSeeder extends Seeder
             // Add sub-menus for "Sản Phẩm"
             if ($m['name'] === 'Sản Phẩm') {
                 $subMenus = [
-                    ['name' => 'Kính Cận', 'url' => '/san-pham?category=kinh-can', 'order' => 1],
-                    ['name' => 'Kính Râm', 'url' => '/san-pham?category=kinh-ram', 'order' => 2],
-                    ['name' => 'Kính Thời Trang', 'url' => '/san-pham?category=kinh-thoi-trang', 'order' => 3],
-                    ['name' => 'Gọng Kính', 'url' => '/san-pham?category=gong-kinh', 'order' => 4],
+                    ['name' => 'Kính Cận', 'url' => '/danh-muc/kinh-can', 'order' => 1],
+                    ['name' => 'Kính Râm', 'url' => '/danh-muc/kinh-ram', 'order' => 2],
+                    ['name' => 'Kính Thời Trang', 'url' => '/danh-muc/kinh-thoi-trang', 'order' => 3],
+                    ['name' => 'Gọng Kính', 'url' => '/danh-muc/gong-kinh', 'order' => 4],
                 ];
 
                 foreach ($subMenus as $sub) {

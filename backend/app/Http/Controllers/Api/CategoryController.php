@@ -68,11 +68,12 @@ class CategoryController extends Controller
             'meta_desc' => 'nullable|string',
         ]);
 
-        $data['slug'] = VietnameseSlug::make($data['name']);
-
-        $existing = Category::where('slug', $data['slug'])->exists();
-        if ($existing) {
-            $data['slug'] .= '-' . time();
+        $baseSlug = VietnameseSlug::make($data['name']);
+        $data['slug'] = $baseSlug;
+        $suffix = 2;
+        while (Category::where('slug', $data['slug'])->exists()) {
+            $data['slug'] = $baseSlug . '-' . $suffix;
+            $suffix++;
         }
 
         $category = Category::create($data);
@@ -94,14 +95,6 @@ class CategoryController extends Controller
             'meta_title' => 'nullable|string',
             'meta_desc' => 'nullable|string',
         ]);
-
-        if (isset($data['name'])) {
-            $newSlug = VietnameseSlug::make($data['name']);
-            if ($newSlug !== $category->slug) {
-                $existing = Category::where('slug', $newSlug)->where('id', '!=', $category->id)->exists();
-                $data['slug'] = $existing ? $newSlug . '-' . time() : $newSlug;
-            }
-        }
 
         $category->update($data);
         Cache::flush();

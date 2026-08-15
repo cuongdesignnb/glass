@@ -82,6 +82,7 @@ export function generateProductSchema(product: {
     '@type': 'Product',
     name: product.name,
     description: product.description,
+    url: `${APP_URL}${product.url}`,
     image: product.image,
     sku: product.sku,
     brand: product.brand

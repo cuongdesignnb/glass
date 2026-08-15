@@ -142,11 +142,9 @@ export default async function ProductDetailPage({
   const basePrice = Number(product.price) + addonTotal;
   const salePrice = product.sale_price ? Number(product.sale_price) + addonTotal : undefined;
 
-  const queryParams: string[] = [];
-  if (color) queryParams.push(`color=${encodeURIComponent(color)}`);
-  if (optionIdsStr) queryParams.push(`option_ids=${encodeURIComponent(optionIdsStr)}`);
-  const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
-  const schemaUrl = `/san-pham/${product.slug}${queryString}`;
+  // Color/addon query parameters are client UX state, not standalone SEO pages.
+  // Keep Product and Offer schema on the same clean URL as page metadata.
+  const schemaUrl = `/san-pham/${product.slug}`;
 
   const reviewData = await getProductReviews(product.id);
 
