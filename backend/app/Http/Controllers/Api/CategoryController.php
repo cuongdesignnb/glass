@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Helpers\VietnameseSlug;
+use App\Services\ProductCatalogCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
@@ -13,7 +14,7 @@ class CategoryController extends Controller
     public function index(Request $request)
     {
         $tree = $request->boolean('tree', false);
-        $cacheKey = "glass_categories_index_" . ($tree ? 'tree' : 'flat');
+        $cacheKey = ProductCatalogCache::categoryIndexKey($tree);
 
         $categories = Cache::remember($cacheKey, 3600, function() use ($request) {
             $countSubquery = "(
@@ -77,7 +78,7 @@ class CategoryController extends Controller
         }
 
         $category = Category::create($data);
-        Cache::flush();
+        ProductCatalogCache::bump();
 
         return response()->json($category, 201);
     }
@@ -97,7 +98,7 @@ class CategoryController extends Controller
         ]);
 
         $category->update($data);
-        Cache::flush();
+        ProductCatalogCache::bump();
 
         return response()->json($category);
     }
@@ -105,7 +106,7 @@ class CategoryController extends Controller
     public function destroy(Category $category)
     {
         $category->delete();
-        Cache::flush();
+        ProductCatalogCache::bump();
         return response()->json(['message' => 'Xóa danh mục thành công']);
     }
 }

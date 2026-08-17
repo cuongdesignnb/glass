@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\ProductAddonGroup;
 use App\Models\ProductAddonPrice;
 use App\Helpers\VietnameseSlug;
+use App\Services\ProductCatalogCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -23,7 +24,7 @@ class ProductController extends Controller
             return response()->json($this->getProductsData($request));
         }
 
-        $cacheKey = 'glass_products_index_' . md5(json_encode($request->all()));
+        $cacheKey = ProductCatalogCache::listKey($request->all());
 
         $products = Cache::remember($cacheKey, 3600, function() use ($request) {
             return $this->getProductsData($request);
@@ -126,7 +127,7 @@ class ProductController extends Controller
         if ($isAdmin) {
             $productData = $this->getProductDetailData($slugOrId);
         } else {
-            $cacheKey = "glass_product_show_" . $slugOrId;
+            $cacheKey = ProductCatalogCache::showKey($slugOrId);
             $productData = Cache::remember($cacheKey, 3600, function() use ($slugOrId) {
                 return $this->getProductDetailData($slugOrId);
             });
@@ -533,7 +534,7 @@ class ProductController extends Controller
             }
         }
 
-        Cache::flush();
+        ProductCatalogCache::bump();
 
         return response()->json($product->load(['faqs', 'addonGroups.options', 'addonPrices', 'collections', 'categories']), 201);
     }
@@ -654,7 +655,7 @@ class ProductController extends Controller
             }
         }
 
-        Cache::flush();
+        ProductCatalogCache::bump();
 
         return response()->json($product->load(['faqs', 'addonGroups.options', 'addonPrices', 'collections', 'categories']));
     }
@@ -690,7 +691,7 @@ class ProductController extends Controller
     public function destroy(Product $product)
     {
         $product->delete();
-        Cache::flush();
+        ProductCatalogCache::bump();
         return response()->json(['message' => 'Xóa sản phẩm thành công']);
     }
 
@@ -721,7 +722,7 @@ class ProductController extends Controller
                 ]);
             }
 
-            Cache::flush();
+            ProductCatalogCache::bump();
             return response()->json(['message' => 'Đã lưu ràng buộc cho sản phẩm']);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
@@ -1001,6 +1002,10 @@ class ProductController extends Controller
 
         fclose($handle);
 
+        if ($created > 0 || $updated > 0) {
+            ProductCatalogCache::bump();
+        }
+
         return response()->json([
             'success' => true,
             'message' => "Import hoàn tất: {$created} tạo mới, {$updated} cập nhật, {$skipped} bỏ qua",
@@ -1148,7 +1153,7 @@ class ProductController extends Controller
             // Addon tables may not exist, skip silently
         }
 
-        Cache::flush();
+        ProductCatalogCache::bump();
 
         return response()->json([
             'message' => 'Đã nhân bản sản phẩm thành công',
@@ -1309,7 +1314,7 @@ class ProductController extends Controller
                 ];
             });
 
-            \Illuminate\Support\Facades\Cache::flush();
+            ProductCatalogCache::bump();
 
             return response()->json($result);
 
@@ -1382,7 +1387,7 @@ class ProductController extends Controller
                 ]);
             });
 
-            \Illuminate\Support\Facades\Cache::flush();
+            ProductCatalogCache::bump();
 
             return response()->json([
                 'success' => true,
