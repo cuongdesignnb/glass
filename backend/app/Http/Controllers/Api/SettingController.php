@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 
 class SettingController extends Controller
@@ -38,25 +37,12 @@ class SettingController extends Controller
 
     public function index(Request $request)
     {
-        // Admin reads must always reflect the just-saved database values. The
-        // admin UI sends `fresh` on read-back; bypassing the shared cache here
-        // prevents an old cached settings snapshot from resetting the form.
-        $forceFresh = $request->has('fresh') || $request->user() !== null;
-
-        if ($forceFresh && $request->filled('group')) {
-            $settings = Setting::getByGroup($request->group);
-        } elseif ($forceFresh) {
-            $settings = Setting::getAllSettings();
-        } elseif ($request->filled('group')) {
-            $group = $request->group;
-            $settings = Cache::remember("glass_settings_group_{$group}", 3600, function() use ($group) {
-                return Setting::getByGroup($group);
-            });
-        } else {
-            $settings = Cache::remember("glass_settings_all", 3600, function() {
-                return Setting::getAllSettings();
-            });
-        }
+        // Settings are a small, infrequently changed table. Read the
+        // persisted values directly so public HTML/API responses cannot
+        // outlive an admin update in a Laravel cache entry.
+        $settings = $request->filled('group')
+            ? Setting::getByGroup($request->group)
+            : Setting::getAllSettings();
 
         if ($request->is('*public*')) {
             $settings = $this->filterSensitiveSettings($settings);
@@ -141,8 +127,6 @@ class SettingController extends Controller
                 $setting['group'] ?? 'general'
             );
         }
-
-        Cache::flush();
 
         return response()->json([
             'message' => 'Cập nhật cài đặt thành công',
@@ -241,8 +225,6 @@ class SettingController extends Controller
         Setting::setValue('custom_font_format', $extension, 'font');
         Setting::setValue('custom_font_enabled', '1', 'font');
 
-        Cache::flush();
-
         return response()->json([
             'message' => 'Upload font thành công',
             'font_name' => pathinfo($originalName, PATHINFO_FILENAME),
@@ -268,8 +250,6 @@ class SettingController extends Controller
         Setting::setValue('custom_font_url', '', 'font');
         Setting::setValue('custom_font_format', '', 'font');
         Setting::setValue('custom_font_enabled', '0', 'font');
-
-        Cache::flush();
 
         return response()->json(['message' => 'Đã xóa font tùy chỉnh']);
     }

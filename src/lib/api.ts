@@ -126,8 +126,12 @@ export const publicApi = {
 
   // Settings
   getSettings: (group?: string) => {
-    const query = group ? `?group=${group}` : "";
-    return fetchApi(`/public/settings${query}`);
+    const params = new URLSearchParams({ fresh: String(Date.now()) });
+    if (group) params.set("group", group);
+    return fetchApi(`/public/settings?${params.toString()}`, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" },
+    });
   },
 
   // FAQs

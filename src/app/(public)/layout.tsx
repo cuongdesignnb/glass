@@ -5,20 +5,19 @@ import ChatWidget from '@/components/layout/ChatWidget';
 import { CartProvider } from '@/lib/useCart';
 import { AuthProvider } from '@/lib/useAuth';
 import { publicApi } from '@/lib/api';
+import { getPublicSettings } from '@/lib/settings';
 import { SettingsProvider } from '@/lib/useSettings';
-import { flattenSettings } from '@/lib/settingsUtils';
 
 export default async function PublicLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [settingsRes, menusRes] = await Promise.all([
-    publicApi.getSettings().catch(() => ({})),
+  const [settings, menusRes] = await Promise.all([
+    getPublicSettings(),
     publicApi.getMenus('header').catch(() => []),
   ]);
 
-  const settings = flattenSettings(settingsRes);
   const menus = Array.isArray(menusRes) ? menusRes : [];
 
   return (

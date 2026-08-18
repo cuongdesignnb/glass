@@ -12,7 +12,10 @@ async function fetchSettings(): Promise<Record<string, string>> {
   if (cachedSettings) return cachedSettings;
   if (fetchPromise) return fetchPromise;
 
-  fetchPromise = fetch(`${API}/public/settings`)
+  fetchPromise = fetch(`${API}/public/settings?fresh=${Date.now()}`, {
+    cache: 'no-store',
+    headers: { 'Cache-Control': 'no-cache' },
+  })
     .then(res => res.json())
     .then(data => {
       const flat = flattenSettings(data);

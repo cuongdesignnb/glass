@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { FiArrowRight, FiTruck, FiShield, FiRefreshCw, FiAward, FiEye, FiCamera, FiPhone, FiCircle, FiSquare, FiHeart, FiMaximize } from 'react-icons/fi';
 import { publicApi } from '@/lib/api';
-import { getFreshPublicSettings } from '@/lib/settings';
+import { getPublicSettings } from '@/lib/settings';
 import { resolveMediaUrl } from '@/lib/media';
 import { DynamicCategories, DynamicProducts, DynamicVouchers, DynamicStats, DynamicConsultButton } from './HomeClient';
 import HomeCollections from './HomeCollections';
@@ -51,7 +51,7 @@ export default async function HomePage() {
     publicApi.getVouchers().catch(() => []),
     // Homepage testimonials are editable from admin at runtime; do not serve
     // a stale Next.js data-cache snapshot after an image is saved.
-    getFreshPublicSettings(),
+    getPublicSettings(),
   ]);
 
   const categories = Array.isArray(categoriesRes) ? categoriesRes.filter((c: any) => c.is_active !== false) : [];

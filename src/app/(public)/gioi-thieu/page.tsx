@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { getFreshPublicSettings } from '@/lib/settings';
+import { getPublicSettings } from '@/lib/settings';
 import { generateMeta, generateBreadcrumbSchema } from '@/lib/seo';
 import AboutClient from './AboutClient';
 
@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getFreshPublicSettings();
+  const settings = await getPublicSettings();
   const siteName = settings['site_name'] || 'Mitoo Eyewear';
   
   const title = settings['about_seo_title'] || `Về Chúng Tôi - ${siteName}`;
@@ -25,7 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AboutPage() {
-  const settings = await getFreshPublicSettings();
+  const settings = await getPublicSettings();
   const siteName = settings['site_name'] || 'Mitoo Eyewear';
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mitoo.vn';
   const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
