@@ -1,5 +1,8 @@
 import { MetadataRoute } from 'next';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mitoo.vn';
 const INTERNAL_API = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 const API_HOST = process.env.API_HOST || '';
@@ -13,8 +16,8 @@ function ssrHeaders(): Record<string, string> {
 async function fetchAll<T>(endpoint: string): Promise<T[]> {
   try {
     const response = await fetch(`${INTERNAL_API}${endpoint}`, {
-      next: { revalidate: 3600 },
-      headers: ssrHeaders(),
+      cache: 'no-store',
+      headers: { ...ssrHeaders(), 'Cache-Control': 'no-cache' },
     });
     if (!response.ok) return [];
     const data = await response.json();
