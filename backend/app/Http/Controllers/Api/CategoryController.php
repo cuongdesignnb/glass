@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Helpers\VietnameseSlug;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
-use App\Helpers\VietnameseSlug;
+use App\Models\Product;
 use App\Services\ProductCatalogCache;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
@@ -17,23 +20,11 @@ class CategoryController extends Controller
         $cacheKey = ProductCatalogCache::categoryIndexKey($tree);
 
         $categories = Cache::remember($cacheKey, 3600, function() use ($request) {
-            $countSubquery = "(
-                SELECT COUNT(DISTINCT p.id)
-                  FROM products p
-             LEFT JOIN category_product cp ON cp.product_id = p.id
-                 WHERE p.category_id = categories.id OR cp.category_id = categories.id
-            ) AS products_count";
-
-            $query = Category::select('categories.*')
-                ->selectRaw($countSubquery);
+            $query = $this->withActiveProductCount(Category::query());
 
             if ($request->boolean('tree', false)) {
                 return $query->whereNull('parent_id')
-                    ->with(['children' => function ($q) use ($countSubquery) {
-                        $q->select('categories.*')
-                          ->selectRaw($countSubquery)
-                          ->orderBy('order');
-                    }])
+                    ->with(['children' => fn ($q) => $this->withActiveProductCount($q)->orderBy('order')])
                     ->orderBy('order')
                     ->get();
             } else {
@@ -46,8 +37,8 @@ class CategoryController extends Controller
 
     public function show(string $slugOrId)
     {
-        $category = Category::withCount('products')
-            ->with('children')
+        $category = $this->withActiveProductCount(Category::query())
+            ->with(['children' => fn ($q) => $this->withActiveProductCount($q)])
             ->where('slug', $slugOrId)
             ->orWhere('id', is_numeric($slugOrId) ? $slugOrId : 0)
             ->firstOrFail();
@@ -108,5 +99,29 @@ class CategoryController extends Controller
         $category->delete();
         ProductCatalogCache::bump();
         return response()->json(['message' => 'Xóa danh mục thành công']);
+    }
+
+    /**
+     * Count active products that belong to a category through either the
+     * primary category_id or the category_product pivot, without duplicates.
+     */
+    private function withActiveProductCount(Builder|Relation $query): Builder
+    {
+        $builder = $query instanceof Relation ? $query->getQuery() : $query;
+        $categoryTable = $query->getModel()->getTable();
+        $categoryIdColumn = $categoryTable . '.id';
+
+        $countQuery = Product::query()
+            ->selectRaw('COUNT(DISTINCT products.id)')
+            ->leftJoin('category_product as category_product_count', 'category_product_count.product_id', '=', 'products.id')
+            ->where('products.is_active', true)
+            ->where(function (Builder $membership) use ($categoryIdColumn) {
+                $membership->whereColumn('products.category_id', $categoryIdColumn)
+                    ->orWhereColumn('category_product_count.category_id', $categoryIdColumn);
+            });
+
+        return $builder
+            ->select($categoryTable . '.*')
+            ->selectSub($countQuery, 'products_count');
     }
 }
