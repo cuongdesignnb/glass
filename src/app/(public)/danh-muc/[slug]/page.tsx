@@ -7,17 +7,12 @@ import { generateBreadcrumbSchema, generateMeta } from '@/lib/seo';
 import { formatPrice } from '@/lib/constants';
 import { productApiParams, normalizeProductSearchParams, type RawSearchParams } from '@/lib/listing-params';
 import CategoryDescription from './CategoryDescription';
+import CategoryChildrenHub, { plainText } from './CategoryChildrenHub';
 import '../../san-pham/products.css';
 
 export const revalidate = 300;
 
 type Props = { params: Promise<{ slug: string }>; searchParams?: Promise<RawSearchParams> | RawSearchParams };
-
-function plainText(value: unknown): string {
-  return typeof value === 'string'
-    ? value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
-    : '';
-}
 
 function containsHtml(value: string): boolean {
   return /<\/?[a-z][\s\S]*?>/i.test(value);
@@ -76,6 +71,7 @@ export default async function CategoryPage({ params, searchParams = {} }: Props)
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionSchema) }} />
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(generateBreadcrumbSchema(breadcrumb)) }} />
     <header className="products-header"><div className="container"><h1 className="heading-lg">{category.name}</h1>{category.description && <CategoryDescription content={category.description} isHtml={containsHtml(category.description)} />}</div></header>
+    <CategoryChildrenHub categoryName={category.name} categories={category.children} />
     <main className="container" style={{ paddingTop: 'var(--space-2xl)', paddingBottom: 'var(--space-4xl)' }}>
       {products.length === 0 ? <p>Chưa có sản phẩm trong danh mục này.</p> : <div className="product-grid">
         {products.map((product: any, index: number) => <Link key={product.id} href={`/san-pham/${product.slug}`} className="product-card">
