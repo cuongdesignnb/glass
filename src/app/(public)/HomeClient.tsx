@@ -6,14 +6,32 @@ import Image from 'next/image';
 import { publicApi } from '@/lib/api';
 import { useSettings } from '@/lib/useSettings';
 import { RiGlassesLine } from 'react-icons/ri';
-import { FiArrowRight, FiCopy, FiCheck, FiGift, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
+import { FiArrowRight, FiCopy, FiCheck, FiGift, FiChevronLeft, FiChevronRight, FiChevronDown, FiChevronUp } from 'react-icons/fi';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || '';
+const CATEGORY_PAGE_SIZE = 6;
 
 function getImageUrl(path: string | null) {
   if (!path) return null;
   if (path.startsWith('http')) return path;
   return `${API_BASE}${path}`;
+}
+
+function plainText(value: unknown): string {
+  if (typeof value !== 'string') return '';
+
+  return value
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&#x27;/gi, "'")
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 export function DynamicStats() {
@@ -57,6 +75,7 @@ const formatPrice = (price: number) =>
 export function DynamicCategories({ initialData }: { initialData?: any[] }) {
   const [categories, setCategories] = useState<any[]>(initialData || []);
   const [loading, setLoading] = useState(!initialData);
+  const [visibleCount, setVisibleCount] = useState(CATEGORY_PAGE_SIZE);
 
   useEffect(() => {
     if (initialData) return;
@@ -64,6 +83,7 @@ export function DynamicCategories({ initialData }: { initialData?: any[] }) {
       .then((data: any[]) => {
         const active = Array.isArray(data) ? data.filter((category: any) => category.is_active !== false) : [];
         setCategories(active);
+        setVisibleCount(CATEGORY_PAGE_SIZE);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -89,37 +109,57 @@ export function DynamicCategories({ initialData }: { initialData?: any[] }) {
 
   if (categories.length === 0) return null;
 
-  return (
-    <div className="category-showcase__grid">
-      {categories.map((category: any) => (
-        <Link key={category.slug || category.id} href={`/danh-muc/${encodeURIComponent(category.slug)}`} className="category-card">
-          <div className="category-card__visual">
-            {(() => {
-              const imageSource = getImageUrl(category.image || category.icon);
+  const visibleCategories = categories.slice(0, visibleCount);
+  const hasMoreCategories = visibleCount < categories.length;
+  const isCollapsed = visibleCount > CATEGORY_PAGE_SIZE;
 
-              return imageSource ? (
-                <Image
-                  src={imageSource}
-                  alt={category.name}
-                  fill
-                  sizes="(max-width: 768px) 40vw, (max-width: 1200px) 22vw, 240px"
-                  className="category-card__image"
-                />
-              ) : (
-                <RiGlassesLine className="category-card__fallback" aria-hidden="true" />
-              );
-            })()}
-          </div>
-          <div className="category-card__content">
-            <h3 className="category-card__name">{category.name}</h3>
-            <p className="category-card__desc">{category.description || 'Khám phá ngay'}</p>
-            <span className="category-card__accent" aria-hidden="true" />
-            <span className="category-card__count">{category.products_count || 0} SẢN PHẨM</span>
-            <span className="category-card__arrow" aria-hidden="true"><FiArrowRight /></span>
-          </div>
-        </Link>
-      ))}
-    </div>
+  return (
+    <>
+      <div className="category-showcase__grid" id="homepage-category-list">
+        {visibleCategories.map((category: any) => (
+          <Link key={category.slug || category.id} href={`/danh-muc/${encodeURIComponent(category.slug)}`} className="category-card">
+            <div className="category-card__visual">
+              {(() => {
+                const imageSource = getImageUrl(category.image || category.icon);
+
+                return imageSource ? (
+                  <Image
+                    src={imageSource}
+                    alt={category.name}
+                    fill
+                    sizes="(max-width: 768px) 40vw, (max-width: 1200px) 22vw, 240px"
+                    className="category-card__image"
+                  />
+                ) : (
+                  <RiGlassesLine className="category-card__fallback" aria-hidden="true" />
+                );
+              })()}
+            </div>
+            <div className="category-card__content">
+              <h3 className="category-card__name">{category.name}</h3>
+              <p className="category-card__desc">{plainText(category.description) || 'Khám phá ngay'}</p>
+              <span className="category-card__accent" aria-hidden="true" />
+              <span className="category-card__count">{category.products_count || 0} SẢN PHẨM</span>
+              <span className="category-card__arrow" aria-hidden="true"><FiArrowRight /></span>
+            </div>
+          </Link>
+        ))}
+      </div>
+      {(hasMoreCategories || isCollapsed) && (
+        <div className="category-showcase__actions">
+          <button
+            type="button"
+            className="category-showcase__more"
+            aria-controls="homepage-category-list"
+            aria-expanded={isCollapsed}
+            onClick={() => setVisibleCount(hasMoreCategories ? Math.min(visibleCount + CATEGORY_PAGE_SIZE, categories.length) : CATEGORY_PAGE_SIZE)}
+          >
+            {hasMoreCategories ? 'Xem thêm' : 'Thu gọn'}
+            {hasMoreCategories ? <FiChevronDown aria-hidden="true" /> : <FiChevronUp aria-hidden="true" />}
+          </button>
+        </div>
+      )}
+    </>
   );
 }
 
