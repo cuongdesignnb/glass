@@ -5,6 +5,7 @@ import { getPublicSettings } from '@/lib/settings';
 import { productCategoryUrl } from '@/lib/listing-params';
 import Breadcrumb from '@/components/layout/Breadcrumb';
 import ProductDetailClient from './ProductDetailClient';
+import ProductCategoryLinks from './ProductCategoryLinks';
 
 export const revalidate = 60;
 
@@ -226,6 +227,10 @@ export default async function ProductDetailPage({
       )}
       <div className="container" style={{ paddingTop: 'var(--space-lg)', paddingBottom: 'var(--space-4xl)' }}>
         <Breadcrumb items={breadcrumbItems} />
+        <ProductCategoryLinks
+          primaryCategory={product.category}
+          categories={product.categories}
+        />
         <ProductDetailClient
           product={product}
           reviewData={reviewData}
