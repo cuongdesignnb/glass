@@ -38,7 +38,10 @@ class CategoryController extends Controller
     public function show(string $slugOrId)
     {
         $category = $this->withActiveProductCount(Category::query())
-            ->with(['children' => fn ($q) => $this->withActiveProductCount($q)])
+            ->with([
+                'parent',
+                'children' => fn ($q) => $this->withActiveProductCount($q),
+            ])
             ->where('slug', $slugOrId)
             ->orWhere('id', is_numeric($slugOrId) ? $slugOrId : 0)
             ->firstOrFail();
