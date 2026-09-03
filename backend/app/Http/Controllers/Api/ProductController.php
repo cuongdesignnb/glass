@@ -125,12 +125,19 @@ class ProductController extends Controller
         $isAdmin = auth('sanctum')->check();
 
         if ($isAdmin) {
-            $productData = $this->getProductDetailData($slugOrId);
+            $productData = $this->getProductDetailData($slugOrId, true);
         } else {
             $cacheKey = ProductCatalogCache::showKey($slugOrId);
             $productData = Cache::remember($cacheKey, 3600, function() use ($slugOrId) {
-                return $this->getProductDetailData($slugOrId);
+                return $this->getProductDetailData($slugOrId, false);
             });
+
+            // A cache entry may have been written before the product was
+            // deactivated. Never expose that stale payload to public callers.
+            if ($productData && !($productData['is_active'] ?? false)) {
+                Cache::forget($cacheKey);
+                $productData = null;
+            }
         }
 
         if (!$productData) {
@@ -160,6 +167,7 @@ class ProductController extends Controller
     public function related(Request $request, string $slugOrId)
     {
         $product = Product::with('categories')
+            ->active()
             ->where(function ($query) use ($slugOrId) {
                 $query->where('slug', $slugOrId)
                     ->orWhere('id', is_numeric($slugOrId) ? $slugOrId : 0);
@@ -346,14 +354,21 @@ class ProductController extends Controller
     /**
      * Get raw product detail data without caching
      */
-    private function getProductDetailData(string $slugOrId)
+    private function getProductDetailData(string $slugOrId, bool $includeInactive = false)
     {
-        $product = Product::with(['category', 'categories', 'faqs' => function($q) {
+        $query = Product::with(['category', 'categories', 'faqs' => function($q) {
             $q->where('is_active', true)->orderBy('order', 'asc');
         }])
-            ->where('slug', $slugOrId)
-            ->orWhere('id', is_numeric($slugOrId) ? $slugOrId : 0)
-            ->first();
+            ->where(function ($query) use ($slugOrId) {
+                $query->where('slug', $slugOrId)
+                    ->orWhere('id', is_numeric($slugOrId) ? $slugOrId : 0);
+            });
+
+        if (!$includeInactive) {
+            $query->active();
+        }
+
+        $product = $query->first();
 
         if (!$product) {
             return null;
