@@ -4,6 +4,7 @@ import { generateMeta, generateProductSchema } from '@/lib/seo';
 import { getPublicSettings } from '@/lib/settings';
 import { productCategoryUrl } from '@/lib/listing-params';
 import { productColorLabel, productMaterialLabel } from '@/lib/product-schema-fields';
+import { productImageSources } from '@/lib/product-image-sources';
 import Breadcrumb from '@/components/layout/Breadcrumb';
 import ProductDetailClient from './ProductDetailClient';
 import ProductCategoryLinks from './ProductCategoryLinks';
@@ -94,12 +95,14 @@ export async function generateMetadata({
   const selectedVariant = product.color_variants?.find((variant: any) =>
     color && (variant.color === color || variant.color_name?.toLowerCase() === color.toLowerCase())
   );
-  const imageSources = selectedVariant?.images?.length
-    ? Array.from(new Set([...(selectedVariant.images || []), ...(product.images || [])]))
-    : product.images;
-  const images = imageSources?.map((img: string) =>
+  const imageSources = productImageSources({
+    variantImages: selectedVariant?.images,
+    galleryImages: product.images,
+    thumbnail: product.thumbnail,
+  });
+  const images = imageSources.map((img: string) =>
     img.startsWith('http') ? img : `${API_MEDIA_URL}${img}`
-  ) || [];
+  );
 
   const settings = await getPublicSettings();
   const siteName = settings['site_name'] || 'MITOO';
@@ -153,12 +156,14 @@ export default async function ProductDetailPage({
   const selectedVariant = product.color_variants?.find((variant: any) =>
     color && (variant.color === color || variant.color_name?.toLowerCase() === color.toLowerCase())
   );
-  const imageSources = selectedVariant?.images?.length
-    ? Array.from(new Set([...(selectedVariant.images || []), ...(product.images || [])]))
-    : product.images;
-  const images = imageSources?.map((img: string) =>
+  const imageSources = productImageSources({
+    variantImages: selectedVariant?.images,
+    galleryImages: product.images,
+    thumbnail: product.thumbnail,
+  });
+  const images = imageSources.map((img: string) =>
     img.startsWith('http') ? img : `${API_MEDIA_URL}${img}`
-  ) || [];
+  );
 
   // Breadcrumb items
   const breadcrumbItems = [
