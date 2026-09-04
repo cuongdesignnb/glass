@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { generateMeta, generateProductSchema } from '@/lib/seo';
 import { getPublicSettings } from '@/lib/settings';
 import { productCategoryUrl } from '@/lib/listing-params';
+import { productColorLabel, productMaterialLabel } from '@/lib/product-schema-fields';
 import Breadcrumb from '@/components/layout/Breadcrumb';
 import ProductDetailClient from './ProductDetailClient';
 import ProductCategoryLinks from './ProductCategoryLinks';
@@ -179,6 +180,9 @@ export default async function ProductDetailPage({
     image: images,
     sku: product.sku,
     brand: product.brand,
+    category: typeof product.category?.name === 'string' ? product.category.name.trim() || undefined : undefined,
+    material: productMaterialLabel(product.materials),
+    color: productColorLabel(product.color_names),
     price: basePrice,
     salePrice: salePrice,
     url: schemaUrl,

@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { getPublicSettings } from './settings';
+import { normalizeOptionalString } from './product-schema-fields';
 
 interface SEOProps {
   title: string;
@@ -72,11 +73,17 @@ export function generateProductSchema(product: {
   image: string[];
   sku?: string;
   brand?: string;
+  category?: string;
+  material?: string;
+  color?: string;
   price: number;
   salePrice?: number;
   url: string;
   inStock: boolean;
 }) {
+  const sku = normalizeOptionalString(product.sku);
+  const brand = normalizeOptionalString(product.brand);
+
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -84,10 +91,11 @@ export function generateProductSchema(product: {
     description: product.description,
     url: `${APP_URL}${product.url}`,
     image: product.image,
-    sku: product.sku,
-    brand: product.brand
-      ? { '@type': 'Brand', name: product.brand }
-      : undefined,
+    sku,
+    brand: brand ? { '@type': 'Brand', name: brand } : undefined,
+    category: normalizeOptionalString(product.category),
+    material: normalizeOptionalString(product.material),
+    color: normalizeOptionalString(product.color),
     offers: {
       '@type': 'Offer',
       url: `${APP_URL}${product.url}`,
