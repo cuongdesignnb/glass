@@ -655,13 +655,32 @@ normalize_environment_modes() {
 normalize_writable_modes() {
     local root="$1"
     local writable_path
+    local runtime_path
+    local -a runtime_paths=(
+        "$root/backend/storage/framework/cache"
+        "$root/backend/storage/framework/cache/data"
+        "$root/backend/storage/framework/sessions"
+        "$root/backend/storage/framework/views"
+        "$root/backend/storage/logs"
+        "$root/backend/bootstrap/cache"
+    )
+
     for writable_path in "$root/backend/storage" "$root/backend/bootstrap/cache"; do
         mkdir -p "$writable_path"
         if ! is_enabled "${SKIP_OWNERSHIP_CHANGES:-0}"; then
-            chgrp -R "$WWW_GROUP" "$writable_path"
+            chown -R "$WWW_USER:${WWW_GROUP:-$WWW_USER}" "$writable_path"
         fi
         find "$writable_path" -type d -exec chmod 2775 {} +
         find "$writable_path" -type f -exec chmod 664 {} +
+    done
+
+    for runtime_path in "${runtime_paths[@]}"; do
+        mkdir -p "$runtime_path"
+        if ! is_enabled "${SKIP_OWNERSHIP_CHANGES:-0}"; then
+            chown -R "$WWW_USER:${WWW_GROUP:-$WWW_USER}" "$runtime_path"
+        fi
+        find "$runtime_path" -type d -exec chmod 2775 {} +
+        find "$runtime_path" -type f -exec chmod 664 {} +
     done
 }
 
@@ -675,14 +694,114 @@ normalize_laravel_permissions() {
 
 laravel_boot_as_www() {
     local root="$1"
-    runuser -u "$WWW_USER" -- "$PHP_BIN" "$root/backend/artisan" about --only=environment >/dev/null
+    run_artisan_as_www "$root" about --only=environment >/dev/null
     emit "LARAVEL_BOOT_AS_WWW" "PASS"
+}
+
+run_artisan_as_www() {
+    local root="$1"
+    shift
+    (($# > 0)) || die "ARTISAN_COMMAND" "BLOCKED" "An Artisan command is required"
+    runuser -u "$WWW_USER" -- "$PHP_BIN" "$root/backend/artisan" "$@"
+}
+
+verify_laravel_runtime_as_www() {
+    local root="$1"
+    local relative_path
+    local -a runtime_paths=(
+        backend/storage/framework/cache
+        backend/storage/framework/cache/data
+        backend/storage/framework/sessions
+        backend/storage/framework/views
+        backend/storage/logs
+        backend/bootstrap/cache
+    )
+
+    for relative_path in "${runtime_paths[@]}"; do
+        [[ -d "$root/$relative_path" ]] \
+            || die "LARAVEL_RUNTIME" "BLOCKED" "Runtime directory is missing: $root/$relative_path"
+        runuser -u "$WWW_USER" -- test -r "$root/$relative_path" -a -w "$root/$relative_path" \
+            || die "LARAVEL_RUNTIME" "BLOCKED" "WWW_USER cannot read/write: $root/$relative_path"
+    done
+
+    local env_file
+    for env_file in "$root/backend/.env" "$root/backend/.env.production"; do
+        if [[ -f "$env_file" ]]; then
+            runuser -u "$WWW_USER" -- test -r "$env_file" \
+                || die "LARAVEL_ENV" "BLOCKED" "WWW_USER cannot read Laravel environment file: $env_file"
+        fi
+    done
+
+    emit "LARAVEL_RUNTIME_AS_WWW" "PASS"
+}
+
+run_laravel_cache_probe_as_www() {
+    local root="$1"
+    local key="mitoo_deploy_cache_probe_$(date +%s%N)_$$"
+    local probe
+    local output
+    local status=0
+
+    probe="$(printf '%s\n' \
+        '$cache = \Illuminate\Support\Facades\Cache::store();' \
+        "\$key = '${key}';" \
+        '$value = '\''MITOO_DEPLOY_CACHE_PROBE'\'';' \
+        '$write = false; $read = false; $delete = false;' \
+        'try {' \
+        '    $write = (bool) $cache->put($key, $value, 60);' \
+        '    if ($write) { $read = $cache->get($key) === $value; }' \
+        '    if ($read) { $delete = (bool) $cache->forget($key) && !$cache->has($key); }' \
+        '} catch (\Throwable $exception) {' \
+        '    $write = false; $read = false; $delete = false;' \
+        '}' \
+        'try { $cache->forget($key); } catch (\Throwable $exception) {}' \
+        'printf("CACHE_WRITE=%s\n", $write ? "PASS" : "FAIL");' \
+        'printf("CACHE_READ=%s\n", $read ? "PASS" : "FAIL");' \
+        'printf("CACHE_DELETE=%s\n", $delete ? "PASS" : "FAIL");' \
+        'if (!$write || !$read || !$delete) { exit(1); }')"
+
+    if output="$(run_artisan_as_www "$root" tinker --execute="$probe" 2>&1)"; then
+        status=0
+    else
+        status=$?
+    fi
+    printf '%s\n' "$output"
+
+    if ! grep -Fq 'CACHE_WRITE=PASS' <<< "$output"; then
+        printf 'CACHE_WRITE=FAIL\n'
+    fi
+    if ! grep -Fq 'CACHE_READ=PASS' <<< "$output"; then
+        printf 'CACHE_READ=FAIL\n'
+    fi
+    if ! grep -Fq 'CACHE_DELETE=PASS' <<< "$output"; then
+        printf 'CACHE_DELETE=FAIL\n'
+    fi
+
+    grep -Fq 'CACHE_WRITE=PASS' <<< "$output" \
+        && grep -Fq 'CACHE_READ=PASS' <<< "$output" \
+        && grep -Fq 'CACHE_DELETE=PASS' <<< "$output" \
+        && [[ "$status" -eq 0 ]] \
+        || {
+            emit "CACHE_PROBE" "FAILED"
+            return 1
+        }
+
+    emit "CACHE_PROBE" "PASS"
+}
+
+prepare_laravel_runtime_as_www() {
+    local root="$1"
+    normalize_laravel_permissions "$root"
+    rebuild_laravel_cache "$root"
+    normalize_laravel_permissions "$root"
+    verify_laravel_runtime_as_www "$root"
+    run_laravel_cache_probe_as_www "$root"
 }
 
 validate_backend() {
     (
         cd "$STAGE_DIR/backend"
-        composer install --no-interaction --prefer-dist --no-progress
+        composer install --no-interaction --prefer-dist --no-progress --no-scripts
         "$PHP_BIN" -l app/Http/Controllers/Api/CollectionController.php
         "$PHP_BIN" artisan test
 
@@ -693,11 +812,8 @@ validate_backend() {
         composer dump-autoload \
             --no-dev --optimize --classmap-authoritative --no-interaction --no-scripts
     )
-    "$PHP_BIN" "$STAGE_DIR/backend/artisan" package:discover --ansi
-    "$PHP_BIN" "$STAGE_DIR/backend/artisan" optimize:clear
-    "$PHP_BIN" "$STAGE_DIR/backend/artisan" config:cache
+    prepare_laravel_runtime_as_www "$STAGE_DIR"
     assert_collision_manifest_absent "$STAGE_DIR/backend"
-    normalize_laravel_permissions "$STAGE_DIR"
     laravel_boot_as_www "$STAGE_DIR"
     emit "BACKEND_VALIDATION" "PASS"
 }
@@ -715,7 +831,7 @@ validate_frontend() {
 }
 
 detect_pending_migrations() {
-    "$PHP_BIN" "$STAGE_DIR/backend/artisan" migrate:status --no-ansi > "$RELEASE_RECORD/migration-status-release.txt"
+    run_artisan_as_www "$STAGE_DIR" migrate:status --no-ansi > "$RELEASE_RECORD/migration-status-release.txt"
     if grep -Eq '(^|[[:space:]])Pending([[:space:]]|$)' "$RELEASE_RECORD/migration-status-release.txt"; then
         MIGRATION_PENDING=1
     else
@@ -759,7 +875,7 @@ run_approved_migrations() {
     MIGRATION_EXECUTED=1
     emit "DATABASE_ROLLBACK_REQUIRED" "MANUAL_REVIEW_IF_MIGRATION_STARTS"
     secure_record_file "$RELEASE_RECORD/migration-execution.txt"
-    "$PHP_BIN" "$STAGE_DIR/backend/artisan" migrate --force 2>&1 | tee "$RELEASE_RECORD/migration-execution.txt"
+    run_artisan_as_www "$STAGE_DIR" migrate --force 2>&1 | tee "$RELEASE_RECORD/migration-execution.txt"
     chmod 600 "$RELEASE_RECORD/migration-execution.txt"
     emit "MIGRATION_EXECUTED" "YES"
     emit "DATABASE_ROLLBACK_REQUIRED" "MANUAL_REVIEW_IF_ACTIVATION_FAILS"
@@ -817,9 +933,9 @@ move_new_runtime_to_production() {
 rebuild_laravel_cache() {
     local root="$1"
     clear_laravel_manifests "$root/backend"
-    "$PHP_BIN" "$root/backend/artisan" package:discover --ansi
-    "$PHP_BIN" "$root/backend/artisan" optimize:clear
-    "$PHP_BIN" "$root/backend/artisan" config:cache
+    run_artisan_as_www "$root" package:discover --ansi
+    run_artisan_as_www "$root" optimize:clear
+    run_artisan_as_www "$root" config:cache
     assert_collision_manifest_absent "$root/backend"
 }
 
@@ -877,7 +993,7 @@ ensure_ai_scheduler_online() {
 
 validate_ai_queue_schedule() {
     local schedule_output
-    schedule_output="$(cd "$APP_ROOT/backend" && "$PHP_BIN" artisan schedule:list --no-ansi)"
+    schedule_output="$(run_artisan_as_www "$APP_ROOT" schedule:list --no-ansi)"
     grep -Fq 'ai:queue-process' <<< "$schedule_output" \
         || die "AI_QUEUE_SCHEDULE" "BLOCKED" "Laravel schedule does not contain ai:queue-process"
     emit "AI_QUEUE_SCHEDULE" "PASS"
@@ -914,8 +1030,7 @@ activate_release() {
     restore_environment_and_tracked_files
     move_new_runtime_to_production
 
-    normalize_laravel_permissions "$APP_ROOT"
-    rebuild_laravel_cache "$APP_ROOT"
+    prepare_laravel_runtime_as_www "$APP_ROOT"
     laravel_boot_as_www "$APP_ROOT"
     reload_php_fpm
     pm2 restart "$PM2_APP" --update-env
@@ -974,8 +1089,7 @@ rollback_release() {
     restore_environment_and_tracked_files || source_status=1
     restore_old_runtime_components || runtime_status=1
 
-    normalize_laravel_permissions "$APP_ROOT" || runtime_status=1
-    rebuild_laravel_cache "$APP_ROOT" || runtime_status=1
+    prepare_laravel_runtime_as_www "$APP_ROOT" || runtime_status=1
     laravel_boot_as_www "$APP_ROOT" || runtime_status=1
     reload_php_fpm || runtime_status=1
     pm2 restart "$PM2_APP" --update-env || pm2_status=1

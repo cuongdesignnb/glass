@@ -220,6 +220,7 @@ test_approved_migration_runs_after_backup() {
     export MIGRATION_BACKUP_MARKER="$backup_marker"
     export MIGRATION_EXECUTION_MARKER="$execution_marker"
     PHP_BIN="$fake_php"
+    run_artisan_as_www() { "$PHP_BIN" "$STAGE_DIR/backend/artisan" "$@"; }
     MIGRATION_PENDING=1
     ALLOW_MIGRATIONS=1
     DATABASE_BACKUP_OK=1
@@ -284,6 +285,138 @@ test_permission_normalization() {
     assert_eq "$(stat -c '%a' "$repo/backend/.env")" "640"
     assert_eq "$(stat -c '%a' "$repo/backend/storage/logs")" "2775"
     assert_eq "$(stat -c '%a' "$repo/backend/storage/logs/test.log")" "664"
+}
+
+test_runtime_directories_created_from_missing_fixture() {
+    local repo
+    repo="$(new_git_repo runtime-missing)"
+    mkdir -p "$repo/backend"
+    printf '#!/usr/bin/env php\n' > "$repo/backend/artisan"
+    printf 'APP_ENV=production\n' > "$repo/backend/.env"
+    git -C "$repo" add backend/artisan
+    git -C "$repo" commit -qm 'runtime fixture'
+
+    SKIP_OWNERSHIP_CHANGES=1
+    WWW_GROUP="$(id -g)"
+    normalize_laravel_permissions "$repo" >/dev/null
+
+    local relative_path
+    for relative_path in \
+        backend/storage/framework/cache \
+        backend/storage/framework/cache/data \
+        backend/storage/framework/sessions \
+        backend/storage/framework/views \
+        backend/storage/logs \
+        backend/bootstrap/cache; do
+        [[ -d "$repo/$relative_path" ]] || fail_test "runtime directory was not created: $relative_path"
+    done
+}
+
+test_runtime_directory_modes() {
+    case "$(uname -s)" in
+        MINGW*|MSYS*|CYGWIN*)
+            printf '# POSIX mode assertions are exercised by Ubuntu CI\n'
+            return 0
+            ;;
+    esac
+
+    local repo
+    repo="$(new_git_repo runtime-modes)"
+    mkdir -p "$repo/backend"
+    printf '#!/usr/bin/env php\n' > "$repo/backend/artisan"
+    printf 'APP_ENV=production\n' > "$repo/backend/.env"
+    git -C "$repo" add backend/artisan
+    git -C "$repo" commit -qm 'runtime mode fixture'
+
+    SKIP_OWNERSHIP_CHANGES=1
+    WWW_GROUP="$(id -g)"
+    normalize_laravel_permissions "$repo" >/dev/null
+
+    local relative_path
+    for relative_path in \
+        backend/storage/framework/cache \
+        backend/storage/framework/cache/data \
+        backend/storage/framework/sessions \
+        backend/storage/framework/views \
+        backend/storage/logs \
+        backend/bootstrap/cache; do
+        assert_eq "$(stat -c '%a' "$repo/$relative_path")" "2775"
+    done
+}
+
+test_rebuild_uses_www_user() {
+    local calls="$TEST_TMP/rebuild-artisan-calls"
+    clear_laravel_manifests() { :; }
+    assert_collision_manifest_absent() { :; }
+    run_artisan_as_www() { printf '%s\n' "$*" >> "$calls"; }
+
+    rebuild_laravel_cache "$TEST_TMP/rebuild-root"
+
+    assert_eq "$(wc -l < "$calls" | tr -d ' ')" "3"
+    grep -Fq ' package:discover --ansi' "$calls"
+    grep -Fq ' optimize:clear' "$calls"
+    grep -Fq ' config:cache' "$calls"
+}
+
+test_post_rebuild_permission_order() {
+    local events="$TEST_TMP/rebuild-order"
+    normalize_laravel_permissions() { printf 'normalize\n' >> "$events"; }
+    rebuild_laravel_cache() { printf 'rebuild\n' >> "$events"; }
+    verify_laravel_runtime_as_www() { printf 'verify\n' >> "$events"; }
+    run_laravel_cache_probe_as_www() { printf 'probe\n' >> "$events"; }
+
+    prepare_laravel_runtime_as_www "$TEST_TMP/order-root"
+
+    assert_eq "$(tr '\n' ' ' < "$events" | sed 's/[[:space:]]*$//')" 'normalize rebuild normalize verify probe'
+}
+
+test_cache_probe_failure_blocks_activation() {
+    normalize_laravel_permissions() { :; }
+    rebuild_laravel_cache() { :; }
+    verify_laravel_runtime_as_www() { :; }
+    run_laravel_cache_probe_as_www() { return 17; }
+
+    assert_command_fails prepare_laravel_runtime_as_www "$TEST_TMP/probe-failure"
+}
+
+test_cache_probe_success_allows_activation() {
+    local marker="$TEST_TMP/probe-success"
+    normalize_laravel_permissions() { :; }
+    rebuild_laravel_cache() { :; }
+    verify_laravel_runtime_as_www() { :; }
+    run_laravel_cache_probe_as_www() { touch "$marker"; }
+
+    prepare_laravel_runtime_as_www "$TEST_TMP/probe-success-root"
+    assert_file_exists "$marker"
+}
+
+test_rollback_uses_safe_runtime_path() {
+    local marker="$TEST_TMP/rollback-runtime-safe"
+    APP_ROOT="$TEST_TMP/rollback-app"
+    FAILED_RUNTIME_PATH="$TEST_TMP/rollback-failed"
+    ROLLBACK_RUNTIME_PATH="$TEST_TMP/rollback-runtime"
+    mkdir -p "$APP_ROOT" "$FAILED_RUNTIME_PATH"
+    OLD_NEXT_MOVED=0
+    OLD_NODE_MOVED=0
+    OLD_VENDOR_MOVED=0
+    NEW_NEXT_MOVED=0
+    NEW_NODE_MOVED=0
+    NEW_VENDOR_MOVED=0
+    MIGRATION_EXECUTED=0
+
+    pm2() { :; }
+    git() { :; }
+    restore_environment_and_tracked_files() { :; }
+    restore_old_runtime_components() { :; }
+    prepare_laravel_runtime_as_www() { touch "$marker"; }
+    laravel_boot_as_www() { :; }
+    reload_php_fpm() { :; }
+    ai_scheduler_pm2_exists() { return 1; }
+    check_local_next_health() { :; }
+    check_pm2_online() { :; }
+
+    rollback_release
+    assert_file_exists "$marker"
 }
 
 test_stale_collision_manifest_is_deleted() {
@@ -379,7 +512,7 @@ test_existing_scheduler_restarts_only_scheduler_app() {
 }
 
 test_schedule_validation_targets_queue_command() {
-    grep -Fq "artisan schedule:list --no-ansi" "$LIBRARY"
+    grep -Fq 'run_artisan_as_www "$APP_ROOT" schedule:list --no-ansi' "$LIBRARY"
     grep -Fq "grep -Fq 'ai:queue-process'" "$LIBRARY"
 }
 
@@ -425,6 +558,13 @@ run_test 'approved migration runs only after backup' test_approved_migration_run
 run_test 'HTTP 200 HTML API fails' test_api_200_html_fails
 run_test 'valid collections JSON passes' test_api_json_passes
 run_test 'Laravel permission normalization passes' test_permission_normalization
+run_test 'missing Laravel runtime directories are created' test_runtime_directories_created_from_missing_fixture
+run_test 'Laravel runtime directories use 2775 mode' test_runtime_directory_modes
+run_test 'Laravel cache rebuild runs as WWW_USER' test_rebuild_uses_www_user
+run_test 'runtime permissions are normalized after rebuild' test_post_rebuild_permission_order
+run_test 'cache probe failure blocks activation' test_cache_probe_failure_blocks_activation
+run_test 'cache probe success allows activation' test_cache_probe_success_allows_activation
+run_test 'rollback uses the safe runtime permission path' test_rollback_uses_safe_runtime_path
 run_test 'stale Collision manifest is deleted' test_stale_collision_manifest_is_deleted
 run_test 'activation failure triggers rollback' test_activation_failure_calls_rollback
 run_test 'public smoke uses local SNI resolve' test_hairpin_smoke_uses_resolve
