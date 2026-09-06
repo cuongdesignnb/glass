@@ -27,6 +27,12 @@ export type ProductListingCanonicalPolicy = {
   robots: { index: boolean; follow: boolean };
 };
 
+export type ArticleListingCanonicalPolicy = {
+  canonicalUrl: string;
+  isFacetUrl: boolean;
+  robots: { index: boolean; follow: boolean };
+};
+
 const PRODUCT_SORTS = new Set(['newest', 'price-asc', 'price-desc', 'popular', 'bestselling']);
 const ARTICLE_SORTS = new Set(['newest']);
 
@@ -149,4 +155,18 @@ export function articleListingUrl(filters: ArticleListingFilters): string {
   if (filters.page !== '1') params.set('page', filters.page);
   const query = params.toString();
   return query ? `/bai-viet?${query}` : '/bai-viet';
+}
+
+/** Keep article listing metadata and CollectionPage schema on one SEO policy. */
+export function articleListingCanonicalPolicy(
+  rawSearchParams: RawSearchParams = {},
+): ArticleListingCanonicalPolicy {
+  const filters = normalizeArticleSearchParams(rawSearchParams);
+  const isFacetUrl = Object.keys(rawSearchParams).some((key) => key !== 'page');
+
+  return {
+    canonicalUrl: isFacetUrl ? '/bai-viet' : articleListingUrl(filters),
+    isFacetUrl,
+    robots: isFacetUrl ? { index: false, follow: true } : { index: true, follow: true },
+  };
 }

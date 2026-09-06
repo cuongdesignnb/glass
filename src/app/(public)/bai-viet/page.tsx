@@ -1,21 +1,24 @@
 import { Metadata } from 'next';
 import { generateMeta, generateCollectionPageSchema, generateBreadcrumbSchema } from '@/lib/seo';
 import { publicApi } from '@/lib/api';
-import { articleApiParams, articleListingUrl, normalizeArticleSearchParams, type RawSearchParams } from '@/lib/listing-params';
+import {
+  articleApiParams,
+  articleListingCanonicalPolicy,
+  articleListingUrl,
+  normalizeArticleSearchParams,
+  type RawSearchParams,
+} from '@/lib/listing-params';
 import ArticleListingClient from './ArticleListingClient';
 import './articles.css';
 
 export async function generateMetadata({ searchParams = {} }: { searchParams?: RawSearchParams }): Promise<Metadata> {
-  const rawKeys = Object.keys(searchParams).filter((key) => key !== 'page');
-  const filters = normalizeArticleSearchParams(searchParams);
-  const isFacetUrl = rawKeys.length > 0;
-  const canonicalUrl = isFacetUrl ? '/bai-viet' : articleListingUrl(filters);
+  const seoPolicy = articleListingCanonicalPolicy(searchParams);
   return await generateMeta({
     title: 'Bài Viết & Kiến Thức Kính Mắt',
     description: 'Khám phá xu hướng kính mắt mới nhất, mẹo chăm sóc, kiến thức chuyên sâu và đánh giá từ các chuyên gia. Cập nhật liên tục.',
     keywords: 'bài viết kính mắt, kiến thức kính, xu hướng kính, chăm sóc kính, tư vấn kính mắt',
-    url: canonicalUrl,
-    robots: isFacetUrl ? { index: false, follow: true } : { index: true, follow: true },
+    url: seoPolicy.canonicalUrl,
+    robots: seoPolicy.robots,
   });
 }
 
@@ -23,6 +26,8 @@ export const revalidate = 60;
 
 export default async function ArticlesPage({ searchParams = {} }: { searchParams?: RawSearchParams }) {
   const filters = normalizeArticleSearchParams(searchParams);
+  const seoPolicy = articleListingCanonicalPolicy(searchParams);
+  const listingUrl = articleListingUrl(filters);
   const [articleResponse, categoryResponse] = await Promise.all([
     publicApi.getArticles(articleApiParams(filters)).catch(() => ({ data: [], current_page: 1, last_page: 1, total: 0 })),
     publicApi.getArticleCategories({}).catch(() => []),
@@ -36,7 +41,6 @@ export default async function ArticlesPage({ searchParams = {} }: { searchParams
     lastPage: Number(articleResponse?.last_page) || 1,
     total: Number(articleResponse?.total) || 0,
   };
-  const canonicalUrl = articleListingUrl(filters);
   const breadcrumbItems = [
     { name: 'Trang chủ', url: '/' },
     { name: 'Bài viết', url: '/bai-viet' },
@@ -45,7 +49,7 @@ export default async function ArticlesPage({ searchParams = {} }: { searchParams
   const collectionSchema = generateCollectionPageSchema({
     name: 'Bài Viết & Kiến Thức Kính Mắt',
     description: 'Khám phá xu hướng kính mắt mới nhất, mẹo chăm sóc và kiến thức chuyên sâu.',
-    url: canonicalUrl,
+    url: seoPolicy.canonicalUrl,
   });
 
   return (
@@ -61,7 +65,7 @@ export default async function ArticlesPage({ searchParams = {} }: { searchParams
         dangerouslySetInnerHTML={{ __html: JSON.stringify(generateBreadcrumbSchema(breadcrumbItems)) }}
       />
       <ArticleListingClient
-        key={canonicalUrl}
+        key={listingUrl}
         initialArticles={articles}
         initialPagination={pagination}
         initialCategories={categories}
