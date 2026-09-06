@@ -38,6 +38,7 @@ STAGE_DIR=""
 RELEASE_RECORD=""
 ROLLBACK_RUNTIME_PATH=""
 FAILED_RUNTIME_PATH=""
+ROLLBACK_SCHEDULER_CONFIG=""
 BACKUP_BRANCH=""
 MYSQL_CNF=""
 MYSQL_DATABASE_FILE=""
@@ -282,7 +283,7 @@ validate_runtime_commands() {
     local command_name
     for command_name in \
         git flock curl df awk sed grep find sort stat cp mv mkdir install gzip sha256sum \
-        mysql mysqldump node npm npx composer pm2 nginx runuser id ss mktemp tee touch tr \
+        mysql mysqldump node npm npx composer pm2 nginx runuser id ps ss mktemp tee touch tr \
         chmod chgrp chown dirname sleep; do
         require_command "$command_name"
     done
@@ -970,21 +971,47 @@ ai_scheduler_pm2_exists() {
 
 check_ai_scheduler_online() {
     local pid
+    local runtime_identity
+    local runtime_user
+    local runtime_group
+    local expected_group="${WWW_GROUP:-$WWW_USER}"
+
     pid="$(pm2 pid "$AI_SCHEDULER_PM2_APP" | awk 'NF {print; exit}')"
     [[ "$pid" =~ ^[1-9][0-9]*$ ]] \
         || die "AI_SCHEDULER_ONLINE" "BLOCKED" "PM2 app $AI_SCHEDULER_PM2_APP has no online PID"
     pm2 describe "$AI_SCHEDULER_PM2_APP" | grep -Eq 'status.*online' \
         || die "AI_SCHEDULER_ONLINE" "BLOCKED" "PM2 app $AI_SCHEDULER_PM2_APP is not online"
+
+    runtime_identity="$(ps -o user= -o group= -p "$pid" | awk 'NF {print $1, $2; exit}' || true)"
+    runtime_user=""
+    runtime_group=""
+    if [[ -n "$runtime_identity" ]]; then
+        read -r runtime_user runtime_group <<< "$runtime_identity"
+    fi
     emit "AI_SCHEDULER_PID" "$pid"
+    emit "AI_SCHEDULER_USER" "${runtime_user:-unknown}"
+    emit "AI_SCHEDULER_GROUP" "${runtime_group:-unknown}"
+    if [[ "$runtime_user" != "$WWW_USER" || "$runtime_group" != "$expected_group" ]]; then
+        emit "AI_SCHEDULER_RUNTIME_USER" "BLOCKED"
+        emit "AI_SCHEDULER_RUNTIME_GROUP" "BLOCKED"
+        printf 'ERROR: scheduler PID %s runs as %s:%s; expected %s:%s\n' \
+            "$pid" "${runtime_user:-unknown}" "${runtime_group:-unknown}" "$WWW_USER" "$expected_group" >&2
+        return 1
+    fi
+
+    emit "AI_SCHEDULER_RUNTIME_IDENTITY" "PASS"
+    emit "AI_SCHEDULER_ONLINE" "PASS"
 }
 
 ensure_ai_scheduler_online() {
+    local scheduler_config="${AI_SCHEDULER_CONFIG:-$APP_ROOT/ecosystem.ai-scheduler.config.cjs}"
+    require_file "$scheduler_config"
+
     if ai_scheduler_pm2_exists; then
-        pm2 restart "$AI_SCHEDULER_PM2_APP" --update-env
-        emit "AI_SCHEDULER_RESTART" "PASS"
+        pm2 startOrRestart "$scheduler_config" --only "$AI_SCHEDULER_PM2_APP" --update-env
+        emit "AI_SCHEDULER_ECOSYSTEM_RELOAD" "PASS"
     else
-        require_file "$APP_ROOT/ecosystem.ai-scheduler.config.cjs"
-        pm2 start "$APP_ROOT/ecosystem.ai-scheduler.config.cjs" --only "$AI_SCHEDULER_PM2_APP"
+        pm2 start "$scheduler_config" --only "$AI_SCHEDULER_PM2_APP" --update-env
         emit "AI_SCHEDULER_START" "PASS"
     fi
     check_ai_scheduler_online
@@ -1062,6 +1089,17 @@ restore_old_runtime_components() {
     fi
 }
 
+preserve_scheduler_config_for_rollback() {
+    local source_path="$APP_ROOT/ecosystem.ai-scheduler.config.cjs"
+    local destination_path="$FAILED_RUNTIME_PATH/ecosystem.ai-scheduler.config.cjs"
+
+    ROLLBACK_SCHEDULER_CONFIG=""
+    [[ -f "$source_path" ]] || return 1
+    cp "$source_path" "$destination_path"
+    chmod 600 "$destination_path"
+    ROLLBACK_SCHEDULER_CONFIG="$destination_path"
+}
+
 rollback_release() {
     ROLLBACK_STARTED=1
     set +e
@@ -1074,6 +1112,7 @@ rollback_release() {
     pm2 stop "$PM2_APP" >/dev/null 2>&1
     mkdir -p "$FAILED_RUNTIME_PATH/backend" || runtime_status=1
     chmod 700 "$FAILED_RUNTIME_PATH" "$FAILED_RUNTIME_PATH/backend" || runtime_status=1
+    preserve_scheduler_config_for_rollback || runtime_status=1
 
     if [[ "$NEW_NEXT_MOVED" == "1" ]]; then
         move_failed_runtime_component "$APP_ROOT/.next" "$FAILED_RUNTIME_PATH/.next" || runtime_status=1
@@ -1093,9 +1132,12 @@ rollback_release() {
     laravel_boot_as_www "$APP_ROOT" || runtime_status=1
     reload_php_fpm || runtime_status=1
     pm2 restart "$PM2_APP" --update-env || pm2_status=1
-    if ai_scheduler_pm2_exists; then
-        pm2 restart "$AI_SCHEDULER_PM2_APP" --update-env || pm2_status=1
-        check_ai_scheduler_online || pm2_status=1
+    if [[ -n "$ROLLBACK_SCHEDULER_CONFIG" ]]; then
+        AI_SCHEDULER_CONFIG="$ROLLBACK_SCHEDULER_CONFIG" ensure_ai_scheduler_online || pm2_status=1
+    else
+        emit "AI_SCHEDULER_RUNTIME_IDENTITY" "BLOCKED"
+        printf 'ERROR: safe scheduler ecosystem config is unavailable during rollback\n' >&2
+        pm2_status=1
     fi
     check_local_next_health 18 5 || runtime_status=1
     check_pm2_online || pm2_status=1

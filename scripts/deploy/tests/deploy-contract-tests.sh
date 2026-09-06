@@ -396,6 +396,8 @@ test_rollback_uses_safe_runtime_path() {
     FAILED_RUNTIME_PATH="$TEST_TMP/rollback-failed"
     ROLLBACK_RUNTIME_PATH="$TEST_TMP/rollback-runtime"
     mkdir -p "$APP_ROOT" "$FAILED_RUNTIME_PATH"
+    printf "module.exports = { apps: [{ name: 'glass-ai-scheduler', uid: 'www', gid: 'www' }] };\n" \
+        > "$APP_ROOT/ecosystem.ai-scheduler.config.cjs"
     OLD_NEXT_MOVED=0
     OLD_NODE_MOVED=0
     OLD_VENDOR_MOVED=0
@@ -411,6 +413,10 @@ test_rollback_uses_safe_runtime_path() {
     prepare_laravel_runtime_as_www() { touch "$marker"; }
     laravel_boot_as_www() { :; }
     reload_php_fpm() { :; }
+    ensure_ai_scheduler_online() {
+        [[ "${AI_SCHEDULER_CONFIG:-}" == "$ROLLBACK_SCHEDULER_CONFIG" ]]
+        touch "$marker"
+    }
     ai_scheduler_pm2_exists() { return 1; }
     check_local_next_health() { :; }
     check_pm2_online() { :; }
@@ -483,20 +489,22 @@ test_dangerous_legacy_commands_absent() {
 
 test_missing_scheduler_is_started_automatically() {
     local calls="$TEST_TMP/scheduler-pm2-start-calls"
+    local validation="$TEST_TMP/scheduler-start-validation"
     ai_scheduler_pm2_exists() { return 1; }
-    check_ai_scheduler_online() { :; }
+    check_ai_scheduler_online() { touch "$validation"; }
     pm2() { printf '%s\n' "$*" >> "$calls"; }
     AI_SCHEDULER_PM2_APP=glass-ai-scheduler
     AI_SCHEDULER_BOOTSTRAP_REQUIRED=1
 
     ensure_ai_scheduler_online >/dev/null
 
-    grep -Fxq "start $APP_ROOT/ecosystem.ai-scheduler.config.cjs --only glass-ai-scheduler" "$calls"
+    grep -Fxq "start $APP_ROOT/ecosystem.ai-scheduler.config.cjs --only glass-ai-scheduler --update-env" "$calls"
     assert_eq "$(wc -l < "$calls" | tr -d ' ')" "1"
+    assert_file_exists "$validation"
     assert_eq "$AI_SCHEDULER_BOOTSTRAP_REQUIRED" "0"
 }
 
-test_existing_scheduler_restarts_only_scheduler_app() {
+test_existing_scheduler_reloads_ecosystem_config() {
     local calls="$TEST_TMP/scheduler-pm2-calls"
     ai_scheduler_pm2_exists() { return 0; }
     check_ai_scheduler_online() { :; }
@@ -506,9 +514,90 @@ test_existing_scheduler_restarts_only_scheduler_app() {
 
     ensure_ai_scheduler_online >/dev/null
 
-    grep -Fxq 'restart glass-ai-scheduler --update-env' "$calls"
+    grep -Fxq "startOrRestart $APP_ROOT/ecosystem.ai-scheduler.config.cjs --only glass-ai-scheduler --update-env" "$calls"
     assert_eq "$(wc -l < "$calls" | tr -d ' ')" "1"
     assert_eq "$AI_SCHEDULER_BOOTSTRAP_REQUIRED" "0"
+}
+
+test_ecosystem_scheduler_uid() {
+    (
+        cd "$REPO_ROOT"
+        node -e "const cfg=require('./ecosystem.ai-scheduler.config.cjs'); const app=cfg.apps.find((item)=>item.name==='glass-ai-scheduler'); if (!app || app.uid !== 'www') process.exit(1);"
+    )
+}
+
+test_ecosystem_scheduler_gid() {
+    (
+        cd "$REPO_ROOT"
+        node -e "const cfg=require('./ecosystem.ai-scheduler.config.cjs'); const app=cfg.apps.find((item)=>item.name==='glass-ai-scheduler'); if (!app || app.gid !== 'www') process.exit(1);"
+    )
+}
+
+test_scheduler_www_identity_passes() {
+    local output
+    WWW_USER=www
+    WWW_GROUP=www
+    pm2() {
+        case "$1" in
+            pid) printf '2481\n' ;;
+            describe) printf 'status online\n' ;;
+        esac
+    }
+    ps() { printf 'www www\n'; }
+
+    output="$(check_ai_scheduler_online)"
+    grep -Fxq 'AI_SCHEDULER_USER=www' <<< "$output"
+    grep -Fxq 'AI_SCHEDULER_GROUP=www' <<< "$output"
+    grep -Fxq 'AI_SCHEDULER_RUNTIME_IDENTITY=PASS' <<< "$output"
+    grep -Fxq 'AI_SCHEDULER_ONLINE=PASS' <<< "$output"
+}
+
+test_scheduler_root_identity_blocks() {
+    WWW_USER=www
+    WWW_GROUP=www
+    pm2() {
+        case "$1" in
+            pid) printf '2482\n' ;;
+            describe) printf 'status online\n' ;;
+        esac
+    }
+    ps() { printf 'root root\n'; }
+
+    assert_command_fails check_ai_scheduler_online
+}
+
+test_scheduler_wrong_group_blocks() {
+    WWW_USER=www
+    WWW_GROUP=www
+    pm2() {
+        case "$1" in
+            pid) printf '2483\n' ;;
+            describe) printf 'status online\n' ;;
+        esac
+    }
+    ps() { printf 'www root\n'; }
+
+    assert_command_fails check_ai_scheduler_online
+}
+
+test_scheduler_invalid_pid_blocks() {
+    WWW_USER=www
+    WWW_GROUP=www
+    pm2() {
+        case "$1" in
+            pid) : ;;
+            describe) printf 'status online\n' ;;
+        esac
+    }
+
+    assert_command_fails check_ai_scheduler_online
+}
+
+test_no_global_process_kill() {
+    if grep -Eiq '(^|[^[:alnum:]_])(pkill|killall)([^[:alnum:]_]|$)' \
+        "$LIBRARY" "$REPO_ROOT/ecosystem.ai-scheduler.config.cjs"; then
+        fail_test 'global process-kill command is present'
+    fi
 }
 
 test_schedule_validation_targets_queue_command() {
@@ -572,7 +661,14 @@ run_test 'staging uses detached worktree' test_staging_uses_detached_worktree
 run_test 'database backup includes integrity checks' test_database_backup_has_integrity_checks
 run_test 'dangerous legacy commands are absent' test_dangerous_legacy_commands_absent
 run_test 'missing scheduler starts automatically' test_missing_scheduler_is_started_automatically
-run_test 'existing scheduler restarts only its PM2 app' test_existing_scheduler_restarts_only_scheduler_app
+run_test 'existing scheduler reloads its ecosystem config' test_existing_scheduler_reloads_ecosystem_config
+run_test 'ecosystem scheduler uid is www' test_ecosystem_scheduler_uid
+run_test 'ecosystem scheduler gid is www' test_ecosystem_scheduler_gid
+run_test 'scheduler www identity passes' test_scheduler_www_identity_passes
+run_test 'scheduler root identity is blocked' test_scheduler_root_identity_blocks
+run_test 'scheduler wrong group is blocked' test_scheduler_wrong_group_blocks
+run_test 'scheduler invalid PID is blocked' test_scheduler_invalid_pid_blocks
+run_test 'scheduler has no global process kill' test_no_global_process_kill
 run_test 'deploy validates the AI queue schedule' test_schedule_validation_targets_queue_command
 run_test 'scheduler bootstrap checks PID and online status' test_scheduler_bootstrap_checks_pid_and_online_status
 run_test 'deployment lock blocks parallel run' test_lock_blocks_parallel_run
