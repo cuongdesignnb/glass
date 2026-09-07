@@ -301,36 +301,43 @@ export function DynamicVouchers({ initialData }: { initialData?: any[] }) {
       )}
 
       {vouchers.length > 0 && (
-        <SliderWrap scrollRef={sliderRef}>
-          <div className="voucher-slider">
-            <div className="voucher-slider__track" ref={sliderRef}>
-              {vouchers.map((voucher: any) => (
-                <div key={voucher.id} className="voucher-slide">
-                  <div className="voucher-slide__left">
-                    <span className="voucher-slide__prefix">Giảm</span>
-                    {voucher.type === 'percent' ? (
-                      <span className="voucher-slide__number">{voucher.value}<span className="voucher-slide__unit">%</span></span>
-                    ) : (
-                      <span className="voucher-slide__number">{voucher.value >= 1000000 ? (voucher.value / 1000000).toFixed(voucher.value % 1000000 === 0 ? 0 : 1) + 'M' : Math.round(voucher.value / 1000) + 'K'}</span>
-                    )}
-                  </div>
-                  <div className="voucher-slide__cutline"><span className="voucher-slide__scissors">✂</span></div>
-                  <div className="voucher-slide__right">
-                    <span className="voucher-slide__code">Mã: <strong>{voucher.code}</strong></span>
-                    <p className="voucher-slide__condition">{voucher.description || (voucher.min_order > 0 ? `Cho đơn từ ${formatVND(voucher.min_order)}` : 'Áp dụng mọi đơn hàng')}</p>
-                    {voucher.type === 'percent' && voucher.max_discount > 0 && <p className="voucher-slide__max">Tối đa {formatVND(voucher.max_discount)}</p>}
-                    <div className="voucher-slide__footer">
-                      <span className="voucher-slide__terms">Điều kiện áp dụng</span>
-                      <button type="button" className={`voucher-slide__copy ${copiedId === voucher.id ? 'voucher-slide__copy--copied' : ''}`} onClick={() => copyCode(voucher.code, voucher.id)}>
-                        {copiedId === voucher.id ? <><FiCheck /> Đã copy</> : <><FiCopy /> Sao chép mã</>}
-                      </button>
+        <>
+          <SliderWrap scrollRef={sliderRef}>
+            <div className="voucher-slider">
+              <div className="voucher-slider__track" ref={sliderRef}>
+                {vouchers.map((voucher: any) => (
+                  <div key={voucher.id} className="voucher-slide">
+                    <div className="voucher-slide__left">
+                      <span className="voucher-slide__prefix">Giảm</span>
+                      {voucher.type === 'percent' ? (
+                        <span className="voucher-slide__number">{voucher.value}<span className="voucher-slide__unit">%</span></span>
+                      ) : (
+                        <span className="voucher-slide__number">{voucher.value >= 1000000 ? (voucher.value / 1000000).toFixed(voucher.value % 1000000 === 0 ? 0 : 1) + 'M' : Math.round(voucher.value / 1000) + 'K'}</span>
+                      )}
+                    </div>
+                    <div className="voucher-slide__cutline"><span className="voucher-slide__scissors">✂</span></div>
+                    <div className="voucher-slide__right">
+                      <span className="voucher-slide__code">Mã: <strong>{voucher.code}</strong></span>
+                      <p className="voucher-slide__condition">{voucher.description || (voucher.min_order > 0 ? `Cho đơn từ ${formatVND(voucher.min_order)}` : 'Áp dụng mọi đơn hàng')}</p>
+                      {voucher.type === 'percent' && voucher.max_discount > 0 && <p className="voucher-slide__max">Tối đa {formatVND(voucher.max_discount)}</p>}
+                      <div className="voucher-slide__footer">
+                        <span className="voucher-slide__terms">Điều kiện áp dụng</span>
+                        <button type="button" className={`voucher-slide__copy ${copiedId === voucher.id ? 'voucher-slide__copy--copied' : ''}`} onClick={() => copyCode(voucher.code, voucher.id)}>
+                          {copiedId === voucher.id ? <><FiCheck /> Đã copy</> : <><FiCopy /> Sao chép mã</>}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
+          </SliderWrap>
+          <div style={{ textAlign: 'center', marginTop: 'var(--space-lg)' }}>
+            <Link href="/voucher" className="btn btn-secondary">
+              Xem tất cả mã giảm giá <FiArrowRight />
+            </Link>
           </div>
-        </SliderWrap>
+        </>
       )}
     </div>
   );

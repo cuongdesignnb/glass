@@ -10,6 +10,23 @@ use Illuminate\Support\Str;
 class PageController extends Controller
 {
     /**
+     * List the published CMS pages that are safe to discover publicly.
+     *
+     * Keep this payload intentionally small: the detail endpoint remains the
+     * source for page content, while sitemap consumers only need identifiers
+     * and the last update timestamp.
+     */
+    public function publicIndex()
+    {
+        $pages = Page::query()
+            ->where('is_published', true)
+            ->orderByDesc('updated_at')
+            ->get(['id', 'title', 'slug', 'updated_at']);
+
+        return response()->json($pages);
+    }
+
+    /**
      * Display a listing of the resource.
      */
     public function index()

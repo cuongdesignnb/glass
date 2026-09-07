@@ -42,10 +42,9 @@ const defaultColumns: FooterColumn[] = [
   {
     title: 'Hỗ Trợ',
     links: [
-      { label: 'Hướng Dẫn Mua Hàng', url: '/huong-dan-mua-hang' },
-      { label: 'Chính Sách Đổi Trả', url: '/chinh-sach-doi-tra' },
-      { label: 'Chính Sách Bảo Hành', url: '/chinh-sach-bao-hanh' },
-      { label: 'Vận Chuyển', url: '/van-chuyen' },
+      { label: 'Chính Sách Vận Chuyển', url: '/chinh-sach-van-chuyen' },
+      { label: 'Chính Sách Đổi Trả', url: '/quy-dinh-doi-tra' },
+      { label: 'Chính Sách Bảo Mật', url: '/chinh-sach-bao-mat' },
       { label: 'Thử Kính AI', url: '/thu-kinh-ao' },
       { label: 'Tra Cứu Đơn Hàng', url: '/tra-cuu-don-hang' },
     ],
@@ -87,11 +86,12 @@ export default function Footer() {
     }
   } catch { /* use empty */ }
   if (bottomLinks.length === 0) {
+    const termsUrl = settings['footer_terms_url']?.trim() || '';
     bottomLinks = [
       { label: 'Chính sách bảo mật', url: settings['footer_privacy_url'] || '/chinh-sach-bao-mat' },
-      { label: 'Điều khoản sử dụng', url: settings['footer_terms_url'] || '/dieu-khoan-su-dung' },
-      { label: 'Chính sách đổi trả', url: '/chinh-sach-doi-tra' },
-      { label: 'Chính sách vận chuyển', url: '/van-chuyen' },
+      ...(termsUrl ? [{ label: 'Điều khoản sử dụng', url: termsUrl }] : []),
+      { label: 'Chính sách đổi trả', url: '/quy-dinh-doi-tra' },
+      { label: 'Chính sách vận chuyển', url: '/chinh-sach-van-chuyen' },
     ];
   }
 

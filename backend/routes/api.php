@@ -51,6 +51,7 @@ Route::prefix('public')->group(function () {
     Route::get('/articles/{slugOrId}', [ArticleController::class, 'show']);
     Route::get('/article-categories', [ArticleCategoryController::class, 'index']);
     Route::get('/article-categories/{slugOrId}', [ArticleCategoryController::class, 'show']);
+    Route::get('/pages', [PageController::class, 'publicIndex']);
     Route::get('/pages/{slugOrId}', [PageController::class, 'show']);
     Route::get('/banners', [BannerController::class, 'index']);
     Route::get('/menus', [MenuController::class, 'index']);
