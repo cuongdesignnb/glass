@@ -1,14 +1,14 @@
-# Glass Eyewear
-> Cửa hàng kính mắt thời trang cao cấp Glass Eyewear, hỗ trợ công nghệ thử kính AI thế hệ mới trực tiếp trên trình duyệt.
+# MITOO
+> MITOO là website kính mắt cung cấp sản phẩm, danh mục, bài viết kiến thức và tính năng thử kính trực tuyến.
 
 ## Trang chính
-- [Trang chủ](https://mitoo.vn/): Trang chủ của Glass Eyewear.
+- [Trang chủ](https://mitoo.vn/): Trang chủ của MITOO.
 - [Sản phẩm](https://mitoo.vn/san-pham): Danh mục sản phẩm kính mắt, gọng kính, tròng kính.
 - [Thử kính AI](https://mitoo.vn/thu-kinh-ao): Tính năng thử kính ảo (Virtual Try-On) trực tuyến sử dụng công nghệ AI.
 - [Bài viết & Kiến thức](https://mitoo.vn/bai-viet): Các bài viết chia sẻ xu hướng kính mắt, mẹo chăm sóc kính và kiến thức nhãn khoa.
-- [Liên hệ](https://mitoo.vn/lien-he): Thông tin liên hệ, bản đồ và hỗ trợ khách hàng.
+- [Liên hệ](https://mitoo.vn/lien-he): Thông tin liên hệ và hỗ trợ khách hàng của MITOO.
 
 ## Hỗ trợ & Chính sách
-- [Chính sách đổi trả](https://mitoo.vn/quy-dinh-doi-tra): Quy định về đổi trả sản phẩm lỗi hoặc không vừa vặn.
-- [Chính sách vận chuyển](https://mitoo.vn/chinh-sach-van-chuyen): Thời gian và phí giao hàng toàn quốc.
-- [Chính sách bảo mật](https://mitoo.vn/chinh-sach-bao-mat)
+- [Chính sách đổi trả](https://mitoo.vn/quy-dinh-doi-tra): Thông tin về quy định đổi trả của MITOO.
+- [Chính sách vận chuyển](https://mitoo.vn/chinh-sach-van-chuyen): Thông tin về chính sách vận chuyển của MITOO.
+- [Chính sách bảo mật](https://mitoo.vn/chinh-sach-bao-mat): Thông tin về chính sách bảo mật của MITOO.

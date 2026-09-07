@@ -51,12 +51,19 @@ test('sitemap discovers CMS pages, contact, and deduplicates URLs', () => {
   assert.doesNotMatch(sitemap, /\/san-pham\?category=|\/san-pham\?page=/);
 });
 
-test('llms.txt only advertises live policy routes', () => {
+test('llms.txt uses accurate MITOO branding and live policy routes', () => {
   const llms = read('public/llms.txt');
 
+  assert.match(llms, /^# MITOO/m);
+  assert.doesNotMatch(llms, /Glass Eyewear/);
+  assert.doesNotMatch(llms, /bản đồ/);
   assert.match(llms, /https:\/\/mitoo\.vn\/lien-he/);
-  assert.match(llms, /https:\/\/mitoo\.vn\/quy-dinh-doi-tra/);
-  assert.match(llms, /https:\/\/mitoo\.vn\/chinh-sach-van-chuyen/);
-  assert.match(llms, /https:\/\/mitoo\.vn\/chinh-sach-bao-mat/);
+  for (const url of [
+    'https://mitoo.vn/quy-dinh-doi-tra',
+    'https://mitoo.vn/chinh-sach-van-chuyen',
+    'https://mitoo.vn/chinh-sach-bao-mat',
+  ]) {
+    assert.equal(llms.split(url).length - 1, 1, `expected one policy link for ${url}`);
+  }
   assert.doesNotMatch(llms, /\/huong-dan-mua-hang|\/chinh-sach-doi-tra|\/chinh-sach-bao-hanh|\/van-chuyen|\/dieu-khoan-su-dung/);
 });
