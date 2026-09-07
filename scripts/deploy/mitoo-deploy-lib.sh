@@ -1003,18 +1003,105 @@ check_ai_scheduler_online() {
     emit "AI_SCHEDULER_ONLINE" "PASS"
 }
 
+check_ai_scheduler_pm2_identity() {
+    local expected_uid
+    local expected_gid
+    local identity_output
+    local identity_status=0
+    local match_count=""
+    local pm2_uid=""
+    local pm2_gid=""
+
+    expected_uid="$(id -u "$WWW_USER")" \
+        || die "AI_SCHEDULER_PM2_IDENTITY" "BLOCKED" "Unable to resolve UID for $WWW_USER"
+    expected_gid="$(id -g "$WWW_USER")" \
+        || die "AI_SCHEDULER_PM2_IDENTITY" "BLOCKED" "Unable to resolve GID for $WWW_USER"
+
+    if identity_output="$(
+        pm2 jlist |
+            AI_SCHEDULER_PM2_APP="$AI_SCHEDULER_PM2_APP" node -e '
+                const fs = require("fs");
+                const appName = process.env.AI_SCHEDULER_PM2_APP;
+                let parseOk = true;
+                let entries = [];
+                try {
+                    entries = JSON.parse(fs.readFileSync(0, "utf8"));
+                } catch (error) {
+                    parseOk = false;
+                }
+                const matches = Array.isArray(entries)
+                    ? entries.filter((entry) => entry && entry.name === appName)
+                    : [];
+                const env = matches.length === 1 && matches[0].pm2_env
+                    ? matches[0].pm2_env
+                    : {};
+                const uid = env.uid === undefined || env.uid === null ? "unknown" : String(env.uid);
+                const gid = env.gid === undefined || env.gid === null ? "unknown" : String(env.gid);
+                console.log(`PM2_MATCH_COUNT=${matches.length}`);
+                console.log(`PM2_UID=${uid}`);
+                console.log(`PM2_GID=${gid}`);
+                if (!parseOk || matches.length !== 1 || !/^[0-9]+$/.test(uid) || !/^[0-9]+$/.test(gid)) {
+                    process.exit(1);
+                }
+            '
+    )"; then
+        identity_status=0
+    else
+        identity_status=$?
+    fi
+
+    match_count="$(awk -F= '$1 == "PM2_MATCH_COUNT" {print $2; exit}' <<< "$identity_output")"
+    pm2_uid="$(awk -F= '$1 == "PM2_UID" {print $2; exit}' <<< "$identity_output")"
+    pm2_gid="$(awk -F= '$1 == "PM2_GID" {print $2; exit}' <<< "$identity_output")"
+
+    emit "AI_SCHEDULER_PM2_UID" "${pm2_uid:-unknown}"
+    emit "AI_SCHEDULER_PM2_GID" "${pm2_gid:-unknown}"
+
+    if [[ "$identity_status" -ne 0 || "$match_count" != "1" || "$pm2_uid" != "$expected_uid" || "$pm2_gid" != "$expected_gid" ]]; then
+        emit "AI_SCHEDULER_PM2_IDENTITY" "BLOCKED"
+        printf 'ERROR: PM2 scheduler identity is %s:%s; expected %s:%s with exactly one app entry\n' \
+            "${pm2_uid:-unknown}" "${pm2_gid:-unknown}" "$expected_uid" "$expected_gid" >&2
+        return 1
+    fi
+
+    emit "AI_SCHEDULER_PM2_IDENTITY" "PASS"
+}
+
 ensure_ai_scheduler_online() {
     local scheduler_config="${AI_SCHEDULER_CONFIG:-$APP_ROOT/ecosystem.ai-scheduler.config.cjs}"
     require_file "$scheduler_config"
 
     if ai_scheduler_pm2_exists; then
-        pm2 startOrRestart "$scheduler_config" --only "$AI_SCHEDULER_PM2_APP" --update-env
-        emit "AI_SCHEDULER_ECOSYSTEM_RELOAD" "PASS"
+        if ! pm2 stop "$AI_SCHEDULER_PM2_APP"; then
+            emit "AI_SCHEDULER_STOP" "FAILED"
+            printf 'ERROR: failed to stop PM2 app %s before controlled replacement\n' "$AI_SCHEDULER_PM2_APP" >&2
+            return 1
+        fi
+        emit "AI_SCHEDULER_STOP" "PASS"
+
+        if ! pm2 delete "$AI_SCHEDULER_PM2_APP"; then
+            emit "AI_SCHEDULER_DELETE" "FAILED"
+            printf 'ERROR: failed to delete PM2 app %s before controlled replacement\n' "$AI_SCHEDULER_PM2_APP" >&2
+            return 1
+        fi
+        if ai_scheduler_pm2_exists; then
+            emit "AI_SCHEDULER_DELETE" "BLOCKED"
+            printf 'ERROR: PM2 app %s still exists after delete; refusing to start a replacement\n' "$AI_SCHEDULER_PM2_APP" >&2
+            return 1
+        fi
+        emit "AI_SCHEDULER_REPLACED" "YES"
     else
-        pm2 start "$scheduler_config" --only "$AI_SCHEDULER_PM2_APP" --update-env
-        emit "AI_SCHEDULER_START" "PASS"
+        emit "AI_SCHEDULER_REPLACED" "NO"
     fi
+
+    if ! pm2 start "$scheduler_config" --only "$AI_SCHEDULER_PM2_APP" --update-env; then
+        emit "AI_SCHEDULER_START" "FAILED"
+        printf 'ERROR: failed to start PM2 app %s from ecosystem config\n' "$AI_SCHEDULER_PM2_APP" >&2
+        return 1
+    fi
+    emit "AI_SCHEDULER_START" "PASS"
     check_ai_scheduler_online
+    check_ai_scheduler_pm2_identity
     AI_SCHEDULER_BOOTSTRAP_REQUIRED=0
 }
 

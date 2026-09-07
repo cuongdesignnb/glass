@@ -555,6 +555,7 @@ test_missing_scheduler_is_started_automatically() {
     local validation="$TEST_TMP/scheduler-start-validation"
     ai_scheduler_pm2_exists() { return 1; }
     check_ai_scheduler_online() { touch "$validation"; }
+    check_ai_scheduler_pm2_identity() { touch "$validation"; }
     pm2() { printf '%s\n' "$*" >> "$calls"; }
     AI_SCHEDULER_PM2_APP=glass-ai-scheduler
     AI_SCHEDULER_BOOTSTRAP_REQUIRED=1
@@ -567,19 +568,85 @@ test_missing_scheduler_is_started_automatically() {
     assert_eq "$AI_SCHEDULER_BOOTSTRAP_REQUIRED" "0"
 }
 
-test_existing_scheduler_reloads_ecosystem_config() {
+test_existing_scheduler_is_controlled_replacement() {
     local calls="$TEST_TMP/scheduler-pm2-calls"
-    ai_scheduler_pm2_exists() { return 0; }
+    local scheduler_exists=1
+    ai_scheduler_pm2_exists() { [[ "$scheduler_exists" == "1" ]]; }
     check_ai_scheduler_online() { :; }
-    pm2() { printf '%s\n' "$*" >> "$calls"; }
+    check_ai_scheduler_pm2_identity() { :; }
+    pm2() {
+        printf '%s\n' "$*" >> "$calls"
+        if [[ "$1" == "delete" ]]; then
+            scheduler_exists=0
+        fi
+    }
     AI_SCHEDULER_PM2_APP=glass-ai-scheduler
     AI_SCHEDULER_BOOTSTRAP_REQUIRED=1
 
     ensure_ai_scheduler_online >/dev/null
 
-    grep -Fxq "startOrRestart $APP_ROOT/ecosystem.ai-scheduler.config.cjs --only glass-ai-scheduler --update-env" "$calls"
-    assert_eq "$(wc -l < "$calls" | tr -d ' ')" "1"
+    assert_eq "$(sed -n '1p' "$calls")" "stop glass-ai-scheduler"
+    assert_eq "$(sed -n '2p' "$calls")" "delete glass-ai-scheduler"
+    assert_eq "$(sed -n '3p' "$calls")" "start $APP_ROOT/ecosystem.ai-scheduler.config.cjs --only glass-ai-scheduler --update-env"
+    assert_eq "$(wc -l < "$calls" | tr -d ' ')" "3"
     assert_eq "$AI_SCHEDULER_BOOTSTRAP_REQUIRED" "0"
+}
+
+test_existing_scheduler_delete_confirmation_blocks_start() {
+    local calls="$TEST_TMP/scheduler-delete-confirmation-calls"
+    ai_scheduler_pm2_exists() { return 0; }
+    check_ai_scheduler_online() { :; }
+    check_ai_scheduler_pm2_identity() { :; }
+    pm2() { printf '%s\n' "$*" >> "$calls"; }
+    AI_SCHEDULER_PM2_APP=glass-ai-scheduler
+    AI_SCHEDULER_BOOTSTRAP_REQUIRED=1
+
+    assert_command_fails ensure_ai_scheduler_online
+    assert_eq "$(sed -n '1p' "$calls")" "stop glass-ai-scheduler"
+    assert_eq "$(sed -n '2p' "$calls")" "delete glass-ai-scheduler"
+    assert_eq "$(wc -l < "$calls" | tr -d ' ')" "2"
+}
+
+test_pm2_stored_identity_passes() {
+    local output
+    WWW_USER=www
+    AI_SCHEDULER_PM2_APP=glass-ai-scheduler
+    id() {
+        case "$1" in
+            -u|-g) printf '1001\n' ;;
+        esac
+    }
+    pm2() {
+        [[ "$1" == "jlist" ]] \
+            && printf '[{"name":"glass-ai-scheduler","pm2_env":{"uid":1001,"gid":1001}}]\n'
+    }
+
+    output="$(check_ai_scheduler_pm2_identity)"
+    grep -Fxq 'AI_SCHEDULER_PM2_UID=1001' <<< "$output"
+    grep -Fxq 'AI_SCHEDULER_PM2_GID=1001' <<< "$output"
+    grep -Fxq 'AI_SCHEDULER_PM2_IDENTITY=PASS' <<< "$output"
+}
+
+test_pm2_stored_identity_mismatch_blocks() {
+    WWW_USER=www
+    AI_SCHEDULER_PM2_APP=glass-ai-scheduler
+    id() {
+        case "$1" in
+            -u|-g) printf '1001\n' ;;
+        esac
+    }
+    pm2() {
+        [[ "$1" == "jlist" ]] \
+            && printf '[{"name":"glass-ai-scheduler","pm2_env":{"uid":0,"gid":0}}]\n'
+    }
+
+    assert_command_fails check_ai_scheduler_pm2_identity
+}
+
+test_no_start_or_restart_in_scheduler_management() {
+    if grep -Eq 'startOrRestart|startOrReload|pm2[[:space:]]+restart[[:space:]]+"\$AI_SCHEDULER_PM2_APP"' "$LIBRARY"; then
+        fail_test 'legacy scheduler restart command is present'
+    fi
 }
 
 test_ecosystem_scheduler_uid() {
@@ -727,13 +794,17 @@ run_test 'staging uses detached worktree' test_staging_uses_detached_worktree
 run_test 'database backup includes integrity checks' test_database_backup_has_integrity_checks
 run_test 'dangerous legacy commands are absent' test_dangerous_legacy_commands_absent
 run_test 'missing scheduler starts automatically' test_missing_scheduler_is_started_automatically
-run_test 'existing scheduler reloads its ecosystem config' test_existing_scheduler_reloads_ecosystem_config
+run_test 'existing scheduler is replaced from ecosystem config' test_existing_scheduler_is_controlled_replacement
+run_test 'scheduler delete confirmation blocks start' test_existing_scheduler_delete_confirmation_blocks_start
 run_test 'ecosystem scheduler uid is www' test_ecosystem_scheduler_uid
 run_test 'ecosystem scheduler gid is www' test_ecosystem_scheduler_gid
 run_test 'scheduler www identity passes' test_scheduler_www_identity_passes
 run_test 'scheduler root identity is blocked' test_scheduler_root_identity_blocks
 run_test 'scheduler wrong group is blocked' test_scheduler_wrong_group_blocks
 run_test 'scheduler invalid PID is blocked' test_scheduler_invalid_pid_blocks
+run_test 'PM2 stored UID/GID identity passes' test_pm2_stored_identity_passes
+run_test 'PM2 stored UID/GID mismatch blocks' test_pm2_stored_identity_mismatch_blocks
+run_test 'scheduler has no startOrRestart regression' test_no_start_or_restart_in_scheduler_management
 run_test 'scheduler has no global process kill' test_no_global_process_kill
 run_test 'deploy validates the AI queue schedule' test_schedule_validation_targets_queue_command
 run_test 'scheduler bootstrap checks PID and online status' test_scheduler_bootstrap_checks_pid_and_online_status
