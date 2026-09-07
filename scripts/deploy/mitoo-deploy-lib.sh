@@ -27,6 +27,9 @@ MITOO_DEPLOY_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 : "${PHP_FPM_SOCKET:=/tmp/php-cgi-82.sock}"
 : "${WWW_USER:=www}"
 : "${MITOO_DEPLOY_TEST_MODE:=0}"
+: "${GIT_FETCH_ATTEMPTS:=3}"
+: "${GIT_FETCH_TIMEOUT_SECONDS:=40}"
+: "${GIT_FETCH_RETRY_SLEEP_SECONDS:=5}"
 
 APP_ROOT="${APP_ROOT:-${MITOO_DEPLOY_SCRIPT_DIR:-$PWD}}"
 DEPLOY_SHA="${DEPLOY_SHA:-}"
@@ -157,6 +160,48 @@ validate_execution_user() {
     fi
 }
 
+validate_git_fetch_config() {
+    [[ "$GIT_FETCH_ATTEMPTS" =~ ^[1-9][0-9]*$ ]] \
+        && ((GIT_FETCH_ATTEMPTS <= 10)) \
+        || die "GIT_FETCH_CONFIG" "BLOCKED" "GIT_FETCH_ATTEMPTS must be an integer from 1 to 10"
+    [[ "$GIT_FETCH_TIMEOUT_SECONDS" =~ ^[1-9][0-9]*$ ]] \
+        && ((GIT_FETCH_TIMEOUT_SECONDS <= 300)) \
+        || die "GIT_FETCH_CONFIG" "BLOCKED" "GIT_FETCH_TIMEOUT_SECONDS must be an integer from 1 to 300"
+    [[ "$GIT_FETCH_RETRY_SLEEP_SECONDS" =~ ^[0-9]+$ ]] \
+        && ((GIT_FETCH_RETRY_SLEEP_SECONDS <= 60)) \
+        || die "GIT_FETCH_CONFIG" "BLOCKED" "GIT_FETCH_RETRY_SLEEP_SECONDS must be an integer from 0 to 60"
+    emit "GIT_FETCH_CONFIG" "PASS"
+}
+
+fetch_origin_main_with_retry() {
+    local attempt
+    local fetch_status=0
+
+    validate_git_fetch_config
+    require_command timeout
+
+    for ((attempt = 1; attempt <= GIT_FETCH_ATTEMPTS; attempt++)); do
+        emit "GIT_FETCH_ATTEMPT" "$attempt/$GIT_FETCH_ATTEMPTS"
+        if timeout "${GIT_FETCH_TIMEOUT_SECONDS}s" git fetch --no-tags origin main; then
+            emit "GIT_FETCH_ATTEMPT_${attempt}" "PASS"
+            emit "GIT_FETCH" "PASS"
+            return 0
+        else
+            fetch_status=$?
+        fi
+
+        emit "GIT_FETCH_ATTEMPT_${attempt}" "FAILED"
+        log "GitHub fetch attempt $attempt/$GIT_FETCH_ATTEMPTS failed with status $fetch_status"
+        if ((attempt < GIT_FETCH_ATTEMPTS)); then
+            sleep "$GIT_FETCH_RETRY_SLEEP_SECONDS"
+        fi
+    done
+
+    emit "GIT_FETCH" "BLOCKED"
+    printf 'ERROR: Unable to fetch origin/main after %s attempts\n' "$GIT_FETCH_ATTEMPTS" >&2
+    return 1
+}
+
 validate_git_repository() {
     cd "$APP_ROOT"
     [[ "$(git branch --show-current)" == "main" ]] || die "GIT_BRANCH" "BLOCKED" "Current branch must be main"
@@ -172,7 +217,7 @@ validate_git_repository() {
     esac
 
     CURRENT_SHA="$(git rev-parse HEAD)"
-    git fetch origin main
+    fetch_origin_main_with_retry
     ORIGIN_MAIN_SHA="$(git rev-parse origin/main)"
 }
 
@@ -284,7 +329,7 @@ validate_runtime_commands() {
     for command_name in \
         git flock curl df awk sed grep find sort stat cp mv mkdir install gzip sha256sum \
         mysql mysqldump node npm npx composer pm2 nginx runuser id ps ss mktemp tee touch tr \
-        chmod chgrp chown dirname sleep; do
+        chmod chgrp chown dirname sleep timeout; do
         require_command "$command_name"
     done
 

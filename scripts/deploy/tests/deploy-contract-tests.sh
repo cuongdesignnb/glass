@@ -101,6 +101,128 @@ test_short_sha_fails() {
     assert_command_fails validate_sha_format deadbeef
 }
 
+test_git_fetch_first_attempt_passes() {
+    local calls="$TEST_TMP/git-fetch-first-pass-calls"
+    local output
+    local fetch_count=0
+    GIT_FETCH_ATTEMPTS=3
+    GIT_FETCH_TIMEOUT_SECONDS=40
+    GIT_FETCH_RETRY_SLEEP_SECONDS=0
+    timeout() {
+        printf '%s\n' "$*" >> "$calls"
+        local duration="$1"
+        shift
+        "$@"
+    }
+    git() {
+        fetch_count=$((fetch_count + 1))
+        [[ "$*" == 'fetch --no-tags origin main' ]]
+    }
+
+    output="$(fetch_origin_main_with_retry)"
+    grep -Fxq 'GIT_FETCH_ATTEMPT=1/3' <<< "$output"
+    grep -Fxq 'GIT_FETCH_ATTEMPT_1=PASS' <<< "$output"
+    grep -Fxq 'GIT_FETCH=PASS' <<< "$output"
+    assert_eq "$(wc -l < "$calls" | tr -d ' ')" "1"
+    grep -Fxq '40s git fetch --no-tags origin main' "$calls"
+}
+
+test_git_fetch_retries_then_passes() {
+    local calls="$TEST_TMP/git-fetch-retry-calls"
+    local output
+    local fetch_count=0
+    GIT_FETCH_ATTEMPTS=3
+    GIT_FETCH_TIMEOUT_SECONDS=40
+    GIT_FETCH_RETRY_SLEEP_SECONDS=0
+    timeout() {
+        printf '%s\n' "$*" >> "$calls"
+        local duration="$1"
+        shift
+        "$@"
+    }
+    git() {
+        fetch_count=$((fetch_count + 1))
+        [[ "$fetch_count" -eq 2 ]]
+    }
+
+    output="$(fetch_origin_main_with_retry)"
+    grep -Fxq 'GIT_FETCH_ATTEMPT=1/3' <<< "$output"
+    grep -Fxq 'GIT_FETCH_ATTEMPT_1=FAILED' <<< "$output"
+    grep -Fxq 'GIT_FETCH_ATTEMPT=2/3' <<< "$output"
+    grep -Fxq 'GIT_FETCH_ATTEMPT_2=PASS' <<< "$output"
+    grep -Fxq 'GIT_FETCH=PASS' <<< "$output"
+    assert_eq "$(wc -l < "$calls" | tr -d ' ')" "2"
+}
+
+test_git_fetch_all_attempts_fail_closed() {
+    local calls="$TEST_TMP/git-fetch-all-fail-calls"
+    local output
+    local fetch_count=0
+    GIT_FETCH_ATTEMPTS=3
+    GIT_FETCH_TIMEOUT_SECONDS=40
+    GIT_FETCH_RETRY_SLEEP_SECONDS=0
+    timeout() {
+        printf '%s\n' "$*" >> "$calls"
+        local duration="$1"
+        shift
+        "$@"
+    }
+    git() {
+        fetch_count=$((fetch_count + 1))
+        return 1
+    }
+
+    if output="$(fetch_origin_main_with_retry 2>&1)"; then
+        fail_test 'fetch unexpectedly succeeded after all attempts failed'
+    fi
+    grep -Fxq 'GIT_FETCH_ATTEMPT_1=FAILED' <<< "$output"
+    grep -Fxq 'GIT_FETCH_ATTEMPT_2=FAILED' <<< "$output"
+    grep -Fxq 'GIT_FETCH_ATTEMPT_3=FAILED' <<< "$output"
+    grep -Fxq 'GIT_FETCH=BLOCKED' <<< "$output"
+    grep -Fq 'Unable to fetch origin/main after 3 attempts' <<< "$output"
+    assert_eq "$(wc -l < "$calls" | tr -d ' ')" "3"
+}
+
+test_git_fetch_timeout_is_bounded() {
+    grep -Fq 'timeout "${GIT_FETCH_TIMEOUT_SECONDS}s" git fetch --no-tags origin main' "$LIBRARY"
+}
+
+test_invalid_git_fetch_config_fails() {
+    GIT_FETCH_ATTEMPTS=0
+    assert_command_fails validate_git_fetch_config
+    GIT_FETCH_ATTEMPTS=3
+    GIT_FETCH_TIMEOUT_SECONDS=abc
+    assert_command_fails validate_git_fetch_config
+    GIT_FETCH_TIMEOUT_SECONDS=40
+    GIT_FETCH_RETRY_SLEEP_SECONDS=-1
+    assert_command_fails validate_git_fetch_config
+}
+
+test_fetch_pre_activation_only() {
+    local source="$TEST_TMP/deploy-library-network-scan"
+    sed -e '/^[[:space:]]*#/d' "$LIBRARY" > "$source"
+    local validate_block
+    validate_block="$(sed -n '/^validate_git_repository() {/,/^}/p' "$source")"
+    grep -Fq 'fetch_origin_main_with_retry' <<< "$validate_block"
+
+    if awk '
+        /^activate_release\(\)/ { after_activation=1 }
+        after_activation && /fetch_origin_main_with_retry|git fetch|git ls-remote|github\.com/ { found=1 }
+        END { exit found ? 0 : 1 }
+    ' "$source"; then
+        fail_test 'network verification appears after activation starts'
+    fi
+}
+
+test_no_raw_fetch_regression() {
+    local validate_block
+    validate_block="$(sed -n '/^validate_git_repository() {/,/^}/p' "$LIBRARY")"
+    if grep -Eq 'git[[:space:]]+fetch[[:space:]]+origin[[:space:]]+main' <<< "$validate_block"; then
+        fail_test 'raw git fetch origin main remains in validate_git_repository'
+    fi
+    grep -Fq 'fetch_origin_main_with_retry' <<< "$validate_block"
+}
+
 test_sha_on_origin_main_passes() {
     local repo sha
     repo="$(new_git_repo sha-main)"
@@ -764,6 +886,13 @@ test_lock_blocks_parallel_run() {
 
 run_test 'missing DEPLOY_SHA fails' test_missing_sha_fails
 run_test 'short DEPLOY_SHA fails' test_short_sha_fails
+run_test 'Git fetch first attempt passes' test_git_fetch_first_attempt_passes
+run_test 'Git fetch retries then passes' test_git_fetch_retries_then_passes
+run_test 'Git fetch fails closed after all attempts' test_git_fetch_all_attempts_fail_closed
+run_test 'Git fetch timeout is bounded' test_git_fetch_timeout_is_bounded
+run_test 'invalid Git fetch config fails' test_invalid_git_fetch_config_fails
+run_test 'Git fetch stays before activation' test_fetch_pre_activation_only
+run_test 'raw Git fetch regression is absent' test_no_raw_fetch_regression
 run_test 'SHA on origin/main passes' test_sha_on_origin_main_passes
 run_test 'SHA outside origin/main fails' test_sha_outside_origin_main_fails
 run_test 'unexpected tracked change fails' test_unexpected_tracked_change_fails
