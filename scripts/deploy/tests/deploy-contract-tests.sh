@@ -231,6 +231,69 @@ test_approved_migration_runs_after_backup() {
     assert_eq "$MIGRATION_EXECUTED" "1"
 }
 
+test_check_database_connection_uses_www_execution() {
+    local calls="$TEST_TMP/database-status-calls"
+    local output
+    local migration_status='Pending'
+    APP_ROOT="$TEST_TMP/database-app"
+
+    run_artisan_as_www() {
+        printf '%s\n' "$*" >> "$calls"
+        printf '%s\n' "$migration_status"
+    }
+
+    output="$(check_database_connection)"
+    grep -Fxq "$APP_ROOT migrate:status --no-ansi" "$calls"
+    grep -Fxq 'MIGRATION_PENDING_CURRENT=YES' <<< "$output"
+    grep -Fxq 'DATABASE_CONNECTION=PASS' <<< "$output"
+
+    migration_status='Nothing to migrate'
+    output="$(check_database_connection)"
+    grep -Fxq 'MIGRATION_PENDING_CURRENT=NO' <<< "$output"
+    grep -Fxq 'DATABASE_CONNECTION=PASS' <<< "$output"
+    assert_eq "$(wc -l < "$calls" | tr -d ' ')" "2"
+}
+
+test_create_release_record_uses_www_execution() {
+    local repo
+    local calls="$TEST_TMP/release-record-artisan-calls"
+    local record="$TEST_TMP/release-record"
+    repo="$(new_git_repo release-record-www)"
+
+    (
+        APP_ROOT="$repo"
+        CURRENT_SHA="$(git -C "$repo" rev-parse HEAD)"
+        DEPLOY_SHA="$CURRENT_SHA"
+        STAGE_DIR="$TEST_TMP/release-stage"
+        ROLLBACK_RUNTIME_PATH="$TEST_TMP/release-rollback"
+        RELEASE_RECORD="$record"
+        pm2() { printf '[]'; }
+        nginx() { :; }
+        ss() { :; }
+        run_artisan_as_www() {
+            printf '%s\n' "$*" >> "$calls"
+            printf 'Nothing to migrate\n'
+        }
+        create_release_record
+    ) >/dev/null
+
+    assert_file_exists "$record/migration-status-before.txt"
+    grep -Fxq "$repo migrate:status --no-ansi" "$calls"
+    grep -Fxq 'Nothing to migrate' "$record/migration-status-before.txt"
+}
+
+test_no_direct_app_root_artisan() {
+    local source="$TEST_TMP/deploy-library-without-comments"
+    sed -e '/^[[:space:]]*#/d' "$LIBRARY" > "$source"
+
+    if grep -Fq '$APP_ROOT/backend/artisan' "$source"; then
+        fail_test 'direct APP_ROOT Artisan path is present'
+    fi
+    if grep -Eq 'cd[[:space:]]+"\$APP_ROOT/backend"|cd[[:space:]]+"\$APP_ROOT"[[:space:]]*;[[:space:]]*(php|"\$PHP_BIN")[[:space:]]+artisan' "$source"; then
+        fail_test 'direct APP_ROOT Artisan working-directory invocation is present'
+    fi
+}
+
 write_api_fixture() {
     local name="$1"
     local content_type="$2"
@@ -644,6 +707,9 @@ run_test 'MySQL thresholds block' test_mysql_threshold_blocks
 run_test 'MySQL block occurs before PM2 stop' test_mysql_block_happens_before_activation
 run_test 'pending migration requires approval and backup' test_pending_migration_requires_flag_and_backup
 run_test 'approved migration runs only after backup' test_approved_migration_runs_after_backup
+run_test 'database connection Artisan runs as WWW_USER' test_check_database_connection_uses_www_execution
+run_test 'release record Artisan runs as WWW_USER' test_create_release_record_uses_www_execution
+run_test 'direct APP_ROOT Artisan invocation is absent' test_no_direct_app_root_artisan
 run_test 'HTTP 200 HTML API fails' test_api_200_html_fails
 run_test 'valid collections JSON passes' test_api_json_passes
 run_test 'Laravel permission normalization passes' test_permission_normalization

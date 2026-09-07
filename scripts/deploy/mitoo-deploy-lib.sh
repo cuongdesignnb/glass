@@ -455,7 +455,7 @@ smoke_laravel_api() {
 check_database_connection() {
     local status_file
     status_file="$(mktemp "${TMPDIR:-/tmp}/mitoo-migration-status.XXXXXX")"
-    "$PHP_BIN" "$APP_ROOT/backend/artisan" migrate:status --no-ansi > "$status_file"
+    run_artisan_as_www "$APP_ROOT" migrate:status --no-ansi > "$status_file"
     if grep -Eq '(^|[[:space:]])Pending([[:space:]]|$)' "$status_file"; then
         emit "MIGRATION_PENDING_CURRENT" "YES"
     else
@@ -526,7 +526,7 @@ create_release_record() {
         printf 'Threads_running=%s\n' "$MYSQL_THREADS_RUNNING"
         ss -ltnH | awk '$4 ~ /:3306$/ {print}'
     } > "$RELEASE_RECORD/mysql-status-before.txt"
-    "$PHP_BIN" "$APP_ROOT/backend/artisan" migrate:status --no-ansi > "$RELEASE_RECORD/migration-status-before.txt"
+    run_artisan_as_www "$APP_ROOT" migrate:status --no-ansi > "$RELEASE_RECORD/migration-status-before.txt"
 
     find "$RELEASE_RECORD" -maxdepth 1 -type f -exec chmod 600 {} +
     exec > >(tee -a "$RELEASE_RECORD/activation.log") 2>&1
