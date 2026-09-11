@@ -8,6 +8,20 @@ const nextConfig = {
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
   staticPageGenerationTimeout: 120,
+  async redirects() {
+    return [
+      {
+        source: '/gong-kinh',
+        destination: '/danh-muc/gong-kinh',
+        permanent: true,
+      },
+      {
+        source: '/trong-kinh',
+        destination: '/danh-muc/trong-kinh',
+        permanent: true,
+      },
+    ];
+  },
   images: {
     formats: ['image/webp', 'image/avif'],
     remotePatterns: [
