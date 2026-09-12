@@ -190,11 +190,19 @@ test_git_fetch_timeout_is_bounded() {
 test_invalid_git_fetch_config_fails() {
     GIT_FETCH_ATTEMPTS=0
     assert_command_fails validate_git_fetch_config
+    GIT_FETCH_ATTEMPTS=11
+    assert_command_fails validate_git_fetch_config
+
     GIT_FETCH_ATTEMPTS=3
     GIT_FETCH_TIMEOUT_SECONDS=abc
     assert_command_fails validate_git_fetch_config
+    GIT_FETCH_TIMEOUT_SECONDS=301
+    assert_command_fails validate_git_fetch_config
+
     GIT_FETCH_TIMEOUT_SECONDS=40
     GIT_FETCH_RETRY_SLEEP_SECONDS=-1
+    assert_command_fails validate_git_fetch_config
+    GIT_FETCH_RETRY_SLEEP_SECONDS=61
     assert_command_fails validate_git_fetch_config
 }
 
@@ -575,6 +583,39 @@ test_cache_probe_success_allows_activation() {
     assert_file_exists "$marker"
 }
 
+test_cache_probe_requires_all_markers_and_zero_status() {
+    local payload="$TEST_TMP/cache-probe-payload"
+    local output
+
+    run_artisan_as_www() {
+        printf '%s\n' "$*" > "$payload"
+        printf 'CACHE_WRITE=PASS\nCACHE_READ=PASS\nCACHE_DELETE=PASS\n'
+    }
+
+    output="$(run_laravel_cache_probe_as_www "$TEST_TMP/cache-probe-success-root")"
+    grep -Fxq 'CACHE_PROBE=PASS' <<< "$output"
+    grep -Fq '$cache = \Illuminate\Support\Facades\Cache::store();' "$payload"
+    grep -Fq '$write = false; $read = false; $delete = false;' "$payload"
+    grep -Eq 'mitoo_deploy_cache_probe_[0-9]+_[0-9]+' "$payload"
+}
+
+test_cache_probe_missing_marker_blocks() {
+    run_artisan_as_www() {
+        printf 'CACHE_WRITE=PASS\nCACHE_READ=PASS\n'
+    }
+
+    assert_command_fails run_laravel_cache_probe_as_www "$TEST_TMP/cache-probe-missing-marker-root"
+}
+
+test_cache_probe_nonzero_status_blocks() {
+    run_artisan_as_www() {
+        printf 'CACHE_WRITE=PASS\nCACHE_READ=PASS\nCACHE_DELETE=PASS\n'
+        return 17
+    }
+
+    assert_command_fails run_laravel_cache_probe_as_www "$TEST_TMP/cache-probe-nonzero-status-root"
+}
+
 test_rollback_uses_safe_runtime_path() {
     local marker="$TEST_TMP/rollback-runtime-safe"
     APP_ROOT="$TEST_TMP/rollback-app"
@@ -915,6 +956,9 @@ run_test 'Laravel cache rebuild runs as WWW_USER' test_rebuild_uses_www_user
 run_test 'runtime permissions are normalized after rebuild' test_post_rebuild_permission_order
 run_test 'cache probe failure blocks activation' test_cache_probe_failure_blocks_activation
 run_test 'cache probe success allows activation' test_cache_probe_success_allows_activation
+run_test 'cache probe requires all markers and zero status' test_cache_probe_requires_all_markers_and_zero_status
+run_test 'cache probe missing marker blocks' test_cache_probe_missing_marker_blocks
+run_test 'cache probe nonzero status blocks' test_cache_probe_nonzero_status_blocks
 run_test 'rollback uses the safe runtime permission path' test_rollback_uses_safe_runtime_path
 run_test 'stale Collision manifest is deleted' test_stale_collision_manifest_is_deleted
 run_test 'activation failure triggers rollback' test_activation_failure_calls_rollback

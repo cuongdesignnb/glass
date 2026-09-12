@@ -161,15 +161,27 @@ validate_execution_user() {
 }
 
 validate_git_fetch_config() {
-    [[ "$GIT_FETCH_ATTEMPTS" =~ ^[1-9][0-9]*$ ]] \
-        && ((GIT_FETCH_ATTEMPTS <= 10)) \
-        || die "GIT_FETCH_CONFIG" "BLOCKED" "GIT_FETCH_ATTEMPTS must be an integer from 1 to 10"
-    [[ "$GIT_FETCH_TIMEOUT_SECONDS" =~ ^[1-9][0-9]*$ ]] \
-        && ((GIT_FETCH_TIMEOUT_SECONDS <= 300)) \
-        || die "GIT_FETCH_CONFIG" "BLOCKED" "GIT_FETCH_TIMEOUT_SECONDS must be an integer from 1 to 300"
-    [[ "$GIT_FETCH_RETRY_SLEEP_SECONDS" =~ ^[0-9]+$ ]] \
-        && ((GIT_FETCH_RETRY_SLEEP_SECONDS <= 60)) \
-        || die "GIT_FETCH_CONFIG" "BLOCKED" "GIT_FETCH_RETRY_SLEEP_SECONDS must be an integer from 0 to 60"
+    if [[ ! "$GIT_FETCH_ATTEMPTS" =~ ^[1-9][0-9]*$ ]]; then
+        die "GIT_FETCH_CONFIG" "BLOCKED" "GIT_FETCH_ATTEMPTS must be an integer from 1 to 10"
+    fi
+    if ((GIT_FETCH_ATTEMPTS > 10)); then
+        die "GIT_FETCH_CONFIG" "BLOCKED" "GIT_FETCH_ATTEMPTS must be an integer from 1 to 10"
+    fi
+
+    if [[ ! "$GIT_FETCH_TIMEOUT_SECONDS" =~ ^[1-9][0-9]*$ ]]; then
+        die "GIT_FETCH_CONFIG" "BLOCKED" "GIT_FETCH_TIMEOUT_SECONDS must be an integer from 1 to 300"
+    fi
+    if ((GIT_FETCH_TIMEOUT_SECONDS > 300)); then
+        die "GIT_FETCH_CONFIG" "BLOCKED" "GIT_FETCH_TIMEOUT_SECONDS must be an integer from 1 to 300"
+    fi
+
+    if [[ ! "$GIT_FETCH_RETRY_SLEEP_SECONDS" =~ ^[0-9]+$ ]]; then
+        die "GIT_FETCH_CONFIG" "BLOCKED" "GIT_FETCH_RETRY_SLEEP_SECONDS must be an integer from 0 to 60"
+    fi
+    if ((GIT_FETCH_RETRY_SLEEP_SECONDS > 60)); then
+        die "GIT_FETCH_CONFIG" "BLOCKED" "GIT_FETCH_RETRY_SLEEP_SECONDS must be an integer from 0 to 60"
+    fi
+
     emit "GIT_FETCH_CONFIG" "PASS"
 }
 
@@ -783,11 +795,19 @@ verify_laravel_runtime_as_www() {
 
 run_laravel_cache_probe_as_www() {
     local root="$1"
-    local key="mitoo_deploy_cache_probe_$(date +%s%N)_$$"
+    local key
     local probe
     local output
     local status=0
 
+    if ! key="mitoo_deploy_cache_probe_$(date +%s%N)_$$"; then
+        emit "CACHE_PROBE" "FAILED"
+        printf 'ERROR: unable to create Laravel cache probe key\n' >&2
+        return 1
+    fi
+
+    # The quoted lines below are literal PHP evaluated by Laravel Tinker; Bash must not expand them.
+    # shellcheck disable=SC2016
     probe="$(printf '%s\n' \
         '$cache = \Illuminate\Support\Facades\Cache::store();' \
         "\$key = '${key}';" \
@@ -823,14 +843,22 @@ run_laravel_cache_probe_as_www() {
         printf 'CACHE_DELETE=FAIL\n'
     fi
 
-    grep -Fq 'CACHE_WRITE=PASS' <<< "$output" \
-        && grep -Fq 'CACHE_READ=PASS' <<< "$output" \
-        && grep -Fq 'CACHE_DELETE=PASS' <<< "$output" \
-        && [[ "$status" -eq 0 ]] \
-        || {
-            emit "CACHE_PROBE" "FAILED"
-            return 1
-        }
+    if ! grep -Fq 'CACHE_WRITE=PASS' <<< "$output"; then
+        emit "CACHE_PROBE" "FAILED"
+        return 1
+    fi
+    if ! grep -Fq 'CACHE_READ=PASS' <<< "$output"; then
+        emit "CACHE_PROBE" "FAILED"
+        return 1
+    fi
+    if ! grep -Fq 'CACHE_DELETE=PASS' <<< "$output"; then
+        emit "CACHE_PROBE" "FAILED"
+        return 1
+    fi
+    if [[ "$status" -ne 0 ]]; then
+        emit "CACHE_PROBE" "FAILED"
+        return 1
+    fi
 
     emit "CACHE_PROBE" "PASS"
 }
@@ -1062,6 +1090,8 @@ check_ai_scheduler_pm2_identity() {
     expected_gid="$(id -g "$WWW_USER")" \
         || die "AI_SCHEDULER_PM2_IDENTITY" "BLOCKED" "Unable to resolve GID for $WWW_USER"
 
+    # The quoted program below is literal JavaScript evaluated by Node; Bash must not expand its template literals.
+    # shellcheck disable=SC2016
     if identity_output="$(
         pm2 jlist |
             AI_SCHEDULER_PM2_APP="$AI_SCHEDULER_PM2_APP" node -e '
