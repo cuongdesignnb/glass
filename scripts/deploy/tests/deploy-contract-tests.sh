@@ -493,6 +493,237 @@ write_api_fixture() {
     printf '%s\n' "$dir"
 }
 
+mock_curl() {
+    local headers_file=""
+    local body_file=""
+
+    printf '%s\n' "$@" > "$MOCK_CURL_ARGS_FILE"
+    while (($# > 0)); do
+        case "$1" in
+            --dump-header)
+                headers_file="$2"
+                shift 2
+                ;;
+            --output)
+                body_file="$2"
+                shift 2
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+
+    [[ -n "$headers_file" && -n "$body_file" ]] || return 99
+    printf '%s' "$MOCK_CURL_HEADERS" > "$headers_file"
+    printf '%s' "$MOCK_CURL_BODY" > "$body_file"
+    printf '%s' "$MOCK_CURL_STATUS"
+    return "$MOCK_CURL_EXIT"
+}
+
+test_api_smoke_uses_https_local_sni() {
+    local dir="$TEST_TMP/api-smoke-https"
+    local args="$TEST_TMP/api-smoke-https-args"
+    mkdir -p "$dir"
+
+    MOCK_CURL_ARGS_FILE="$args"
+    MOCK_CURL_STATUS=200
+    MOCK_CURL_HEADERS=$'HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n'
+    MOCK_CURL_BODY='{"data":[]}'
+    MOCK_CURL_EXIT=0
+    PUBLIC_DOMAIN='qa.example.test'
+    PHP_BIN="$(command -v php)"
+    curl() { mock_curl "$@"; }
+
+    smoke_laravel_api "$dir" >/dev/null
+
+    [[ "$(sed -n '1p' "$args")" == '-q' ]] || fail_test 'curl quiet mode is not the first argument'
+    grep -Fxq -- '--noproxy' "$args"
+    grep -Fxq -- '*' "$args"
+    grep -Fxq -- '--connect-timeout' "$args"
+    grep -Fxq -- '5' "$args"
+    grep -Fxq -- '--max-time' "$args"
+    grep -Fxq -- '20' "$args"
+    grep -Fxq -- '--resolve' "$args"
+    grep -Fxq -- 'qa.example.test:443:127.0.0.1' "$args"
+    grep -Fxq -- 'https://qa.example.test/api/public/collections' "$args"
+    if grep -Eiq '^-k$|^--insecure$|^-L$|^--location($|-)' "$args"; then
+        fail_test 'curl smoke check contains an insecure or redirect-following option'
+    fi
+    if grep -Fxq -- 'http://127.0.0.1/api/public/collections' "$args"; then
+        fail_test 'curl smoke check still uses the HTTP loopback URL'
+    fi
+}
+
+test_api_smoke_rejects_redirect_statuses() {
+    local response_status
+    local dir
+    local output
+    local status
+
+    PUBLIC_DOMAIN='redirect.example.test'
+    PHP_BIN="$(command -v php)"
+    curl() { mock_curl "$@"; }
+
+    for response_status in 301 302 307 308; do
+        dir="$TEST_TMP/api-smoke-redirect-$response_status"
+        mkdir -p "$dir"
+        MOCK_CURL_ARGS_FILE="$TEST_TMP/api-smoke-redirect-$response_status-args"
+        MOCK_CURL_STATUS="$response_status"
+        MOCK_CURL_HEADERS="HTTP/1.1 ${response_status} Redirect"$'\r\nContent-Type: application/json\r\n\r\n'
+        MOCK_CURL_BODY='{"data":[]}'
+        MOCK_CURL_EXIT=0
+
+        set +e
+        output="$(smoke_laravel_api "$dir" 2>&1)"
+        status=$?
+        set -e
+
+        [[ "$status" -ne 0 ]] || fail_test "HTTP $response_status unexpectedly passed"
+        ! grep -Fxq 'API_SMOKE_JSON=PASS' <<< "$output" \
+            || fail_test "HTTP $response_status emitted JSON PASS"
+        grep -Fxq 'API_SMOKE_HTTP=BLOCKED' <<< "$output" \
+            || fail_test "HTTP $response_status did not emit HTTP BLOCKED"
+    done
+}
+
+test_api_smoke_rejects_invalid_responses() {
+    local fixture
+    local dir
+    local output
+    local status
+
+    PUBLIC_DOMAIN='invalid-response.example.test'
+    PHP_BIN="$(command -v php)"
+    curl() { mock_curl "$@"; }
+
+    for fixture in html invalid-json wrong-shape; do
+        dir="$TEST_TMP/api-smoke-$fixture"
+        mkdir -p "$dir"
+        MOCK_CURL_ARGS_FILE="$TEST_TMP/api-smoke-$fixture-args"
+        MOCK_CURL_STATUS=200
+        MOCK_CURL_HEADERS=$'HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n'
+        MOCK_CURL_EXIT=0
+        case "$fixture" in
+            html) MOCK_CURL_BODY='<!DOCTYPE html><b>Warning</b>' ;;
+            invalid-json) MOCK_CURL_BODY='{not-json' ;;
+            wrong-shape) MOCK_CURL_BODY='{"items":[]}' ;;
+        esac
+
+        set +e
+        output="$(smoke_laravel_api "$dir" 2>&1)"
+        status=$?
+        set -e
+
+        [[ "$status" -ne 0 ]] || fail_test "$fixture response unexpectedly passed"
+        ! grep -Fxq 'API_SMOKE_JSON=PASS' <<< "$output" \
+            || fail_test "$fixture response emitted JSON PASS"
+    done
+}
+
+test_api_smoke_curl_failure_blocks_and_skips_validator() {
+    local curl_exit
+    local dir
+    local output
+    local status
+    local validator_marker
+
+    PUBLIC_DOMAIN='transport.example.test'
+    PHP_BIN="$(command -v php)"
+    curl() { mock_curl "$@"; }
+
+    for curl_exit in 7 28 35; do
+        dir="$TEST_TMP/api-smoke-curl-$curl_exit"
+        validator_marker="$TEST_TMP/api-smoke-validator-$curl_exit"
+        MOCK_CURL_ARGS_FILE="$TEST_TMP/api-smoke-curl-$curl_exit-args"
+        MOCK_CURL_STATUS=200
+        MOCK_CURL_HEADERS=$'HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n'
+        MOCK_CURL_BODY='{"data":[]}'
+        MOCK_CURL_EXIT="$curl_exit"
+        validate_api_response_files() {
+            touch "$validator_marker"
+            return 0
+        }
+
+        set +e
+        output="$(smoke_laravel_api "$dir" 2>&1)"
+        status=$?
+        set -e
+
+        [[ "$status" -ne 0 ]] || fail_test "curl exit $curl_exit unexpectedly passed"
+        ! grep -Fxq 'API_SMOKE_JSON=PASS' <<< "$output" \
+            || fail_test "curl exit $curl_exit emitted JSON PASS"
+        grep -Fxq 'API_SMOKE_TRANSPORT=BLOCKED' <<< "$output" \
+            || fail_test "curl exit $curl_exit did not emit transport BLOCKED"
+        grep -Fxq "API_SMOKE_CURL_EXIT=$curl_exit" <<< "$output" \
+            || fail_test "curl exit $curl_exit was not recorded"
+        assert_file_absent "$validator_marker"
+    done
+}
+
+test_api_smoke_failure_in_condition_returns_nonzero() {
+    local dir="$TEST_TMP/api-smoke-conditional"
+    local output
+    mkdir -p "$dir"
+
+    MOCK_CURL_ARGS_FILE="$TEST_TMP/api-smoke-conditional-args"
+    MOCK_CURL_STATUS=301
+    MOCK_CURL_HEADERS=$'HTTP/1.1 301 Moved Permanently\r\nContent-Type: application/json\r\n\r\n'
+    MOCK_CURL_BODY='{"data":[]}'
+    MOCK_CURL_EXIT=0
+    PUBLIC_DOMAIN='conditional.example.test'
+    PHP_BIN="$(command -v php)"
+    curl() { mock_curl "$@"; }
+
+    if output="$(smoke_laravel_api "$dir" 2>&1)"; then
+        fail_test 'smoke failure succeeded when called in a condition'
+    fi
+    ! grep -Fxq 'API_SMOKE_JSON=PASS' <<< "$output" \
+        || fail_test 'conditional smoke failure emitted JSON PASS'
+    grep -Fxq 'API_SMOKE_HTTP=BLOCKED' <<< "$output" \
+        || fail_test 'conditional smoke failure did not emit HTTP BLOCKED'
+}
+
+test_api_smoke_preflight_failure_blocks_activation() {
+    local smoke_dir="$TEST_TMP/api-smoke-preflight"
+    local backup_marker="$TEST_TMP/api-smoke-preflight-backup"
+    local build_marker="$TEST_TMP/api-smoke-preflight-build"
+    local activation_marker="$TEST_TMP/api-smoke-preflight-activation"
+
+    mkdir -p "$smoke_dir"
+    MOCK_CURL_ARGS_FILE="$TEST_TMP/api-smoke-preflight-args"
+    MOCK_CURL_STATUS=301
+    MOCK_CURL_HEADERS=$'HTTP/1.1 301 Moved Permanently\r\nContent-Type: application/json\r\n\r\n'
+    MOCK_CURL_BODY='{"data":[]}'
+    MOCK_CURL_EXIT=0
+    PUBLIC_DOMAIN='preflight.example.test'
+    PHP_BIN="$(command -v php)"
+    curl() { mock_curl "$@"; }
+
+    preflight_smoke_main() {
+        initialize_context() { :; }
+        acquire_lock() { :; }
+        run_preflight() { smoke_laravel_api "$smoke_dir"; }
+        create_release_record() { touch "$backup_marker"; }
+        backup_environment() { touch "$backup_marker"; }
+        backup_database() { touch "$backup_marker"; }
+        prepare_stage() { touch "$build_marker"; }
+        validate_backend() { touch "$build_marker"; }
+        validate_frontend() { touch "$build_marker"; }
+        check_migrations() { :; }
+        run_approved_migrations() { :; }
+        activate_release() { touch "$activation_marker"; }
+        cleanup_temporary_secrets() { :; }
+        CHECK_ONLY=0
+        main
+    }
+
+    assert_command_fails preflight_smoke_main
+    assert_file_absent "$backup_marker"
+    assert_file_absent "$build_marker"
+    assert_file_absent "$activation_marker"
+}
+
 test_api_200_html_fails() {
     local dir
     dir="$(write_api_fixture api-html text/html '<!DOCTYPE html><b>Warning</b>')"
@@ -1007,6 +1238,12 @@ run_test 'approved migration runs only after backup' test_approved_migration_run
 run_test 'database connection Artisan runs as WWW_USER' test_check_database_connection_uses_www_execution
 run_test 'release record Artisan runs as WWW_USER' test_create_release_record_uses_www_execution
 run_test 'direct APP_ROOT Artisan invocation is absent' test_no_direct_app_root_artisan
+run_test 'API smoke uses HTTPS local SNI' test_api_smoke_uses_https_local_sni
+run_test 'API smoke rejects redirect statuses' test_api_smoke_rejects_redirect_statuses
+run_test 'API smoke rejects invalid responses' test_api_smoke_rejects_invalid_responses
+run_test 'API smoke curl failure blocks and skips validator' test_api_smoke_curl_failure_blocks_and_skips_validator
+run_test 'API smoke failure returns nonzero in condition' test_api_smoke_failure_in_condition_returns_nonzero
+run_test 'API smoke preflight failure blocks activation' test_api_smoke_preflight_failure_blocks_activation
 run_test 'HTTP 200 HTML API fails' test_api_200_html_fails
 run_test 'valid collections JSON passes' test_api_json_passes
 run_test 'Laravel permission normalization passes' test_permission_normalization
