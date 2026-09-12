@@ -190,12 +190,77 @@ test_git_fetch_timeout_is_bounded() {
 test_invalid_git_fetch_config_fails() {
     GIT_FETCH_ATTEMPTS=0
     assert_command_fails validate_git_fetch_config
+    GIT_FETCH_ATTEMPTS=11
+    assert_command_fails validate_git_fetch_config
+
     GIT_FETCH_ATTEMPTS=3
     GIT_FETCH_TIMEOUT_SECONDS=abc
     assert_command_fails validate_git_fetch_config
+    GIT_FETCH_TIMEOUT_SECONDS=301
+    assert_command_fails validate_git_fetch_config
+
     GIT_FETCH_TIMEOUT_SECONDS=40
     GIT_FETCH_RETRY_SLEEP_SECONDS=-1
     assert_command_fails validate_git_fetch_config
+    GIT_FETCH_RETRY_SLEEP_SECONDS=61
+    assert_command_fails validate_git_fetch_config
+}
+
+test_valid_git_fetch_retry_sleep_values_pass() {
+    local retry_sleep
+    local output
+
+    GIT_FETCH_ATTEMPTS=3
+    GIT_FETCH_TIMEOUT_SECONDS=40
+
+    for retry_sleep in 0 5 60; do
+        GIT_FETCH_RETRY_SLEEP_SECONDS="$retry_sleep"
+        if ! output="$(validate_git_fetch_config 2>&1)"; then
+            fail_test "valid retry sleep unexpectedly blocked: $retry_sleep"
+        fi
+        grep -Fxq 'GIT_FETCH_CONFIG=PASS' <<< "$output" \
+            || fail_test "valid retry sleep did not emit PASS: $retry_sleep"
+    done
+}
+
+test_invalid_git_fetch_retry_sleep_fails_closed() {
+    local retry_sleep
+    local output
+    local status
+
+    GIT_FETCH_ATTEMPTS=3
+    GIT_FETCH_TIMEOUT_SECONDS=40
+
+    for retry_sleep in 61 -1 abc 08 09 0999; do
+        GIT_FETCH_RETRY_SLEEP_SECONDS="$retry_sleep"
+        set +e
+        output="$(validate_git_fetch_config 2>&1)"
+        status=$?
+        set -e
+
+        [[ "$status" -ne 0 ]] \
+            || fail_test "invalid retry sleep unexpectedly succeeded: $retry_sleep"
+        ! grep -Fxq 'GIT_FETCH_CONFIG=PASS' <<< "$output" \
+            || fail_test "invalid retry sleep emitted PASS: $retry_sleep"
+        grep -Fxq 'GIT_FETCH_CONFIG=BLOCKED' <<< "$output" \
+            || fail_test "invalid retry sleep did not emit BLOCKED: $retry_sleep"
+    done
+}
+
+test_git_fetch_config_failure_in_condition_returns_nonzero() {
+    local output
+
+    GIT_FETCH_ATTEMPTS=3
+    GIT_FETCH_TIMEOUT_SECONDS=40
+    GIT_FETCH_RETRY_SLEEP_SECONDS=08
+
+    if output="$(validate_git_fetch_config 2>&1)"; then
+        fail_test 'invalid retry sleep succeeded when validation was used as a condition'
+    fi
+    ! grep -Fxq 'GIT_FETCH_CONFIG=PASS' <<< "$output" \
+        || fail_test 'conditional validation emitted PASS after failure'
+    grep -Fxq 'GIT_FETCH_CONFIG=BLOCKED' <<< "$output" \
+        || fail_test 'conditional validation did not emit BLOCKED'
 }
 
 test_fetch_pre_activation_only() {
@@ -575,6 +640,39 @@ test_cache_probe_success_allows_activation() {
     assert_file_exists "$marker"
 }
 
+test_cache_probe_requires_all_markers_and_zero_status() {
+    local payload="$TEST_TMP/cache-probe-payload"
+    local output
+
+    run_artisan_as_www() {
+        printf '%s\n' "$*" > "$payload"
+        printf 'CACHE_WRITE=PASS\nCACHE_READ=PASS\nCACHE_DELETE=PASS\n'
+    }
+
+    output="$(run_laravel_cache_probe_as_www "$TEST_TMP/cache-probe-success-root")"
+    grep -Fxq 'CACHE_PROBE=PASS' <<< "$output"
+    grep -Fq '$cache = \Illuminate\Support\Facades\Cache::store();' "$payload"
+    grep -Fq '$write = false; $read = false; $delete = false;' "$payload"
+    grep -Eq 'mitoo_deploy_cache_probe_[0-9]+_[0-9]+' "$payload"
+}
+
+test_cache_probe_missing_marker_blocks() {
+    run_artisan_as_www() {
+        printf 'CACHE_WRITE=PASS\nCACHE_READ=PASS\n'
+    }
+
+    assert_command_fails run_laravel_cache_probe_as_www "$TEST_TMP/cache-probe-missing-marker-root"
+}
+
+test_cache_probe_nonzero_status_blocks() {
+    run_artisan_as_www() {
+        printf 'CACHE_WRITE=PASS\nCACHE_READ=PASS\nCACHE_DELETE=PASS\n'
+        return 17
+    }
+
+    assert_command_fails run_laravel_cache_probe_as_www "$TEST_TMP/cache-probe-nonzero-status-root"
+}
+
 test_rollback_uses_safe_runtime_path() {
     local marker="$TEST_TMP/rollback-runtime-safe"
     APP_ROOT="$TEST_TMP/rollback-app"
@@ -891,6 +989,9 @@ run_test 'Git fetch retries then passes' test_git_fetch_retries_then_passes
 run_test 'Git fetch fails closed after all attempts' test_git_fetch_all_attempts_fail_closed
 run_test 'Git fetch timeout is bounded' test_git_fetch_timeout_is_bounded
 run_test 'invalid Git fetch config fails' test_invalid_git_fetch_config_fails
+run_test 'valid retry sleep values pass' test_valid_git_fetch_retry_sleep_values_pass
+run_test 'invalid retry sleep fails closed' test_invalid_git_fetch_retry_sleep_fails_closed
+run_test 'conditional fetch config failure returns nonzero' test_git_fetch_config_failure_in_condition_returns_nonzero
 run_test 'Git fetch stays before activation' test_fetch_pre_activation_only
 run_test 'raw Git fetch regression is absent' test_no_raw_fetch_regression
 run_test 'SHA on origin/main passes' test_sha_on_origin_main_passes
@@ -915,6 +1016,9 @@ run_test 'Laravel cache rebuild runs as WWW_USER' test_rebuild_uses_www_user
 run_test 'runtime permissions are normalized after rebuild' test_post_rebuild_permission_order
 run_test 'cache probe failure blocks activation' test_cache_probe_failure_blocks_activation
 run_test 'cache probe success allows activation' test_cache_probe_success_allows_activation
+run_test 'cache probe requires all markers and zero status' test_cache_probe_requires_all_markers_and_zero_status
+run_test 'cache probe missing marker blocks' test_cache_probe_missing_marker_blocks
+run_test 'cache probe nonzero status blocks' test_cache_probe_nonzero_status_blocks
 run_test 'rollback uses the safe runtime permission path' test_rollback_uses_safe_runtime_path
 run_test 'stale Collision manifest is deleted' test_stale_collision_manifest_is_deleted
 run_test 'activation failure triggers rollback' test_activation_failure_calls_rollback
