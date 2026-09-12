@@ -163,23 +163,29 @@ validate_execution_user() {
 validate_git_fetch_config() {
     if [[ ! "$GIT_FETCH_ATTEMPTS" =~ ^[1-9][0-9]*$ ]]; then
         die "GIT_FETCH_CONFIG" "BLOCKED" "GIT_FETCH_ATTEMPTS must be an integer from 1 to 10"
+        return 1
     fi
-    if ((GIT_FETCH_ATTEMPTS > 10)); then
+    if ! ((GIT_FETCH_ATTEMPTS <= 10)); then
         die "GIT_FETCH_CONFIG" "BLOCKED" "GIT_FETCH_ATTEMPTS must be an integer from 1 to 10"
+        return 1
     fi
 
     if [[ ! "$GIT_FETCH_TIMEOUT_SECONDS" =~ ^[1-9][0-9]*$ ]]; then
         die "GIT_FETCH_CONFIG" "BLOCKED" "GIT_FETCH_TIMEOUT_SECONDS must be an integer from 1 to 300"
+        return 1
     fi
-    if ((GIT_FETCH_TIMEOUT_SECONDS > 300)); then
+    if ! ((GIT_FETCH_TIMEOUT_SECONDS <= 300)); then
         die "GIT_FETCH_CONFIG" "BLOCKED" "GIT_FETCH_TIMEOUT_SECONDS must be an integer from 1 to 300"
+        return 1
     fi
 
     if [[ ! "$GIT_FETCH_RETRY_SLEEP_SECONDS" =~ ^[0-9]+$ ]]; then
         die "GIT_FETCH_CONFIG" "BLOCKED" "GIT_FETCH_RETRY_SLEEP_SECONDS must be an integer from 0 to 60"
+        return 1
     fi
-    if ((GIT_FETCH_RETRY_SLEEP_SECONDS > 60)); then
+    if ! ((GIT_FETCH_RETRY_SLEEP_SECONDS <= 60)); then
         die "GIT_FETCH_CONFIG" "BLOCKED" "GIT_FETCH_RETRY_SLEEP_SECONDS must be an integer from 0 to 60"
+        return 1
     fi
 
     emit "GIT_FETCH_CONFIG" "PASS"

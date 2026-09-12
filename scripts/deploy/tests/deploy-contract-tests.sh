@@ -206,6 +206,63 @@ test_invalid_git_fetch_config_fails() {
     assert_command_fails validate_git_fetch_config
 }
 
+test_valid_git_fetch_retry_sleep_values_pass() {
+    local retry_sleep
+    local output
+
+    GIT_FETCH_ATTEMPTS=3
+    GIT_FETCH_TIMEOUT_SECONDS=40
+
+    for retry_sleep in 0 5 60; do
+        GIT_FETCH_RETRY_SLEEP_SECONDS="$retry_sleep"
+        if ! output="$(validate_git_fetch_config 2>&1)"; then
+            fail_test "valid retry sleep unexpectedly blocked: $retry_sleep"
+        fi
+        grep -Fxq 'GIT_FETCH_CONFIG=PASS' <<< "$output" \
+            || fail_test "valid retry sleep did not emit PASS: $retry_sleep"
+    done
+}
+
+test_invalid_git_fetch_retry_sleep_fails_closed() {
+    local retry_sleep
+    local output
+    local status
+
+    GIT_FETCH_ATTEMPTS=3
+    GIT_FETCH_TIMEOUT_SECONDS=40
+
+    for retry_sleep in 61 -1 abc 08 09 0999; do
+        GIT_FETCH_RETRY_SLEEP_SECONDS="$retry_sleep"
+        set +e
+        output="$(validate_git_fetch_config 2>&1)"
+        status=$?
+        set -e
+
+        [[ "$status" -ne 0 ]] \
+            || fail_test "invalid retry sleep unexpectedly succeeded: $retry_sleep"
+        ! grep -Fxq 'GIT_FETCH_CONFIG=PASS' <<< "$output" \
+            || fail_test "invalid retry sleep emitted PASS: $retry_sleep"
+        grep -Fxq 'GIT_FETCH_CONFIG=BLOCKED' <<< "$output" \
+            || fail_test "invalid retry sleep did not emit BLOCKED: $retry_sleep"
+    done
+}
+
+test_git_fetch_config_failure_in_condition_returns_nonzero() {
+    local output
+
+    GIT_FETCH_ATTEMPTS=3
+    GIT_FETCH_TIMEOUT_SECONDS=40
+    GIT_FETCH_RETRY_SLEEP_SECONDS=08
+
+    if output="$(validate_git_fetch_config 2>&1)"; then
+        fail_test 'invalid retry sleep succeeded when validation was used as a condition'
+    fi
+    ! grep -Fxq 'GIT_FETCH_CONFIG=PASS' <<< "$output" \
+        || fail_test 'conditional validation emitted PASS after failure'
+    grep -Fxq 'GIT_FETCH_CONFIG=BLOCKED' <<< "$output" \
+        || fail_test 'conditional validation did not emit BLOCKED'
+}
+
 test_fetch_pre_activation_only() {
     local source="$TEST_TMP/deploy-library-network-scan"
     sed -e '/^[[:space:]]*#/d' "$LIBRARY" > "$source"
@@ -932,6 +989,9 @@ run_test 'Git fetch retries then passes' test_git_fetch_retries_then_passes
 run_test 'Git fetch fails closed after all attempts' test_git_fetch_all_attempts_fail_closed
 run_test 'Git fetch timeout is bounded' test_git_fetch_timeout_is_bounded
 run_test 'invalid Git fetch config fails' test_invalid_git_fetch_config_fails
+run_test 'valid retry sleep values pass' test_valid_git_fetch_retry_sleep_values_pass
+run_test 'invalid retry sleep fails closed' test_invalid_git_fetch_retry_sleep_fails_closed
+run_test 'conditional fetch config failure returns nonzero' test_git_fetch_config_failure_in_condition_returns_nonzero
 run_test 'Git fetch stays before activation' test_fetch_pre_activation_only
 run_test 'raw Git fetch regression is absent' test_no_raw_fetch_regression
 run_test 'SHA on origin/main passes' test_sha_on_origin_main_passes
