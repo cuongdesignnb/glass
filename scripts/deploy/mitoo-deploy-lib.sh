@@ -475,24 +475,33 @@ validate_api_response_files() {
     local status
 
     status="$(tr -d '\r\n' < "$status_file")"
-    [[ "$status" == "200" ]] || die "API_SMOKE_HTTP" "BLOCKED" "Collections API returned HTTP $status"
-    grep -Eiq '^Content-Type:[[:space:]]*[^;]*application/json' "$headers_file" \
-        || die "API_SMOKE_CONTENT_TYPE" "BLOCKED" "Collections API did not return application/json"
+    if [[ "$status" != "200" ]]; then
+        die "API_SMOKE_HTTP" "BLOCKED" "Collections API returned HTTP $status"
+        return 1
+    fi
+    if ! grep -Eiq '^Content-Type:[[:space:]]*[^;]*application/json' "$headers_file"; then
+        die "API_SMOKE_CONTENT_TYPE" "BLOCKED" "Collections API did not return application/json"
+        return 1
+    fi
 
     if grep -Eiq '^[[:space:]]*(<html|<!DOCTYPE|<br[[:space:]/>]|<b>Warning)' "$body_file"; then
         die "API_SMOKE_BODY" "BLOCKED" "Collections API returned HTML or a PHP warning"
+        return 1
     fi
 
     # The single-quoted program is PHP source and must not be expanded by Bash.
     # shellcheck disable=SC2016
-    "$PHP_BIN" -r '
+    if ! "$PHP_BIN" -r '
         $body = file_get_contents($argv[1]);
         $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
         if (!is_array($decoded)) { exit(2); }
         if (array_is_list($decoded)) { exit(0); }
         if (array_key_exists("data", $decoded) && is_array($decoded["data"])) { exit(0); }
         exit(3);
-    ' "$body_file" || die "API_SMOKE_JSON" "BLOCKED" "Collections API body is not the expected JSON collection shape"
+    ' "$body_file"; then
+        die "API_SMOKE_JSON" "BLOCKED" "Collections API body is not the expected JSON collection shape"
+        return 1
+    fi
 
     emit "API_SMOKE_JSON" "PASS"
 }
@@ -504,13 +513,24 @@ smoke_laravel_api() {
     local headers_file="$output_dir/api-headers.txt"
     local body_file="$output_dir/api-body.json"
 
-    curl --silent --show-error \
-        --header "Host: $PUBLIC_DOMAIN" \
+    local curl_status=0
+    if curl -q --noproxy '*' \
+        --silent --show-error \
+        --connect-timeout 5 --max-time 20 \
+        --resolve "${PUBLIC_DOMAIN}:443:127.0.0.1" \
         --header 'Accept: application/json' \
         --dump-header "$headers_file" \
         --output "$body_file" \
         --write-out '%{http_code}' \
-        'http://127.0.0.1/api/public/collections' > "$status_file"
+        "https://${PUBLIC_DOMAIN}/api/public/collections" > "$status_file"; then
+        curl_status=0
+    else
+        curl_status=$?
+        emit "API_SMOKE_TRANSPORT" "BLOCKED"
+        emit "API_SMOKE_CURL_EXIT" "$curl_status"
+        printf 'ERROR: Collections API transport check failed (curl exit %s)\n' "$curl_status" >&2
+        return 1
+    fi
 
     validate_api_response_files "$status_file" "$headers_file" "$body_file"
 }
