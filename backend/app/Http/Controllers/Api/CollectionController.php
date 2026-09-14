@@ -7,6 +7,8 @@ use App\Models\Collection;
 use App\Helpers\VietnameseSlug;
 use App\Services\SlugHistory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class CollectionController extends Controller
@@ -128,7 +130,11 @@ class CollectionController extends Controller
             'order'         => 'nullable|integer|min:0',
             'is_active'     => 'nullable|boolean',
             'regenerate_slug' => 'sometimes|boolean',
-            'requested_slug' => 'sometimes|nullable|string|max:255',
+            'requested_slug' => [
+                Rule::requiredIf(fn () => $request->boolean('regenerate_slug')),
+                'string',
+                'max:255',
+            ],
             'product_ids'   => 'nullable|array',
             'product_ids.*' => 'integer|distinct|exists:products,id',
         ]);
@@ -140,23 +146,33 @@ class CollectionController extends Controller
         unset($data['regenerate_slug']);
         unset($data['requested_slug']);
 
-        if ($regenerateSlug) {
-            $newSlug = VietnameseSlug::make($data['name'] ?? $collection->name);
-            if ($requestedSlug !== null && $requestedSlug !== $newSlug) {
-                throw ValidationException::withMessages([
-                    'slug' => 'Slug xem trước đã cũ. Vui lòng tạo và xác nhận lại slug.',
-                ]);
+        $collection = DB::transaction(function () use (
+            &$collection,
+            $data,
+            $regenerateSlug,
+            $requestedSlug,
+            $request
+        ) {
+            if ($regenerateSlug) {
+                $newSlug = VietnameseSlug::make($data['name'] ?? $collection->name);
+                if ($requestedSlug !== $newSlug) {
+                    throw ValidationException::withMessages([
+                        'slug' => 'Slug xem trước đã cũ. Vui lòng tạo và xác nhận lại slug.',
+                    ]);
+                }
+
+                if ($newSlug !== $collection->slug) {
+                    $collection = SlugHistory::change($collection, SlugHistory::COLLECTION, $newSlug);
+                    $data['slug'] = $newSlug;
+                }
             }
 
-            if ($newSlug !== $collection->slug) {
-                $collection = SlugHistory::change($collection, SlugHistory::COLLECTION, $newSlug);
-                $data['slug'] = $newSlug;
-            }
-        }
+            unset($data['product_ids']);
+            $collection->update($data);
+            $this->syncProducts($collection, $request);
 
-        unset($data['product_ids']);
-        $collection->update($data);
-        $this->syncProducts($collection, $request);
+            return $collection;
+        });
 
         return response()->json($collection->load('products')->loadCount('products'));
     }

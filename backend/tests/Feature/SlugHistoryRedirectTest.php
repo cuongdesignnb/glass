@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Event;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -67,6 +68,231 @@ class SlugHistoryRedirectTest extends TestCase
 
         $this->assertSame('nguon', $source->fresh()->slug);
         $this->assertDatabaseCount('slug_redirects', 0);
+    }
+
+    public function test_product_slug_regeneration_requires_a_preview_slug(): void
+    {
+        $product = $this->createProduct('Sản phẩm A', 'san-pham-a');
+        Sanctum::actingAs($this->createAdmin());
+
+        $this->putJson('/api/products/'.$product->id, [
+            'name' => 'Sản phẩm B',
+            'regenerate_slug' => true,
+        ])->assertUnprocessable()->assertJsonValidationErrors('requested_slug');
+
+        $this->assertSame('Sản phẩm A', $product->fresh()->name);
+        $this->assertSame('san-pham-a', $product->fresh()->slug);
+        $this->assertDatabaseCount('slug_redirects', 0);
+    }
+
+    public function test_article_slug_regeneration_requires_a_preview_slug(): void
+    {
+        $article = Article::create([
+            'title' => 'Bài viết A',
+            'slug' => 'bai-viet-a',
+            'content' => '<p>Nội dung</p>',
+            'is_published' => true,
+        ]);
+        Sanctum::actingAs($this->createAdmin());
+
+        $this->putJson('/api/articles/'.$article->id, [
+            'title' => 'Bài viết B',
+            'regenerate_slug' => true,
+        ])->assertUnprocessable()->assertJsonValidationErrors('requested_slug');
+
+        $this->assertSame('Bài viết A', $article->fresh()->title);
+        $this->assertSame('bai-viet-a', $article->fresh()->slug);
+        $this->assertDatabaseCount('slug_redirects', 0);
+    }
+
+    public function test_collection_slug_regeneration_requires_a_preview_slug(): void
+    {
+        $collection = Collection::create([
+            'name' => 'Bộ sưu tập A',
+            'slug' => 'bo-suu-tap-a',
+            'is_active' => true,
+        ]);
+        Sanctum::actingAs($this->createAdmin());
+
+        $this->putJson('/api/collections/'.$collection->id, [
+            'name' => 'Bộ sưu tập B',
+            'regenerate_slug' => true,
+        ])->assertUnprocessable()->assertJsonValidationErrors('requested_slug');
+
+        $this->assertSame('Bộ sưu tập A', $collection->fresh()->name);
+        $this->assertSame('bo-suu-tap-a', $collection->fresh()->slug);
+        $this->assertDatabaseCount('slug_redirects', 0);
+    }
+
+    public function test_product_stale_preview_is_rejected_without_mutation(): void
+    {
+        $product = $this->createProduct('Sản phẩm A', 'san-pham-a');
+        Sanctum::actingAs($this->createAdmin());
+
+        $this->putJson('/api/products/'.$product->id, [
+            'name' => 'Sản phẩm B',
+            'regenerate_slug' => true,
+            'requested_slug' => 'not-the-generated-slug',
+        ])->assertUnprocessable()->assertJsonValidationErrors('slug');
+
+        $this->assertSame('Sản phẩm A', $product->fresh()->name);
+        $this->assertSame('san-pham-a', $product->fresh()->slug);
+        $this->assertDatabaseCount('slug_redirects', 0);
+    }
+
+    public function test_article_stale_preview_is_rejected_without_mutation(): void
+    {
+        $article = Article::create([
+            'title' => 'Bài viết A',
+            'slug' => 'bai-viet-a',
+            'content' => '<p>Nội dung</p>',
+            'is_published' => true,
+        ]);
+        Sanctum::actingAs($this->createAdmin());
+
+        $this->putJson('/api/articles/'.$article->id, [
+            'title' => 'Bài viết B',
+            'regenerate_slug' => true,
+            'requested_slug' => 'not-the-generated-slug',
+        ])->assertUnprocessable()->assertJsonValidationErrors('slug');
+
+        $this->assertSame('Bài viết A', $article->fresh()->title);
+        $this->assertSame('bai-viet-a', $article->fresh()->slug);
+        $this->assertDatabaseCount('slug_redirects', 0);
+    }
+
+    public function test_collection_stale_preview_is_rejected_without_mutation(): void
+    {
+        $collection = Collection::create([
+            'name' => 'Bộ sưu tập A',
+            'slug' => 'bo-suu-tap-a',
+            'is_active' => true,
+        ]);
+        Sanctum::actingAs($this->createAdmin());
+
+        $this->putJson('/api/collections/'.$collection->id, [
+            'name' => 'Bộ sưu tập B',
+            'regenerate_slug' => true,
+            'requested_slug' => 'not-the-generated-slug',
+        ])->assertUnprocessable()->assertJsonValidationErrors('slug');
+
+        $this->assertSame('Bộ sưu tập A', $collection->fresh()->name);
+        $this->assertSame('bo-suu-tap-a', $collection->fresh()->slug);
+        $this->assertDatabaseCount('slug_redirects', 0);
+    }
+
+    public function test_product_full_save_rolls_back_after_slug_history_step_fails(): void
+    {
+        $product = $this->createProduct('Sản phẩm A', 'san-pham-a');
+        $faq = $product->faqs()->create([
+            'question' => 'Câu hỏi cũ',
+            'answer' => 'Câu trả lời cũ',
+            'order' => 0,
+            'is_active' => true,
+        ]);
+        $eventName = 'eloquent.updated: '.Product::class;
+        Event::listen($eventName, function (Product $model): void {
+            if ($model->wasChanged('name') && $model->name === 'Sản phẩm B') {
+                throw new \RuntimeException('forced product save failure');
+            }
+        });
+        Sanctum::actingAs($this->createAdmin());
+
+        try {
+            $this->putJson('/api/products/'.$product->id, [
+                'name' => 'Sản phẩm B',
+                'regenerate_slug' => true,
+                'requested_slug' => 'san-pham-b',
+                'faqs' => [[
+                    'question' => 'Câu hỏi mới',
+                    'answer' => 'Câu trả lời mới',
+                ]],
+            ])->assertStatus(500);
+        } finally {
+            Event::forget($eventName);
+        }
+
+        $this->assertSame('Sản phẩm A', $product->fresh()->name);
+        $this->assertSame('san-pham-a', $product->fresh()->slug);
+        $this->assertDatabaseCount('slug_redirects', 0);
+        $this->assertDatabaseHas('faqs', [
+            'id' => $faq->id,
+            'product_id' => $product->id,
+            'question' => 'Câu hỏi cũ',
+        ]);
+    }
+
+    public function test_article_full_save_rolls_back_after_slug_history_step_fails(): void
+    {
+        $article = Article::create([
+            'title' => 'Bài viết A',
+            'slug' => 'bai-viet-a',
+            'content' => '<p>Nội dung</p>',
+            'is_published' => true,
+        ]);
+        $eventName = 'eloquent.updated: '.Article::class;
+        Event::listen($eventName, function (Article $model): void {
+            if ($model->wasChanged('title') && $model->title === 'Bài viết B') {
+                throw new \RuntimeException('forced article save failure');
+            }
+        });
+        Sanctum::actingAs($this->createAdmin());
+
+        try {
+            $this->putJson('/api/articles/'.$article->id, [
+                'title' => 'Bài viết B',
+                'regenerate_slug' => true,
+                'requested_slug' => 'bai-viet-b',
+            ])->assertStatus(500);
+        } finally {
+            Event::forget($eventName);
+        }
+
+        $this->assertSame('Bài viết A', $article->fresh()->title);
+        $this->assertSame('bai-viet-a', $article->fresh()->slug);
+        $this->assertDatabaseCount('slug_redirects', 0);
+    }
+
+    public function test_collection_full_save_rolls_back_after_slug_history_step_fails(): void
+    {
+        $collection = Collection::create([
+            'name' => 'Bộ sưu tập A',
+            'slug' => 'bo-suu-tap-a',
+            'is_active' => true,
+        ]);
+        $existingProduct = $this->createProduct('Sản phẩm hiện tại', 'san-pham-hien-tai');
+        $collection->products()->attach($existingProduct->id, ['order' => 0]);
+        $replacementProduct = $this->createProduct('Sản phẩm thay thế', 'san-pham-thay-the');
+        $eventName = 'eloquent.updated: '.Collection::class;
+        Event::listen($eventName, function (Collection $model): void {
+            if ($model->wasChanged('name') && $model->name === 'Bộ sưu tập B') {
+                throw new \RuntimeException('forced collection save failure');
+            }
+        });
+        Sanctum::actingAs($this->createAdmin());
+
+        try {
+            $this->putJson('/api/collections/'.$collection->id, [
+                'name' => 'Bộ sưu tập B',
+                'regenerate_slug' => true,
+                'requested_slug' => 'bo-suu-tap-b',
+                'product_ids' => [$replacementProduct->id],
+            ])->assertStatus(500);
+        } finally {
+            Event::forget($eventName);
+        }
+
+        $this->assertSame('Bộ sưu tập A', $collection->fresh()->name);
+        $this->assertSame('bo-suu-tap-a', $collection->fresh()->slug);
+        $this->assertDatabaseCount('slug_redirects', 0);
+        $this->assertDatabaseHas('collection_product', [
+            'collection_id' => $collection->id,
+            'product_id' => $existingProduct->id,
+        ]);
+        $this->assertDatabaseMissing('collection_product', [
+            'collection_id' => $collection->id,
+            'product_id' => $replacementProduct->id,
+        ]);
     }
 
     public function test_product_history_redirect_preserves_query_and_current_url_is_ok(): void

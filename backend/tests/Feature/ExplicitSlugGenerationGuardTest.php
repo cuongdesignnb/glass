@@ -69,6 +69,7 @@ class ExplicitSlugGenerationGuardTest extends TestCase
         $this->putJson('/api/products/'.$product->id, [
             'name' => 'Gọng Kính Nhựa MS0016 Dáng Vuông',
             'regenerate_slug' => true,
+            'requested_slug' => 'gong-kinh-nhua-ms0016-dang-vuong',
         ])->assertOk()
             ->assertJsonPath('slug', 'gong-kinh-nhua-ms0016-dang-vuong');
 
@@ -84,6 +85,7 @@ class ExplicitSlugGenerationGuardTest extends TestCase
         $this->putJson('/api/products/'.$source->id, [
             'name' => 'Collision Target',
             'regenerate_slug' => true,
+            'requested_slug' => 'collision-target',
         ])->assertUnprocessable()
             ->assertJsonValidationErrors('slug');
 
@@ -116,6 +118,7 @@ class ExplicitSlugGenerationGuardTest extends TestCase
         $this->putJson('/api/articles/'.$article->id, [
             'title' => 'Hướng dẫn chọn kính đúng cách',
             'regenerate_slug' => true,
+            'requested_slug' => 'huong-dan-chon-kinh-dung-cach',
         ])->assertOk()
             ->assertJsonPath('slug', 'huong-dan-chon-kinh-dung-cach');
 
@@ -131,6 +134,7 @@ class ExplicitSlugGenerationGuardTest extends TestCase
         $this->putJson('/api/articles/'.$source->id, [
             'title' => 'Bài viết trùng',
             'regenerate_slug' => true,
+            'requested_slug' => 'bai-viet-trung',
         ])->assertUnprocessable()
             ->assertJsonValidationErrors('slug');
 
@@ -160,6 +164,7 @@ class ExplicitSlugGenerationGuardTest extends TestCase
         $this->putJson('/api/collections/'.$collection->id, [
             'name' => 'Bộ Sưu Tập Mùa Hè',
             'regenerate_slug' => true,
+            'requested_slug' => 'bo-suu-tap-mua-he',
         ])->assertOk()
             ->assertJsonPath('slug', 'bo-suu-tap-mua-he');
 
@@ -175,6 +180,7 @@ class ExplicitSlugGenerationGuardTest extends TestCase
         $this->putJson('/api/collections/'.$source->id, [
             'name' => 'Bộ sưu tập trùng',
             'regenerate_slug' => true,
+            'requested_slug' => 'bo-suu-tap-trung',
         ])->assertUnprocessable()
             ->assertJsonValidationErrors('slug');
 

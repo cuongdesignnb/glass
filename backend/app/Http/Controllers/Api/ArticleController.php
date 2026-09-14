@@ -7,6 +7,8 @@ use App\Models\Article;
 use App\Helpers\VietnameseSlug;
 use App\Services\SlugHistory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class ArticleController extends Controller
@@ -121,7 +123,11 @@ class ArticleController extends Controller
             'is_published' => 'nullable|boolean',
             'is_featured' => 'nullable|boolean',
             'regenerate_slug' => 'sometimes|boolean',
-            'requested_slug' => 'sometimes|nullable|string|max:255',
+            'requested_slug' => [
+                Rule::requiredIf(fn () => $request->boolean('regenerate_slug')),
+                'string',
+                'max:255',
+            ],
             'meta_title' => 'nullable|string',
             'meta_desc' => 'nullable|string',
             'meta_keywords' => 'nullable|string',
@@ -137,20 +143,6 @@ class ArticleController extends Controller
         unset($data['regenerate_slug']);
         unset($data['requested_slug']);
 
-        if ($regenerateSlug) {
-            $newSlug = VietnameseSlug::make($data['title'] ?? $article->title);
-            if ($requestedSlug !== null && $requestedSlug !== $newSlug) {
-                throw ValidationException::withMessages([
-                    'slug' => 'Slug xem trước đã cũ. Vui lòng tạo và xác nhận lại slug.',
-                ]);
-            }
-
-            if ($newSlug !== $article->slug) {
-                $article = SlugHistory::change($article, SlugHistory::ARTICLE, $newSlug);
-                $data['slug'] = $newSlug;
-            }
-        }
-
         // Auto set published_at
         if (!empty($data['is_published']) && !$article->published_at) {
             $data['published_at'] = now();
@@ -164,7 +156,30 @@ class ArticleController extends Controller
             $data['thumbnail_alt'] = $data['title'] ?? $article->title;
         }
 
-        $article->update($data);
+        $article = DB::transaction(function () use (
+            &$article,
+            $data,
+            $regenerateSlug,
+            $requestedSlug
+        ) {
+            if ($regenerateSlug) {
+                $newSlug = VietnameseSlug::make($data['title'] ?? $article->title);
+                if ($requestedSlug !== $newSlug) {
+                    throw ValidationException::withMessages([
+                        'slug' => 'Slug xem trước đã cũ. Vui lòng tạo và xác nhận lại slug.',
+                    ]);
+                }
+
+                if ($newSlug !== $article->slug) {
+                    $article = SlugHistory::change($article, SlugHistory::ARTICLE, $newSlug);
+                    $data['slug'] = $newSlug;
+                }
+            }
+
+            $article->update($data);
+
+            return $article;
+        });
         return response()->json($article);
     }
 

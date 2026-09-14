@@ -11,7 +11,9 @@ use App\Services\ProductCatalogCache;
 use App\Services\SlugHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
@@ -605,7 +607,11 @@ class ProductController extends Controller
             'is_featured' => 'nullable|boolean',
             'is_new' => 'nullable|boolean',
             'regenerate_slug' => 'sometimes|boolean',
-            'requested_slug' => 'sometimes|nullable|string|max:255',
+            'requested_slug' => [
+                Rule::requiredIf(fn () => $request->boolean('regenerate_slug')),
+                'string',
+                'max:255',
+            ],
             'featured_order' => 'nullable|integer|min:0',
             'stock' => 'nullable|integer|min:0',
             'weight' => 'nullable|string',
@@ -638,60 +644,70 @@ class ProductController extends Controller
         unset($data['regenerate_slug']);
         unset($data['requested_slug']);
 
-        if ($regenerateSlug) {
-            $newSlug = VietnameseSlug::make($data['name'] ?? $product->name);
-            if ($requestedSlug !== null && $requestedSlug !== $newSlug) {
-                throw ValidationException::withMessages([
-                    'slug' => 'Slug xem trước đã cũ. Vui lòng tạo và xác nhận lại slug.',
-                ]);
-            }
-
-            if ($newSlug !== $product->slug) {
-                $product = SlugHistory::change($product, SlugHistory::PRODUCT, $newSlug);
-                $data['slug'] = $newSlug;
-            }
-        }
-
-        $product->update($data);
-
-        if ($request->has('faqs') && is_array($request->faqs)) {
-            $product->faqs()->delete();
-            foreach ($request->faqs as $i => $faqData) {
-                if (!empty($faqData['question']) && !empty($faqData['answer'])) {
-                    $product->faqs()->create([
-                        'question' => $faqData['question'],
-                        'answer' => $faqData['answer'],
-                        'order' => $i,
-                        'is_active' => $faqData['is_active'] ?? true,
+        $product = DB::transaction(function () use (
+            &$product,
+            $data,
+            $regenerateSlug,
+            $requestedSlug,
+            $request
+        ) {
+            if ($regenerateSlug) {
+                $newSlug = VietnameseSlug::make($data['name'] ?? $product->name);
+                if ($requestedSlug !== $newSlug) {
+                    throw ValidationException::withMessages([
+                        'slug' => 'Slug xem trước đã cũ. Vui lòng tạo và xác nhận lại slug.',
                     ]);
                 }
-            }
-        }
 
-        // Handle addon groups + prices
-        if ($request->has('addon_groups') && is_array($request->addon_groups)) {
-            $this->syncAddonGroups($product, $request->addon_groups);
-        }
-        if ($request->has('addon_prices') && is_array($request->addon_prices)) {
-            $this->syncAddonPrices($product, $request->addon_prices);
-        }
-
-        // Handle collections
-        if ($request->has('collection_ids') && is_array($request->collection_ids)) {
-            $syncData = [];
-            foreach ($request->collection_ids as $i => $cid) {
-                $syncData[$cid] = ['order' => $i];
+                if ($newSlug !== $product->slug) {
+                    $product = SlugHistory::change($product, SlugHistory::PRODUCT, $newSlug);
+                    $data['slug'] = $newSlug;
+                }
             }
-            $product->collections()->sync($syncData);
-        }
 
-        // Handle categories (multi-select)
-        if ($request->has('category_ids') && is_array($request->category_ids)) {
-            $product->categories()->sync($request->category_ids);
-            if (!empty($request->category_ids)) {
-                $product->update(['category_id' => $request->category_ids[0]]);
+            $product->update($data);
+
+            if ($request->has('faqs') && is_array($request->faqs)) {
+                $product->faqs()->delete();
+                foreach ($request->faqs as $i => $faqData) {
+                    if (!empty($faqData['question']) && !empty($faqData['answer'])) {
+                        $product->faqs()->create([
+                            'question' => $faqData['question'],
+                            'answer' => $faqData['answer'],
+                            'order' => $i,
+                            'is_active' => $faqData['is_active'] ?? true,
+                        ]);
+                    }
+                }
             }
-        }
+
+            // Handle addon groups + prices
+            if ($request->has('addon_groups') && is_array($request->addon_groups)) {
+                $this->syncAddonGroups($product, $request->addon_groups);
+            }
+            if ($request->has('addon_prices') && is_array($request->addon_prices)) {
+                $this->syncAddonPrices($product, $request->addon_prices);
+            }
+
+            // Handle collections
+            if ($request->has('collection_ids') && is_array($request->collection_ids)) {
+                $syncData = [];
+                foreach ($request->collection_ids as $i => $cid) {
+                    $syncData[$cid] = ['order' => $i];
+                }
+                $product->collections()->sync($syncData);
+            }
+
+            // Handle categories (multi-select)
+            if ($request->has('category_ids') && is_array($request->category_ids)) {
+                $product->categories()->sync($request->category_ids);
+                if (!empty($request->category_ids)) {
+                    $product->update(['category_id' => $request->category_ids[0]]);
+                }
+            }
+
+            return $product;
+        });
 
         ProductCatalogCache::bump();
 
