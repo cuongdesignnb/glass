@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Article;
 use App\Helpers\VietnameseSlug;
+use App\Services\SlugHistory;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -48,11 +49,18 @@ class ArticleController extends Controller
         return response()->json($query->paginate($perPage));
     }
 
-    public function show(string $slugOrId)
+    public function show(Request $request, string $slugOrId)
     {
+        $redirect = SlugHistory::publicRedirect('article', $slugOrId, $request, '/bai-viet');
+        if ($redirect) {
+            return $redirect;
+        }
+
         $article = Article::with('category')
-            ->where('slug', $slugOrId)
-            ->orWhere('id', is_numeric($slugOrId) ? $slugOrId : 0)
+            ->where(function ($query) use ($slugOrId) {
+                $query->where('slug', $slugOrId)
+                    ->orWhere('id', is_numeric($slugOrId) ? $slugOrId : 0);
+            })
             ->firstOrFail();
 
         $article->increment('views');
@@ -113,6 +121,7 @@ class ArticleController extends Controller
             'is_published' => 'nullable|boolean',
             'is_featured' => 'nullable|boolean',
             'regenerate_slug' => 'sometimes|boolean',
+            'requested_slug' => 'sometimes|nullable|string|max:255',
             'meta_title' => 'nullable|string',
             'meta_desc' => 'nullable|string',
             'meta_keywords' => 'nullable|string',
@@ -124,18 +133,20 @@ class ArticleController extends Controller
         // Keep the existing URL for normal edits. Regeneration is available
         // only after an explicit, confirmed admin action.
         $regenerateSlug = (bool) ($data['regenerate_slug'] ?? false);
+        $requestedSlug = $data['requested_slug'] ?? null;
         unset($data['regenerate_slug']);
+        unset($data['requested_slug']);
 
         if ($regenerateSlug) {
             $newSlug = VietnameseSlug::make($data['title'] ?? $article->title);
-            if ($newSlug !== $article->slug) {
-                $existing = Article::where('slug', $newSlug)->where('id', '!=', $article->id)->exists();
-                if ($existing) {
-                    throw ValidationException::withMessages([
-                        'slug' => 'Slug này đang được sử dụng bởi bài viết khác.',
-                    ]);
-                }
+            if ($requestedSlug !== null && $requestedSlug !== $newSlug) {
+                throw ValidationException::withMessages([
+                    'slug' => 'Slug xem trước đã cũ. Vui lòng tạo và xác nhận lại slug.',
+                ]);
+            }
 
+            if ($newSlug !== $article->slug) {
+                $article = SlugHistory::change($article, SlugHistory::ARTICLE, $newSlug);
                 $data['slug'] = $newSlug;
             }
         }

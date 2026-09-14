@@ -346,6 +346,17 @@ export const adminApi = {
 
   me: (token: string) => fetchApi("/auth/me", { token }),
 
+  previewSlug: (
+    token: string,
+    payload: { entity_type: 'product' | 'article' | 'collection'; entity_id?: number; source_text: string },
+  ) => fetchApi('/slug-preview', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    token,
+    cache: 'no-store',
+    headers: { 'Cache-Control': 'no-cache' },
+  }),
+
   // Products
   getProducts: (token: string, params?: Record<string, string>) => {
     const query = params

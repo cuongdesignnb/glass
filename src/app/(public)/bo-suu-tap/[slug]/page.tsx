@@ -1,20 +1,58 @@
 import { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { cache, type CSSProperties } from 'react';
 import { FiArrowLeft, FiArrowRight } from 'react-icons/fi';
-import { publicApi } from '@/lib/api';
 import { generateBreadcrumbSchema, generateMeta } from '@/lib/seo';
 import '../../san-pham/products.css';
 import './collection.css';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mitoo.vn';
 const API_BASE = process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || '';
+const INTERNAL_API = process.env.INTERNAL_API_URL || '';
+const API_HOST = process.env.API_HOST || '';
+const SSR_API = INTERNAL_API || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
-const getCollection = cache(async (slug: string) => {
+function ssrHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (INTERNAL_API && API_HOST) headers.Host = API_HOST;
+  return headers;
+}
+
+type SearchParams = Record<string, string | string[] | undefined>;
+type CollectionRedirect = { redirectTo: string };
+
+function queryString(searchParams?: SearchParams): string {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(searchParams || {})) {
+    if (Array.isArray(value)) {
+      value.forEach(item => query.append(key, item));
+    } else if (value !== undefined) {
+      query.append(key, value);
+    }
+  }
+  const serialized = query.toString();
+  return serialized ? `?${serialized}` : '';
+}
+
+function isCollectionRedirect(value: any): value is CollectionRedirect {
+  return Boolean(value && typeof value.redirectTo === 'string' && value.redirectTo.length > 0);
+}
+
+const getCollection = cache(async (slug: string, searchParams?: SearchParams) => {
   try {
-    return await publicApi.getCollection(slug);
+    const response = await fetch(`${SSR_API}/public/collections/${encodeURIComponent(slug)}${queryString(searchParams)}`, {
+      headers: ssrHeaders(),
+      cache: 'no-store',
+      redirect: 'manual',
+    });
+    if (response.status === 301 || response.status === 308) {
+      const location = response.headers.get('location');
+      return location ? { redirectTo: location } : null;
+    }
+    if (!response.ok) return null;
+    return response.json();
   } catch {
     return null;
   }
@@ -32,9 +70,17 @@ function formatPrice(value: number | string): string {
 
 export const revalidate = 60;
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const collection = await getCollection(params.slug);
+export async function generateMetadata({ params, searchParams }: {
+  params: { slug: string };
+  searchParams?: Promise<SearchParams> | SearchParams;
+}): Promise<Metadata> {
+  const resolvedSearchParams = searchParams instanceof Promise ? await searchParams : (searchParams || {});
+  const collection = await getCollection(params.slug, resolvedSearchParams);
   if (!collection) return {};
+
+  if (isCollectionRedirect(collection)) {
+    return { alternates: { canonical: collection.redirectTo }, robots: { index: false, follow: false } };
+  }
 
   return generateMeta({
     title: collection.name,
@@ -44,8 +90,15 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   });
 }
 
-export default async function CollectionPage({ params }: { params: { slug: string } }) {
-  const collection = await getCollection(params.slug);
+export default async function CollectionPage({ params, searchParams }: {
+  params: { slug: string };
+  searchParams?: Promise<SearchParams> | SearchParams;
+}) {
+  const resolvedSearchParams = searchParams instanceof Promise ? await searchParams : (searchParams || {});
+  const collection = await getCollection(params.slug, resolvedSearchParams);
+  if (isCollectionRedirect(collection)) {
+    permanentRedirect(collection.redirectTo);
+  }
   if (!collection) notFound();
 
   const products = Array.isArray(collection.products)

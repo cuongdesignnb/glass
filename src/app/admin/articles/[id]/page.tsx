@@ -9,7 +9,6 @@ import { FiSave, FiArrowLeft, FiCpu, FiEye, FiImage, FiX, FiZap } from 'react-ic
 import dynamic from 'next/dynamic';
 import MediaPicker from '@/components/admin/MediaPicker';
 import SlugChangeConfirm from '@/components/admin/SlugChangeConfirm';
-import { vietnameseSlug } from '@/lib/vietnamese-slug';
 import toast from 'react-hot-toast';
 
 const RichEditor = dynamic(() => import('@/components/admin/RichEditor'), { ssr: false });
@@ -30,6 +29,7 @@ export default function ArticleFormPage() {
   const [slugChangeRequested, setSlugChangeRequested] = useState(false);
   const [slugPreview, setSlugPreview] = useState('');
   const [showSlugConfirm, setShowSlugConfirm] = useState(false);
+  const [slugPreviewLoading, setSlugPreviewLoading] = useState(false);
 
   const [form, setForm] = useState({
     title: '', slug: '', excerpt: '', content: '', thumbnail: '', thumbnail_alt: '', thumbnail_caption: '',
@@ -87,26 +87,47 @@ export default function ArticleFormPage() {
     setShowSlugConfirm(false);
   };
 
-  const handleGenerateSlug = () => {
-    const generated = vietnameseSlug(form.title);
-    if (!generated) {
+  const handleGenerateSlug = async () => {
+    if (!token || !form.title.trim()) {
       toast.error('Vui lòng nhập tiêu đề trước khi tạo slug.');
       return;
     }
 
-    if (!isEdit) {
-      setForm(prev => ({ ...prev, slug: generated }));
-      toast.success('Đã tạo slug xem trước. Slug chính thức sẽ được xác nhận khi lưu.');
-      return;
-    }
+    setSlugPreviewLoading(true);
+    try {
+      const preview = await adminApi.previewSlug(token, {
+        entity_type: 'article',
+        entity_id: isEdit ? Number(params?.id) : undefined,
+        source_text: form.title,
+      });
+      const generated = String(preview?.generated_slug || '');
+      if (!generated) {
+        toast.error('Tiêu đề không tạo được slug hợp lệ.');
+        return;
+      }
+      if (!preview?.available) {
+        toast.error('Slug này đang được sử dụng bởi một URL khác.');
+        return;
+      }
 
-    if (generated === form.slug) {
-      toast.success('Slug hiện tại đã phù hợp với tiêu đề.');
-      return;
-    }
+      if (!isEdit) {
+        setForm(prev => ({ ...prev, slug: generated }));
+        toast.success('Đã tạo slug xem trước từ backend.');
+        return;
+      }
 
-    setSlugPreview(generated);
-    setShowSlugConfirm(true);
+      if (generated === form.slug) {
+        toast.success('Slug hiện tại đã phù hợp với tiêu đề.');
+        return;
+      }
+
+      setSlugPreview(generated);
+      setShowSlugConfirm(true);
+    } catch (err: any) {
+      toast.error('Không thể tạo slug: ' + (err.message || 'Lỗi backend'));
+    } finally {
+      setSlugPreviewLoading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -121,6 +142,7 @@ export default function ArticleFormPage() {
       };
       if (isEdit && slugChangeRequested) {
         (payload as Record<string, unknown>).regenerate_slug = true;
+        (payload as Record<string, unknown>).requested_slug = slugPreview;
       }
       if (isEdit) {
         await adminApi.updateArticle(token, Number(params?.id), payload);
@@ -256,8 +278,8 @@ export default function ArticleFormPage() {
                       readOnly
                       style={{ flex: 1, color: slugChangeRequested ? 'var(--color-gold)' : undefined }}
                     />
-                    <button type="button" className="admin-btn admin-btn--secondary admin-btn--sm" onClick={handleGenerateSlug} disabled={!form.title.trim()}>
-                      Generate Slug
+                    <button type="button" className="admin-btn admin-btn--secondary admin-btn--sm" onClick={handleGenerateSlug} disabled={!form.title.trim() || slugPreviewLoading}>
+                      {slugPreviewLoading ? 'Đang tạo...' : 'Generate Slug'}
                     </button>
                   </div>
                   <p style={{ margin: '6px 0 0', fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)' }}>

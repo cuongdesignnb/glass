@@ -40,7 +40,7 @@ export default function SlugChangeConfirm({
         URL mới: {nextUrl}
       </p>
       <p style={{ margin: '0 0 12px', fontSize: '0.78rem', color: 'rgba(255,255,255,0.55)' }}>
-        Thay đổi URL có thể ảnh hưởng SEO và các liên kết cũ. Chỉ tiếp tục nếu bạn thực sự muốn đổi đường dẫn.
+        Sau khi lưu, URL cũ sẽ chuyển hướng vĩnh viễn sang URL mới. Sitemap và canonical sẽ chỉ dùng URL mới.
       </p>
       <div style={{ display: 'flex', gap: '8px' }}>
         <button type="button" className="admin-btn admin-btn--secondary admin-btn--sm" onClick={onCancel}>

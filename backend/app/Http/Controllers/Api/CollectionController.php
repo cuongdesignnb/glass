@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Collection;
 use App\Helpers\VietnameseSlug;
+use App\Services\SlugHistory;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -38,9 +39,16 @@ class CollectionController extends Controller
         return response()->json($query->get());
     }
 
-    public function show(string $slugOrId)
+    public function show(Request $request, string $slugOrId)
     {
         $isAdmin = $this->isAdmin();
+
+        if (! $isAdmin) {
+            $redirect = SlugHistory::publicRedirect('collection', $slugOrId, $request, '/bo-suu-tap');
+            if ($redirect) {
+                return $redirect;
+            }
+        }
 
         $query = Collection::with(['products' => function ($q) use ($isAdmin) {
                 if (!$isAdmin) {
@@ -120,6 +128,7 @@ class CollectionController extends Controller
             'order'         => 'nullable|integer|min:0',
             'is_active'     => 'nullable|boolean',
             'regenerate_slug' => 'sometimes|boolean',
+            'requested_slug' => 'sometimes|nullable|string|max:255',
             'product_ids'   => 'nullable|array',
             'product_ids.*' => 'integer|distinct|exists:products,id',
         ]);
@@ -127,18 +136,20 @@ class CollectionController extends Controller
         // Preserve the collection URL for ordinary edits. Regeneration is
         // allowed only after an explicit, confirmed admin action.
         $regenerateSlug = (bool) ($data['regenerate_slug'] ?? false);
+        $requestedSlug = $data['requested_slug'] ?? null;
         unset($data['regenerate_slug']);
+        unset($data['requested_slug']);
 
         if ($regenerateSlug) {
             $newSlug = VietnameseSlug::make($data['name'] ?? $collection->name);
-            if ($newSlug !== $collection->slug) {
-                $exists = Collection::where('slug', $newSlug)->where('id', '!=', $collection->id)->exists();
-                if ($exists) {
-                    throw ValidationException::withMessages([
-                        'slug' => 'Slug này đang được sử dụng bởi bộ sưu tập khác.',
-                    ]);
-                }
+            if ($requestedSlug !== null && $requestedSlug !== $newSlug) {
+                throw ValidationException::withMessages([
+                    'slug' => 'Slug xem trước đã cũ. Vui lòng tạo và xác nhận lại slug.',
+                ]);
+            }
 
+            if ($newSlug !== $collection->slug) {
+                $collection = SlugHistory::change($collection, SlugHistory::COLLECTION, $newSlug);
                 $data['slug'] = $newSlug;
             }
         }

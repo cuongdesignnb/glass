@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { generateMeta, generateProductSchema } from '@/lib/seo';
 import { getPublicSettings } from '@/lib/settings';
 import { productCategoryUrl } from '@/lib/listing-params';
@@ -24,16 +24,42 @@ function ssrHeaders(): Record<string, string> {
   return h;
 }
 
-async function getProduct(slug: string) {
-  const url = `${SSR_API}/public/products/${slug}`;
+type SearchParams = Record<string, string | string[] | undefined>;
+type ProductRedirect = { redirectTo: string };
+
+function queryString(searchParams?: SearchParams): string {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(searchParams || {})) {
+    if (Array.isArray(value)) {
+      value.forEach(item => query.append(key, item));
+    } else if (value !== undefined) {
+      query.append(key, value);
+    }
+  }
+  const serialized = query.toString();
+  return serialized ? `?${serialized}` : '';
+}
+
+function isProductRedirect(value: any): value is ProductRedirect {
+  return Boolean(value && typeof value.redirectTo === 'string' && value.redirectTo.length > 0);
+}
+
+async function getProduct(slug: string, searchParams?: SearchParams) {
+  const url = `${SSR_API}/public/products/${encodeURIComponent(slug)}${queryString(searchParams)}`;
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     const res = await fetch(url, {
       headers: ssrHeaders(),
       signal: controller.signal,
+      cache: 'no-store',
+      redirect: 'manual',
     });
     clearTimeout(timeout);
+    if (res.status === 301 || res.status === 308) {
+      const location = res.headers.get('location');
+      return location ? { redirectTo: location } : null;
+    }
     if (res.status === 404) return null; // Product genuinely doesn't exist
     if (!res.ok) {
       console.error(`[SSR getProduct] API error ${res.status} for ${slug}`);
@@ -63,17 +89,21 @@ export async function generateMetadata({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ color?: string; option_ids?: string }> | { color?: string; option_ids?: string };
+  searchParams?: Promise<SearchParams> | SearchParams;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const product = await getProduct(slug);
+  const resolvedSearchParams = searchParams instanceof Promise ? await searchParams : (searchParams || {});
+  const product = await getProduct(slug, resolvedSearchParams);
   if (!product) {
     return { title: 'Sản phẩm không tìm thấy' };
   }
 
-  const resolvedSearchParams = searchParams instanceof Promise ? await searchParams : (searchParams || {});
-  const color = resolvedSearchParams.color;
-  const optionIdsStr = resolvedSearchParams.option_ids;
+  if (isProductRedirect(product)) {
+    return { alternates: { canonical: product.redirectTo }, robots: { index: false, follow: false } };
+  }
+
+  const color = typeof resolvedSearchParams.color === 'string' ? resolvedSearchParams.color : undefined;
+  const optionIdsStr = typeof resolvedSearchParams.option_ids === 'string' ? resolvedSearchParams.option_ids : undefined;
   const optionIds = optionIdsStr ? optionIdsStr.split(',').map(id => parseInt(id, 10)).filter(Boolean) : [];
 
   const optionNames: string[] = [];
@@ -122,15 +152,18 @@ export default async function ProductDetailPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ color?: string; option_ids?: string }> | { color?: string; option_ids?: string };
+  searchParams?: Promise<SearchParams> | SearchParams;
 }) {
   const { slug } = await params;
-  const product = await getProduct(slug);
+  const resolvedSearchParams = searchParams instanceof Promise ? await searchParams : (searchParams || {});
+  const product = await getProduct(slug, resolvedSearchParams);
+  if (isProductRedirect(product)) {
+    permanentRedirect(product.redirectTo);
+  }
   if (!product) notFound();
 
-  const resolvedSearchParams = searchParams instanceof Promise ? await searchParams : (searchParams || {});
-  const color = resolvedSearchParams.color;
-  const optionIdsStr = resolvedSearchParams.option_ids;
+  const color = typeof resolvedSearchParams.color === 'string' ? resolvedSearchParams.color : undefined;
+  const optionIdsStr = typeof resolvedSearchParams.option_ids === 'string' ? resolvedSearchParams.option_ids : undefined;
   const optionIds = optionIdsStr ? optionIdsStr.split(',').map(id => parseInt(id, 10)).filter(Boolean) : [];
 
   let addonTotal = 0;

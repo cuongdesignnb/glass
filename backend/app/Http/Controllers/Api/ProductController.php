@@ -8,6 +8,7 @@ use App\Models\ProductAddonGroup;
 use App\Models\ProductAddonPrice;
 use App\Helpers\VietnameseSlug;
 use App\Services\ProductCatalogCache;
+use App\Services\SlugHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
@@ -121,9 +122,16 @@ class ProductController extends Controller
     /**
      * Show single product by slug or ID
      */
-    public function show(string $slugOrId)
+    public function show(Request $request, string $slugOrId)
     {
         $isAdmin = auth('sanctum')->check();
+
+        if (! $isAdmin) {
+            $redirect = SlugHistory::publicRedirect('product', $slugOrId, $request, '/san-pham');
+            if ($redirect) {
+                return $redirect;
+            }
+        }
 
         if ($isAdmin) {
             $productData = $this->getProductDetailData($slugOrId, true);
@@ -597,6 +605,7 @@ class ProductController extends Controller
             'is_featured' => 'nullable|boolean',
             'is_new' => 'nullable|boolean',
             'regenerate_slug' => 'sometimes|boolean',
+            'requested_slug' => 'sometimes|nullable|string|max:255',
             'featured_order' => 'nullable|integer|min:0',
             'stock' => 'nullable|integer|min:0',
             'weight' => 'nullable|string',
@@ -625,21 +634,20 @@ class ProductController extends Controller
         // A normal edit must never change an existing public URL. Slug
         // regeneration is an explicit, confirmed admin action only.
         $regenerateSlug = (bool) ($data['regenerate_slug'] ?? false);
+        $requestedSlug = $data['requested_slug'] ?? null;
         unset($data['regenerate_slug']);
+        unset($data['requested_slug']);
 
         if ($regenerateSlug) {
             $newSlug = VietnameseSlug::make($data['name'] ?? $product->name);
+            if ($requestedSlug !== null && $requestedSlug !== $newSlug) {
+                throw ValidationException::withMessages([
+                    'slug' => 'Slug xem trước đã cũ. Vui lòng tạo và xác nhận lại slug.',
+                ]);
+            }
+
             if ($newSlug !== $product->slug) {
-                $slugInUse = Product::where('slug', $newSlug)
-                    ->where('id', '!=', $product->id)
-                    ->exists();
-
-                if ($slugInUse) {
-                    throw ValidationException::withMessages([
-                        'slug' => 'Slug này đang được sử dụng bởi sản phẩm khác.',
-                    ]);
-                }
-
+                $product = SlugHistory::change($product, SlugHistory::PRODUCT, $newSlug);
                 $data['slug'] = $newSlug;
             }
         }

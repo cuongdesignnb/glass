@@ -10,7 +10,6 @@ import { FiSave, FiArrowLeft, FiImage, FiX, FiPlus, FiTrash2, FiLink, FiCpu, FiZ
 import dynamic from 'next/dynamic';
 import MediaPicker from '@/components/admin/MediaPicker';
 import SlugChangeConfirm from '@/components/admin/SlugChangeConfirm';
-import { vietnameseSlug } from '@/lib/vietnamese-slug';
 import toast from 'react-hot-toast';
 
 const RichEditor = dynamic(() => import('@/components/admin/RichEditor'), { ssr: false });
@@ -36,6 +35,7 @@ export default function ProductFormPage() {
   const [slugChangeRequested, setSlugChangeRequested] = useState(false);
   const [slugPreview, setSlugPreview] = useState('');
   const [showSlugConfirm, setShowSlugConfirm] = useState(false);
+  const [slugPreviewLoading, setSlugPreviewLoading] = useState(false);
 
   const [form, setForm] = useState({
     name: '', slug: '', sku: '', description: '', content: '',
@@ -146,26 +146,47 @@ export default function ProductFormPage() {
     setShowSlugConfirm(false);
   };
 
-  const handleGenerateSlug = () => {
-    const generated = vietnameseSlug(form.name);
-    if (!generated) {
+  const handleGenerateSlug = async () => {
+    if (!token || !form.name.trim()) {
       toast.error('Vui lòng nhập tên sản phẩm trước khi tạo slug.');
       return;
     }
 
-    if (!isEdit) {
-      setForm(prev => ({ ...prev, slug: generated }));
-      toast.success('Đã tạo slug xem trước. Slug chính thức sẽ được xác nhận khi lưu.');
-      return;
-    }
+    setSlugPreviewLoading(true);
+    try {
+      const preview = await adminApi.previewSlug(token, {
+        entity_type: 'product',
+        entity_id: isEdit ? Number(params?.id) : undefined,
+        source_text: form.name,
+      });
+      const generated = String(preview?.generated_slug || '');
+      if (!generated) {
+        toast.error('Tên sản phẩm không tạo được slug hợp lệ.');
+        return;
+      }
+      if (!preview?.available) {
+        toast.error('Slug này đang được sử dụng bởi một URL khác.');
+        return;
+      }
 
-    if (generated === form.slug) {
-      toast.success('Slug hiện tại đã phù hợp với tên sản phẩm.');
-      return;
-    }
+      if (!isEdit) {
+        setForm(prev => ({ ...prev, slug: generated }));
+        toast.success('Đã tạo slug xem trước từ backend.');
+        return;
+      }
 
-    setSlugPreview(generated);
-    setShowSlugConfirm(true);
+      if (generated === form.slug) {
+        toast.success('Slug hiện tại đã phù hợp với tên sản phẩm.');
+        return;
+      }
+
+      setSlugPreview(generated);
+      setShowSlugConfirm(true);
+    } catch (err: any) {
+      toast.error('Không thể tạo slug: ' + (err.message || 'Lỗi backend'));
+    } finally {
+      setSlugPreviewLoading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -188,6 +209,7 @@ export default function ProductFormPage() {
       };
       if (isEdit && slugChangeRequested) {
         (payload as Record<string, unknown>).regenerate_slug = true;
+        (payload as Record<string, unknown>).requested_slug = slugPreview;
       }
 
       const savingToast = toast.loading('Đang lưu sản phẩm...');
@@ -373,8 +395,8 @@ export default function ProductFormPage() {
                     readOnly
                     style={{ flex: 1, color: slugChangeRequested ? 'var(--color-gold)' : undefined }}
                   />
-                  <button type="button" className="admin-btn admin-btn--secondary admin-btn--sm" onClick={handleGenerateSlug} disabled={!form.name.trim()}>
-                    Generate Slug
+                  <button type="button" className="admin-btn admin-btn--secondary admin-btn--sm" onClick={handleGenerateSlug} disabled={!form.name.trim() || slugPreviewLoading}>
+                    {slugPreviewLoading ? 'Đang tạo...' : 'Generate Slug'}
                   </button>
                 </div>
                 <p style={{ margin: '6px 0 0', fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)' }}>

@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\ShippingController;
 use App\Http\Controllers\Api\MerchantController;
 use App\Http\Controllers\Api\ArticleCategoryController;
 use App\Http\Controllers\Api\AiContentQueueController;
+use App\Http\Controllers\Api\SlugPreviewController;
 
 /*
 |--------------------------------------------------------------------------
@@ -164,6 +165,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
+
+    // Backend is the single source of truth for slug previews. This action
+    // only reads the entity and current slug tables; it never mutates data.
+    Route::post('/slug-preview', SlugPreviewController::class);
 
     // Products CRUD
     Route::apiResource('products', ProductController::class);
