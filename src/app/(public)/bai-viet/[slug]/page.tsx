@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { generateMeta, generateArticleSchema, generateBreadcrumbSchema } from '@/lib/seo';
 import { getPublicSettings } from '@/lib/settings';
 import ArticleDetailClient from './ArticleDetailClient';
@@ -20,11 +20,37 @@ function ssrHeaders(): Record<string, string> {
   return h;
 }
 
-async function getArticle(slug: string) {
+type SearchParams = Record<string, string | string[] | undefined>;
+type ArticleRedirect = { redirectTo: string };
+
+function queryString(searchParams?: SearchParams): string {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(searchParams || {})) {
+    if (Array.isArray(value)) {
+      value.forEach(item => query.append(key, item));
+    } else if (value !== undefined) {
+      query.append(key, value);
+    }
+  }
+  const serialized = query.toString();
+  return serialized ? `?${serialized}` : '';
+}
+
+function isArticleRedirect(value: any): value is ArticleRedirect {
+  return Boolean(value && typeof value.redirectTo === 'string' && value.redirectTo.length > 0);
+}
+
+async function getArticle(slug: string, searchParams?: SearchParams) {
   try {
-    const res = await fetch(`${SSR_API}/public/articles/${slug}`, {
+    const res = await fetch(`${SSR_API}/public/articles/${encodeURIComponent(slug)}${queryString(searchParams)}`, {
       headers: ssrHeaders(),
+      cache: 'no-store',
+      redirect: 'manual',
     });
+    if (res.status === 301 || res.status === 308) {
+      const location = res.headers.get('location');
+      return location ? { redirectTo: location } : null;
+    }
     if (!res.ok) return null;
     return res.json();
   } catch {
@@ -115,11 +141,19 @@ function injectMissingImageAlts(html: string, articleTitle: string): string {
   });
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<SearchParams> | SearchParams;
+}): Promise<Metadata> {
   const { slug } = await params;
-  const article = await getArticle(slug);
+  const resolvedSearchParams = searchParams instanceof Promise ? await searchParams : (searchParams || {});
+  const article = await getArticle(slug, resolvedSearchParams);
   if (!article) {
     return { title: 'Bài viết không tìm thấy' };
+  }
+
+  if (isArticleRedirect(article)) {
+    return { alternates: { canonical: article.redirectTo }, robots: { index: false, follow: false } };
   }
 
   const ogImage = getArticleImage(article, article.slug || slug);
@@ -136,9 +170,16 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   });
 }
 
-export default async function ArticleDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function ArticleDetailPage({ params, searchParams }: {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<SearchParams> | SearchParams;
+}) {
   const { slug } = await params;
-  const article = await getArticle(slug);
+  const resolvedSearchParams = searchParams instanceof Promise ? await searchParams : (searchParams || {});
+  const article = await getArticle(slug, resolvedSearchParams);
+  if (isArticleRedirect(article)) {
+    permanentRedirect(article.redirectTo);
+  }
   if (!article) notFound();
 
   const related = await getRelatedArticles(article.id, article.tags || []);

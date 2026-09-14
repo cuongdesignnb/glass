@@ -26,7 +26,7 @@ test('collection routes expose managed products, metadata, schema and sitemap en
   const controller = read('backend/app/Http/Controllers/Api/CollectionController.php');
 
   assert.match(directory, /publicApi\.getCollections\(\)/);
-  assert.match(detail, /publicApi\.getCollection\(slug\)/);
+  assert.match(detail, /publicApi\.getCollection\(slug\)|\/public\/collections\/.*encodeURIComponent\(slug\)/);
   assert.match(detail, /'@type': 'CollectionPage'/);
   assert.match(detail, /'@type': 'ItemList'/);
   assert.match(sitemap, /\/bo-suu-tap/);

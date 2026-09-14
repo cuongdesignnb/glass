@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { adminApi } from '@/lib/api';
 import { useToken } from '@/lib/useToken';
 import MediaPicker from '@/components/admin/MediaPicker';
+import SlugChangeConfirm from '@/components/admin/SlugChangeConfirm';
 import {
   FiPlus, FiTrash2, FiEdit2, FiSave, FiX, FiCheck,
   FiArrowUp, FiArrowDown, FiEye, FiEyeOff, FiImage
@@ -27,6 +28,7 @@ const PRESET_VARIANTS = [
 
 const emptyForm = {
   name: '',
+  slug: '',
   description: '',
   tag: '',
   variant: 'classic',
@@ -50,6 +52,10 @@ export default function AdminCollectionsPage() {
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [allProducts, setAllProducts] = useState<any[]>([]);
   const [productSearch, setProductSearch] = useState('');
+  const [slugChangeRequested, setSlugChangeRequested] = useState(false);
+  const [slugPreview, setSlugPreview] = useState('');
+  const [showSlugConfirm, setShowSlugConfirm] = useState(false);
+  const [slugPreviewLoading, setSlugPreviewLoading] = useState(false);
 
   useEffect(() => { if (token) { loadCollections(); loadProducts(); } }, [token]);
 
@@ -97,6 +103,10 @@ export default function AdminCollectionsPage() {
     const saveToast = toast.loading('Đang lưu...');
     try {
       const payload = { ...form };
+      if (editingId && slugChangeRequested) {
+        (payload as Record<string, unknown>).regenerate_slug = true;
+        (payload as Record<string, unknown>).requested_slug = slugPreview;
+      }
       if (editingId) {
         await adminApi.updateCollection(token, editingId, payload);
       } else {
@@ -107,6 +117,56 @@ export default function AdminCollectionsPage() {
       loadCollections();
     } catch (err: any) {
       toast.error('Lỗi: ' + (err.message || ''), { id: saveToast });
+    }
+  };
+
+  const handleNameChange = (name: string) => {
+    setForm(prev => ({ ...prev, name }));
+    setSlugChangeRequested(false);
+    setSlugPreview('');
+    setShowSlugConfirm(false);
+  };
+
+  const handleGenerateSlug = async () => {
+    if (!token || !form.name.trim()) {
+      toast.error('Vui lòng nhập tên bộ sưu tập trước khi tạo slug.');
+      return;
+    }
+
+    setSlugPreviewLoading(true);
+    try {
+      const preview = await adminApi.previewSlug(token, {
+        entity_type: 'collection',
+        entity_id: editingId || undefined,
+        source_text: form.name,
+      });
+      const generated = String(preview?.generated_slug || '');
+      if (!generated) {
+        toast.error('Tên bộ sưu tập không tạo được slug hợp lệ.');
+        return;
+      }
+      if (!preview?.available) {
+        toast.error('Slug này đang được sử dụng bởi một URL khác.');
+        return;
+      }
+
+      if (!editingId) {
+        setForm(prev => ({ ...prev, slug: generated }));
+        toast.success('Đã tạo slug xem trước từ backend.');
+        return;
+      }
+
+      if (generated === form.slug) {
+        toast.success('Slug hiện tại đã phù hợp với tên bộ sưu tập.');
+        return;
+      }
+
+      setSlugPreview(generated);
+      setShowSlugConfirm(true);
+    } catch (err: any) {
+      toast.error('Không thể tạo slug: ' + (err.message || 'Lỗi backend'));
+    } finally {
+      setSlugPreviewLoading(false);
     }
   };
 
@@ -121,6 +181,7 @@ export default function AdminCollectionsPage() {
     }
     setForm({
       name: col.name || '',
+      slug: col.slug || '',
       description: col.description || '',
       tag: col.tag || '',
       variant: col.variant || 'classic',
@@ -133,6 +194,9 @@ export default function AdminCollectionsPage() {
       is_active: col.is_active ?? true,
       product_ids: productIds,
     });
+    setSlugChangeRequested(false);
+    setSlugPreview('');
+    setShowSlugConfirm(false);
     setShowForm(true);
   };
 
@@ -171,6 +235,9 @@ export default function AdminCollectionsPage() {
     setEditingId(null);
     setShowForm(false);
     setForm(emptyForm);
+    setSlugChangeRequested(false);
+    setSlugPreview('');
+    setShowSlugConfirm(false);
   };
 
   return (
@@ -199,13 +266,46 @@ export default function AdminCollectionsPage() {
                 <div className="admin-form__group" style={{ flex: 2 }}>
                   <label className="admin-form__label">Tên bộ sưu tập *</label>
                   <input className="admin-form__input" value={form.name}
-                    onChange={e => setForm({ ...form, name: e.target.value })} placeholder="VD: Thanh Lịch" />
+                    onChange={e => handleNameChange(e.target.value)} placeholder="VD: Thanh Lịch" />
                 </div>
                 <div className="admin-form__group" style={{ flex: 1 }}>
                   <label className="admin-form__label">Nhãn (Tag)</label>
                   <input className="admin-form__input" value={form.tag}
                     onChange={e => setForm({ ...form, tag: e.target.value.toUpperCase() })} placeholder="VD: CLASSIC" />
                 </div>
+              </div>
+
+              {/* Stable URL */}
+              <div className="admin-form__group">
+                <label className="admin-form__label">Slug / Đường dẫn URL</label>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    className="admin-form__input"
+                    value={slugChangeRequested ? slugPreview : (form.slug || 'Chưa có — sẽ tạo khi lưu')}
+                    readOnly
+                    style={{ flex: 1, color: slugChangeRequested ? 'var(--color-gold)' : undefined }}
+                  />
+                  <button type="button" className="admin-btn admin-btn--secondary admin-btn--sm" onClick={handleGenerateSlug} disabled={!form.name.trim() || slugPreviewLoading}>
+                    {slugPreviewLoading ? 'Đang tạo...' : 'Generate Slug'}
+                  </button>
+                </div>
+                <p style={{ margin: '6px 0 0', fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)' }}>
+                  Slug hiện tại được giữ nguyên khi lưu thông thường. Chỉ đổi sau khi xác nhận.
+                </p>
+                {showSlugConfirm && slugPreview && (
+                  <SlugChangeConfirm
+                    currentSlug={form.slug || 'chưa có'}
+                    nextSlug={slugPreview}
+                    pathPrefix="/bo-suu-tap"
+                    onCancel={() => { setShowSlugConfirm(false); setSlugPreview(''); }}
+                    onConfirm={() => { setSlugChangeRequested(true); setShowSlugConfirm(false); }}
+                  />
+                )}
+                {slugChangeRequested && !showSlugConfirm && (
+                  <p style={{ margin: '8px 0 0', fontSize: '0.78rem', color: 'var(--color-gold)' }}>
+                    Đã xác nhận đổi URL. Hãy bấm “Cập Nhật” để áp dụng.
+                  </p>
+                )}
               </div>
 
               {/* Row 2: Description */}

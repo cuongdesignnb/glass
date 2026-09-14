@@ -5,7 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Collection;
 use App\Helpers\VietnameseSlug;
+use App\Services\SlugHistory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class CollectionController extends Controller
 {
@@ -37,9 +41,16 @@ class CollectionController extends Controller
         return response()->json($query->get());
     }
 
-    public function show(string $slugOrId)
+    public function show(Request $request, string $slugOrId)
     {
         $isAdmin = $this->isAdmin();
+
+        if (! $isAdmin) {
+            $redirect = SlugHistory::publicRedirect('collection', $slugOrId, $request, '/bo-suu-tap');
+            if ($redirect) {
+                return $redirect;
+            }
+        }
 
         $query = Collection::with(['products' => function ($q) use ($isAdmin) {
                 if (!$isAdmin) {
@@ -118,21 +129,50 @@ class CollectionController extends Controller
             'accent_color'  => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'order'         => 'nullable|integer|min:0',
             'is_active'     => 'nullable|boolean',
+            'regenerate_slug' => 'sometimes|boolean',
+            'requested_slug' => [
+                Rule::requiredIf(fn () => $request->boolean('regenerate_slug')),
+                'string',
+                'max:255',
+            ],
             'product_ids'   => 'nullable|array',
             'product_ids.*' => 'integer|distinct|exists:products,id',
         ]);
 
-        if (isset($data['name'])) {
-            $newSlug = VietnameseSlug::make($data['name']);
-            if ($newSlug !== $collection->slug) {
-                $exists = Collection::where('slug', $newSlug)->where('id', '!=', $collection->id)->exists();
-                $data['slug'] = $exists ? $newSlug . '-' . time() : $newSlug;
-            }
-        }
+        // Preserve the collection URL for ordinary edits. Regeneration is
+        // allowed only after an explicit, confirmed admin action.
+        $regenerateSlug = (bool) ($data['regenerate_slug'] ?? false);
+        $requestedSlug = $data['requested_slug'] ?? null;
+        unset($data['regenerate_slug']);
+        unset($data['requested_slug']);
 
-        unset($data['product_ids']);
-        $collection->update($data);
-        $this->syncProducts($collection, $request);
+        $collection = DB::transaction(function () use (
+            &$collection,
+            $data,
+            $regenerateSlug,
+            $requestedSlug,
+            $request
+        ) {
+            if ($regenerateSlug) {
+                $newSlug = VietnameseSlug::make($data['name'] ?? $collection->name);
+                if ($requestedSlug !== $newSlug) {
+                    throw ValidationException::withMessages([
+                        'slug' => 'Slug xem trước đã cũ. Vui lòng tạo và xác nhận lại slug.',
+                    ]);
+                }
+
+                if ($newSlug !== $collection->slug) {
+                    $collection = SlugHistory::change($collection, SlugHistory::COLLECTION, $newSlug);
+                    $data['slug'] = $newSlug;
+                }
+            }
+
+            unset($data['product_ids']);
+            $collection->update($data);
+            $this->syncProducts($collection, $request);
+
+            return $collection;
+        });
 
         return response()->json($collection->load('products')->loadCount('products'));
     }
