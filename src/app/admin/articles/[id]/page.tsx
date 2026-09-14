@@ -8,6 +8,8 @@ import { useToken } from '@/lib/useToken';
 import { FiSave, FiArrowLeft, FiCpu, FiEye, FiImage, FiX, FiZap } from 'react-icons/fi';
 import dynamic from 'next/dynamic';
 import MediaPicker from '@/components/admin/MediaPicker';
+import SlugChangeConfirm from '@/components/admin/SlugChangeConfirm';
+import { vietnameseSlug } from '@/lib/vietnamese-slug';
 import toast from 'react-hot-toast';
 
 const RichEditor = dynamic(() => import('@/components/admin/RichEditor'), { ssr: false });
@@ -25,9 +27,12 @@ export default function ArticleFormPage() {
   const [mediaTarget, setMediaTarget] = useState<'thumbnail' | 'editor'>('thumbnail');
   const [editorInsertFn, setEditorInsertFn] = useState<((url: string, alt?: string, caption?: string) => void) | null>(null);
   const [aiImageCount, setAiImageCount] = useState(2);
+  const [slugChangeRequested, setSlugChangeRequested] = useState(false);
+  const [slugPreview, setSlugPreview] = useState('');
+  const [showSlugConfirm, setShowSlugConfirm] = useState(false);
 
   const [form, setForm] = useState({
-    title: '', excerpt: '', content: '', thumbnail: '', thumbnail_alt: '', thumbnail_caption: '',
+    title: '', slug: '', excerpt: '', content: '', thumbnail: '', thumbnail_alt: '', thumbnail_caption: '',
     author: '', tags: [] as string[], is_published: false, is_featured: false,
     meta_title: '', meta_desc: '', meta_keywords: '', og_image: '',
     article_category_id: '' as string | number,
@@ -58,7 +63,7 @@ export default function ArticleFormPage() {
       const article = (data.data || []).find((a: any) => a.id === Number(params?.id));
       if (article) {
         setForm({
-          title: article.title || '', excerpt: article.excerpt || '',
+          title: article.title || '', slug: article.slug || '', excerpt: article.excerpt || '',
           content: article.content || '', thumbnail: article.thumbnail || '',
           thumbnail_alt: article.thumbnail_alt || article.title || '',
           thumbnail_caption: article.thumbnail_caption || '',
@@ -74,6 +79,36 @@ export default function ArticleFormPage() {
     finally { setLoading(false); }
   };
 
+  const handleTitleChange = (title: string) => {
+    setForm(prev => ({ ...prev, title }));
+    // Require a fresh preview/confirmation when the title changes.
+    setSlugChangeRequested(false);
+    setSlugPreview('');
+    setShowSlugConfirm(false);
+  };
+
+  const handleGenerateSlug = () => {
+    const generated = vietnameseSlug(form.title);
+    if (!generated) {
+      toast.error('Vui lòng nhập tiêu đề trước khi tạo slug.');
+      return;
+    }
+
+    if (!isEdit) {
+      setForm(prev => ({ ...prev, slug: generated }));
+      toast.success('Đã tạo slug xem trước. Slug chính thức sẽ được xác nhận khi lưu.');
+      return;
+    }
+
+    if (generated === form.slug) {
+      toast.success('Slug hiện tại đã phù hợp với tiêu đề.');
+      return;
+    }
+
+    setSlugPreview(generated);
+    setShowSlugConfirm(true);
+  };
+
   const handleSave = async () => {
     if (!token || !form.title) return;
     setSaving(true);
@@ -84,6 +119,9 @@ export default function ArticleFormPage() {
         tags: tagsInput.split(',').map(t => t.trim()).filter(Boolean),
         article_category_id: form.article_category_id ? Number(form.article_category_id) : null,
       };
+      if (isEdit && slugChangeRequested) {
+        (payload as Record<string, unknown>).regenerate_slug = true;
+      }
       if (isEdit) {
         await adminApi.updateArticle(token, Number(params?.id), payload);
       } else {
@@ -146,6 +184,11 @@ export default function ArticleFormPage() {
           if (data.meta_keywords) updates.meta_keywords = data.meta_keywords;
           if (data.tags?.length) setTagsInput(data.tags.join(', '));
         }
+        if (updates.title && updates.title !== form.title) {
+          setSlugChangeRequested(false);
+          setSlugPreview('');
+          setShowSlugConfirm(false);
+        }
         setForm(f => ({ ...f, ...updates }));
         const parts: string[] = ['Đã tạo xong'];
         if (data.full_article) parts.push('(SEO + tags)');
@@ -201,8 +244,39 @@ export default function ArticleFormPage() {
                 <div className="admin-form__group">
                   <label className="admin-form__label">Tiêu đề bài viết *</label>
                   <input className="admin-form__input" value={form.title}
-                    onChange={e => setForm({ ...form, title: e.target.value })}
+                    onChange={e => handleTitleChange(e.target.value)}
                     placeholder="Ví dụ: Xu hướng kính mắt 2026" style={{ fontSize: '1.125rem', padding: '14px' }} />
+                </div>
+                <div className="admin-form__group">
+                  <label className="admin-form__label">Slug / Đường dẫn URL</label>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input
+                      className="admin-form__input"
+                      value={slugChangeRequested ? slugPreview : (form.slug || 'Chưa có — sẽ tạo khi lưu')}
+                      readOnly
+                      style={{ flex: 1, color: slugChangeRequested ? 'var(--color-gold)' : undefined }}
+                    />
+                    <button type="button" className="admin-btn admin-btn--secondary admin-btn--sm" onClick={handleGenerateSlug} disabled={!form.title.trim()}>
+                      Generate Slug
+                    </button>
+                  </div>
+                  <p style={{ margin: '6px 0 0', fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)' }}>
+                    Slug hiện tại được giữ nguyên khi lưu thông thường. Chỉ đổi sau khi xác nhận.
+                  </p>
+                  {showSlugConfirm && slugPreview && (
+                    <SlugChangeConfirm
+                      currentSlug={form.slug || 'chưa có'}
+                      nextSlug={slugPreview}
+                      pathPrefix="/bai-viet"
+                      onCancel={() => { setShowSlugConfirm(false); setSlugPreview(''); }}
+                      onConfirm={() => { setSlugChangeRequested(true); setShowSlugConfirm(false); }}
+                    />
+                  )}
+                  {slugChangeRequested && !showSlugConfirm && (
+                    <p style={{ margin: '8px 0 0', fontSize: '0.78rem', color: 'var(--color-gold)' }}>
+                      Đã xác nhận đổi URL. Hãy bấm “Lưu Bài Viết” để áp dụng.
+                    </p>
+                  )}
                 </div>
                 <div className="admin-form__group">
                   <label className="admin-form__label">Tóm tắt</label>

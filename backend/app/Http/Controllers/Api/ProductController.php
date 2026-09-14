@@ -11,6 +11,7 @@ use App\Services\ProductCatalogCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
 {
@@ -595,6 +596,7 @@ class ProductController extends Controller
             'is_active' => 'nullable|boolean',
             'is_featured' => 'nullable|boolean',
             'is_new' => 'nullable|boolean',
+            'regenerate_slug' => 'sometimes|boolean',
             'featured_order' => 'nullable|integer|min:0',
             'stock' => 'nullable|integer|min:0',
             'weight' => 'nullable|string',
@@ -620,12 +622,25 @@ class ProductController extends Controller
             $data['thumbnail_alt'] = $data['name'] ?? $product->name;
         }
 
-        // Regenerate slug if name changed
-        if (isset($data['name'])) {
-            $newSlug = VietnameseSlug::make($data['name']);
+        // A normal edit must never change an existing public URL. Slug
+        // regeneration is an explicit, confirmed admin action only.
+        $regenerateSlug = (bool) ($data['regenerate_slug'] ?? false);
+        unset($data['regenerate_slug']);
+
+        if ($regenerateSlug) {
+            $newSlug = VietnameseSlug::make($data['name'] ?? $product->name);
             if ($newSlug !== $product->slug) {
-                $existingSlug = Product::where('slug', $newSlug)->where('id', '!=', $product->id)->exists();
-                $data['slug'] = $existingSlug ? $newSlug . '-' . time() : $newSlug;
+                $slugInUse = Product::where('slug', $newSlug)
+                    ->where('id', '!=', $product->id)
+                    ->exists();
+
+                if ($slugInUse) {
+                    throw ValidationException::withMessages([
+                        'slug' => 'Slug này đang được sử dụng bởi sản phẩm khác.',
+                    ]);
+                }
+
+                $data['slug'] = $newSlug;
             }
         }
 

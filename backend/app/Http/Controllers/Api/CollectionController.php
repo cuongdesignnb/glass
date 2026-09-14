@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Collection;
 use App\Helpers\VietnameseSlug;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class CollectionController extends Controller
 {
@@ -118,15 +119,27 @@ class CollectionController extends Controller
             'accent_color'  => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'order'         => 'nullable|integer|min:0',
             'is_active'     => 'nullable|boolean',
+            'regenerate_slug' => 'sometimes|boolean',
             'product_ids'   => 'nullable|array',
             'product_ids.*' => 'integer|distinct|exists:products,id',
         ]);
 
-        if (isset($data['name'])) {
-            $newSlug = VietnameseSlug::make($data['name']);
+        // Preserve the collection URL for ordinary edits. Regeneration is
+        // allowed only after an explicit, confirmed admin action.
+        $regenerateSlug = (bool) ($data['regenerate_slug'] ?? false);
+        unset($data['regenerate_slug']);
+
+        if ($regenerateSlug) {
+            $newSlug = VietnameseSlug::make($data['name'] ?? $collection->name);
             if ($newSlug !== $collection->slug) {
                 $exists = Collection::where('slug', $newSlug)->where('id', '!=', $collection->id)->exists();
-                $data['slug'] = $exists ? $newSlug . '-' . time() : $newSlug;
+                if ($exists) {
+                    throw ValidationException::withMessages([
+                        'slug' => 'Slug này đang được sử dụng bởi bộ sưu tập khác.',
+                    ]);
+                }
+
+                $data['slug'] = $newSlug;
             }
         }
 

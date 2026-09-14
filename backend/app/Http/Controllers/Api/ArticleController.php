@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Article;
 use App\Helpers\VietnameseSlug;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class ArticleController extends Controller
 {
@@ -111,6 +112,7 @@ class ArticleController extends Controller
             'tags' => 'nullable|array',
             'is_published' => 'nullable|boolean',
             'is_featured' => 'nullable|boolean',
+            'regenerate_slug' => 'sometimes|boolean',
             'meta_title' => 'nullable|string',
             'meta_desc' => 'nullable|string',
             'meta_keywords' => 'nullable|string',
@@ -119,11 +121,22 @@ class ArticleController extends Controller
             'article_category_id' => 'nullable|integer|exists:article_categories,id',
         ]);
 
-        if (isset($data['title'])) {
-            $newSlug = VietnameseSlug::make($data['title']);
+        // Keep the existing URL for normal edits. Regeneration is available
+        // only after an explicit, confirmed admin action.
+        $regenerateSlug = (bool) ($data['regenerate_slug'] ?? false);
+        unset($data['regenerate_slug']);
+
+        if ($regenerateSlug) {
+            $newSlug = VietnameseSlug::make($data['title'] ?? $article->title);
             if ($newSlug !== $article->slug) {
                 $existing = Article::where('slug', $newSlug)->where('id', '!=', $article->id)->exists();
-                $data['slug'] = $existing ? $newSlug . '-' . time() : $newSlug;
+                if ($existing) {
+                    throw ValidationException::withMessages([
+                        'slug' => 'Slug này đang được sử dụng bởi bài viết khác.',
+                    ]);
+                }
+
+                $data['slug'] = $newSlug;
             }
         }
 

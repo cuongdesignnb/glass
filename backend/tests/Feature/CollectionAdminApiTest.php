@@ -122,13 +122,13 @@ class CollectionAdminApiTest extends TestCase
             'is_active' => false,
             'product_ids' => [$second->id, $first->id],
         ])->assertOk()
-            ->assertJsonPath('slug', 'after-update')
+            ->assertJsonPath('slug', 'before-update')
             ->assertJsonPath('is_active', false);
 
         $this->assertDatabaseHas('collections', [
             'id' => $collection->id,
             'name' => 'After Update',
-            'slug' => 'after-update',
+            'slug' => 'before-update',
             'is_active' => false,
         ]);
         $this->assertDatabaseMissing('collection_product', [
