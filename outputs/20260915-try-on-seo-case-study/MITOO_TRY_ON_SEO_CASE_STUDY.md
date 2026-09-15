@@ -84,11 +84,25 @@ After the interactive tool, the page now server-renders:
 
 1. How the MITOO try-on flow works (three steps).
 2. Reasons to compare frames online.
-3. Links to verified managed category routes (`gong-kinh`, `kinh-can`, `kinh-ram`, `kinh-thoi-trang`, `trong-kinh`).
+3. Links to verified managed frame-shape category routes (`gong-kinh-vuong`, `gong-kinh-tron`, `gong-kinh-mat-meo`, `gong-kinh-panto`, `gong-kinh-da-giac`). The lens category is intentionally excluded from this frame-shape discovery section.
 4. Neutral guidance by face shape.
 5. A visible five-question FAQ.
 
 The page emits WebPage, BreadcrumbList and FAQPage JSON-LD from the same FAQ data rendered on screen. No Product, SoftwareApplication, MedicalApplication, ratings, or invented claims were added. The existing single clean sitemap entry was preserved; no query or pagination URL was introduced.
+
+### Frame-shape category verification
+
+The five category candidates were checked read-only against the live site before updating the links. Each returned HTTP 200 with a category H1, so each is safe to expose as a crawlable frame-shape link:
+
+| Label | URL | HTTP | Category exists | Live H1 |
+| --- | --- | ---: | --- | --- |
+| Gọng kính vuông | `/danh-muc/gong-kinh-vuong` | 200 | YES | Gọng Kính Vuông |
+| Gọng kính tròn | `/danh-muc/gong-kinh-tron` | 200 | YES | Gọng Kính Tròn |
+| Gọng kính mắt mèo | `/danh-muc/gong-kinh-mat-meo` | 200 | YES | Gọng Kính Mắt Mèo |
+| Gọng kính Panto | `/danh-muc/gong-kinh-panto` | 200 | YES | Gọng Kính Panto |
+| Gọng kính đa giác | `/danh-muc/gong-kinh-da-giac` | 200 | YES | Gọng Kính Đa Giác |
+
+`/danh-muc/trong-kinh` was removed from this section because it describes lens type rather than frame shape. No unverified or known-404 category link was added.
 
 ### Internal links and product discovery
 

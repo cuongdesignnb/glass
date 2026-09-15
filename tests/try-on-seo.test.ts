@@ -34,12 +34,27 @@ test('try-on landing server-renders indexable sections and matching FAQ schema',
   assert.match(page, /'@type': 'FAQPage'/);
   assert.match(page, /dangerouslySetInnerHTML/);
   assert.equal((page.match(/<details key={item\.question}>/g) || []).length, 1);
-  assert.match(page, /\/danh-muc\/gong-kinh/);
-  assert.match(page, /\/danh-muc\/kinh-can/);
-  assert.match(page, /\/danh-muc\/kinh-ram/);
-  assert.match(page, /\/danh-muc\/kinh-thoi-trang/);
-  assert.match(page, /\/danh-muc\/trong-kinh/);
+  assert.match(page, /Khám phá các kiểu gọng theo dáng kính, sau đó chọn mẫu bạn thích để thử bằng AI trên khuôn mặt\./);
   assert.doesNotMatch(page, /realtime AR|AR tracking realtime|chính xác 100%|đảm bảo vừa mặt/);
+});
+
+test('TRYON_CATEGORY_LINKS_VERIFIED: frame-shape routes are live and lens category is excluded', () => {
+  for (const href of [
+    '/danh-muc/gong-kinh-vuong',
+    '/danh-muc/gong-kinh-tron',
+    '/danh-muc/gong-kinh-mat-meo',
+    '/danh-muc/gong-kinh-panto',
+    '/danh-muc/gong-kinh-da-giac',
+  ]) {
+    assert.match(page, new RegExp(`href: '${href.replaceAll('/', '\\/')}'`));
+  }
+  assert.doesNotMatch(page, /\/danh-muc\/trong-kinh/);
+  assert.equal((page.match(/href: '\/danh-muc\/gong-kinh-(?:vuong|tron|mat-meo|panto|da-giac)'/g) || []).length, 5);
+});
+
+test('TRYON_CATEGORY_404_LINKS=0 and LENS_CATEGORY_REMOVED', () => {
+  assert.doesNotMatch(page, /\/danh-muc\/trong-kinh/);
+  assert.doesNotMatch(page, /Kính cận|Kính râm|Kính thời trang/);
 });
 
 test('try-on product discovery and product detail use crawlable canonical links', () => {

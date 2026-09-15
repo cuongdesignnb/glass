@@ -30,11 +30,11 @@ const faqItems = [
 ] as const;
 
 const categoryLinks = [
-  { href: '/danh-muc/gong-kinh', label: 'Gọng kính' },
-  { href: '/danh-muc/kinh-can', label: 'Kính cận' },
-  { href: '/danh-muc/kinh-ram', label: 'Kính râm' },
-  { href: '/danh-muc/kinh-thoi-trang', label: 'Kính thời trang' },
-  { href: '/danh-muc/trong-kinh', label: 'Tròng kính' },
+  { href: '/danh-muc/gong-kinh-vuong', label: 'Gọng kính vuông' },
+  { href: '/danh-muc/gong-kinh-tron', label: 'Gọng kính tròn' },
+  { href: '/danh-muc/gong-kinh-mat-meo', label: 'Gọng kính mắt mèo' },
+  { href: '/danh-muc/gong-kinh-panto', label: 'Gọng kính Panto' },
+  { href: '/danh-muc/gong-kinh-da-giac', label: 'Gọng kính đa giác' },
 ] as const;
 
 export const metadata: Metadata = {
@@ -105,7 +105,7 @@ export default function VirtualTryOnPage() {
 
         <section className="tryon-seo-content__section">
           <h2>Bạn có thể thử những kiểu gọng kính nào?</h2>
-          <p>Hãy bắt đầu với các danh mục đang được MITOO quản lý, sau đó chọn sản phẩm muốn mô phỏng:</p>
+          <p>Khám phá các kiểu gọng theo dáng kính, sau đó chọn mẫu bạn thích để thử bằng AI trên khuôn mặt.</p>
           <nav className="tryon-seo-content__links" aria-label="Danh mục kính MITOO">
             {categoryLinks.map((category) => (
               <Link key={category.href} href={category.href}>{category.label}</Link>
