@@ -428,6 +428,22 @@
   opacity: 1;
 }
 
+.product-info__tryon-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--color-brand);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.product-info__tryon-link:hover {
+  color: var(--color-gold);
+  text-decoration: underline;
+}
+
 .product-info__trust {
   display: grid;
   grid-template-columns: 1fr 1fr;

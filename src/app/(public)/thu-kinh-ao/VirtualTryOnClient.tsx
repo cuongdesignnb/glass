@@ -5,6 +5,7 @@ import { publicApi } from '@/lib/api';
 import { GENDERS, FACE_SHAPES, FRAME_STYLES, MATERIALS, COLORS, formatPrice } from '@/lib/constants';
 import { FiUpload, FiCamera, FiX, FiSearch, FiChevronRight, FiChevronLeft, FiArrowRight, FiCheck, FiDownload, FiRotateCcw, FiFilter, FiGrid, FiZoomIn } from 'react-icons/fi';
 import { RiGlassesLine, RiSparklingLine, RiCameraLensFill, RiMagicLine } from 'react-icons/ri';
+import Link from 'next/link';
 import './try-on.css';
 
 const API_MEDIA = (process.env.NEXT_PUBLIC_API_URL || '').replace('/api', '');
@@ -289,16 +290,20 @@ export default function VirtualTryOnClient() {
           <div className="tryon-hero__orb tryon-hero__orb--3" />
         </div>
         <div className="container">
-          <div className="tryon-hero__content">
-            <div className="tryon-hero__badge">
-              <RiSparklingLine /> Công nghệ AI
-            </div>
+            <div className="tryon-hero__content">
+              <div className="tryon-hero__badge">
+                <RiSparklingLine /> Công nghệ AI
+              </div>
             <h1 className="tryon-hero__title">
-              Thử Kính <em>Ảo</em>
+              Thử Kính Online <em>Bằng AI Trên Khuôn Mặt</em>
             </h1>
             <p className="tryon-hero__desc">
-              Trải nghiệm đeo thử kính ngay tại nhà với công nghệ AI tiên tiến
+              Không cần đến cửa hàng để thử từng mẫu kính. Chụp hoặc tải ảnh khuôn mặt, chọn gọng kính bạn thích và để AI tạo hình ảnh mô phỏng giúp bạn hình dung kiểu kính trên khuôn mặt trước khi mua.
             </p>
+            <div className="tryon-hero__actions">
+              <a className="btn btn-primary" href="#try-on-workspace">Thử kính ngay <FiArrowRight /></a>
+              <Link className="btn btn-secondary" href="/danh-muc/gong-kinh">Xem gọng kính <FiArrowRight /></Link>
+            </div>
             {remainingTries !== null && (
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: '8px',
@@ -346,7 +351,7 @@ export default function VirtualTryOnClient() {
       </div>
 
       {/* Main Content */}
-      <div className="container tryon-container">
+      <div id="try-on-workspace" className="container tryon-container">
         {/* ====== STEP 1 - Face Upload ====== */}
         {step === 1 && (
           <div className="tryon-panel tryon-fade-in">
@@ -557,47 +562,51 @@ export default function VirtualTryOnClient() {
                       ? (product.thumbnail.startsWith('http') ? product.thumbnail : `${API_MEDIA}${product.thumbnail}`)
                       : '';
                     return (
-                      <button
-                        key={product.id}
-                        className={`tryon-product-card ${isSelected ? 'tryon-product-card--selected' : ''}`}
-                        onClick={() => {
-                          setSelectedProduct(product);
-                          setSelectedColor(product.colors?.[0] || '');
-                        }}
-                      >
-                        {isSelected && (
-                          <div className="tryon-product-card__check">
-                            <FiCheck />
-                          </div>
-                        )}
-                        <div className="tryon-product-card__img">
-                          {thumbSrc ? (
-                            <img src={thumbSrc} alt={product.name} />
-                          ) : (
-                            <div className="tryon-product-card__placeholder">
-                              <RiGlassesLine />
+                      <div key={product.id} className="tryon-product-card-wrap">
+                        <button
+                          className={`tryon-product-card ${isSelected ? 'tryon-product-card--selected' : ''}`}
+                          onClick={() => {
+                            setSelectedProduct(product);
+                            setSelectedColor(product.colors?.[0] || '');
+                          }}
+                        >
+                          {isSelected && (
+                            <div className="tryon-product-card__check">
+                              <FiCheck />
                             </div>
                           )}
-                        </div>
-                        <div className="tryon-product-card__info">
-                          <span className="tryon-product-card__brand">{product.brand || product.category?.name}</span>
-                          <h4 className="tryon-product-card__name">{product.name}</h4>
-                          <div className="tryon-product-card__price">
-                            {formatPrice(product.sale_price || product.price)}
+                          <div className="tryon-product-card__img">
+                            {thumbSrc ? (
+                              <img src={thumbSrc} alt={product.name} />
+                            ) : (
+                              <div className="tryon-product-card__placeholder">
+                                <RiGlassesLine />
+                              </div>
+                            )}
                           </div>
-                          {product.colors && product.colors.length > 0 && (
-                            <div className="tryon-product-card__colors">
-                              {product.colors.slice(0, 6).map((c: string, i: number) => (
-                                <span
-                                  key={i}
-                                  className="tryon-product-card__color-dot"
-                                  style={{ backgroundColor: c === 'transparent' ? '#f5f5dc' : c }}
-                                />
-                              ))}
+                          <div className="tryon-product-card__info">
+                            <span className="tryon-product-card__brand">{product.brand || product.category?.name}</span>
+                            <h4 className="tryon-product-card__name">{product.name}</h4>
+                            <div className="tryon-product-card__price">
+                              {formatPrice(product.sale_price || product.price)}
                             </div>
-                          )}
-                        </div>
-                      </button>
+                            {product.colors && product.colors.length > 0 && (
+                              <div className="tryon-product-card__colors">
+                                {product.colors.slice(0, 6).map((c: string, i: number) => (
+                                  <span
+                                    key={i}
+                                    className="tryon-product-card__color-dot"
+                                    style={{ backgroundColor: c === 'transparent' ? '#f5f5dc' : c }}
+                                  />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                        <Link className="tryon-product-card__detail-link" href={`/san-pham/${encodeURIComponent(product.slug)}`}>
+                          Xem chi tiết sản phẩm <FiArrowRight aria-hidden="true" />
+                        </Link>
+                      </div>
                     );
                   })}
                 </div>
@@ -644,6 +653,9 @@ export default function VirtualTryOnClient() {
                 <button className="btn btn-primary btn-lg tryon-next-btn" onClick={processTryOn}>
                   <RiMagicLine /> Đeo thử kính
                 </button>
+                <Link className="tryon-selected__detail-link" href={`/san-pham/${encodeURIComponent(selectedProduct.slug)}`}>
+                  Xem chi tiết sản phẩm <FiArrowRight aria-hidden="true" />
+                </Link>
               </div>
             )}
           </div>

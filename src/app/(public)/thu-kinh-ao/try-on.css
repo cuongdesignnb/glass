@@ -108,6 +108,24 @@
   animation: fadeInUp 0.6s ease 0.3s both;
 }
 
+.tryon-hero__actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  margin-top: var(--space-xl);
+  animation: fadeInUp 0.6s ease 0.45s both;
+}
+
+.tryon-hero__actions .btn,
+.tryon-seo-content__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
 /* Progress Steps */
 .tryon-progress {
   background: var(--color-primary);
@@ -695,6 +713,12 @@
 }
 
 /* Product Card */
+.tryon-product-card-wrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .tryon-product-card {
   position: relative;
   background: rgba(255,255,255,0.04);
@@ -704,6 +728,8 @@
   cursor: pointer;
   transition: all var(--transition-base);
   text-align: left;
+  width: 100%;
+  flex: 1;
 }
 
 .tryon-product-card:hover {
@@ -809,6 +835,25 @@
   border: 1.5px solid rgba(255,255,255,0.15);
 }
 
+.tryon-product-card__detail-link,
+.tryon-selected__detail-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--color-gold-light);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 8px 10px 2px;
+}
+
+.tryon-product-card__detail-link:hover,
+.tryon-selected__detail-link:hover {
+  color: var(--color-white);
+  text-decoration: underline;
+}
+
 /* Selected Product Bar */
 .tryon-selected {
   margin-top: var(--space-xl);
@@ -854,6 +899,11 @@
   color: var(--color-rose);
   font-weight: 700;
   font-size: 1rem;
+}
+
+.tryon-selected__detail-link {
+  font-size: 0.875rem;
+  padding-top: 0;
 }
 
 .tryon-selected__colors {
@@ -1088,8 +1138,129 @@
   animation: fadeInUp 0.4s ease;
 }
 
+/* Server-rendered SEO content */
+.tryon-seo-content {
+  max-width: 960px;
+  padding-top: var(--space-4xl);
+  padding-bottom: var(--space-4xl);
+}
+
+.tryon-seo-content__section {
+  margin-bottom: var(--space-3xl);
+  color: var(--color-gray-700);
+}
+
+.tryon-seo-content__section h2 {
+  color: var(--color-gray-900);
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  margin-bottom: var(--space-md);
+}
+
+.tryon-seo-content__section h3 {
+  color: var(--color-gray-900);
+  font-size: 1rem;
+  margin-bottom: 6px;
+}
+
+.tryon-seo-content__section p,
+.tryon-seo-content__section li {
+  line-height: 1.75;
+}
+
+.tryon-seo-content__eyebrow {
+  color: var(--color-brand);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: var(--space-sm);
+}
+
+.tryon-seo-content__steps {
+  display: grid;
+  gap: var(--space-sm);
+  padding-left: 1.5rem;
+  margin: var(--space-lg) 0;
+}
+
+.tryon-seo-content__note {
+  border-left: 3px solid var(--color-gold);
+  padding: 10px 14px;
+  background: rgba(201, 169, 110, 0.08);
+  color: var(--color-gray-700);
+}
+
+.tryon-seo-content__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: var(--space-lg);
+}
+
+.tryon-seo-content__links a {
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-full);
+  color: var(--color-brand);
+  padding: 8px 14px;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.tryon-seo-content__links a:hover {
+  border-color: var(--color-gold);
+  color: var(--color-gray-900);
+}
+
+.tryon-seo-content__face-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-lg);
+  margin: var(--space-lg) 0 var(--space-xl);
+}
+
+.tryon-seo-content__face-grid > div {
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  background: var(--color-gray-50);
+}
+
+.tryon-seo-content__cta {
+  text-decoration: none;
+}
+
+.tryon-seo-content__faq details {
+  border-bottom: 1px solid var(--color-gray-200);
+  padding: var(--space-md) 0;
+}
+
+.tryon-seo-content__faq summary {
+  cursor: pointer;
+  color: var(--color-gray-900);
+  font-weight: 700;
+}
+
+.tryon-seo-content__faq details p {
+  margin: var(--space-sm) 0 0;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
+  .tryon-hero__actions {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0 var(--space-lg);
+  }
+
+  .tryon-hero__actions .btn {
+    width: 100%;
+  }
+
+  .tryon-seo-content__face-grid {
+    grid-template-columns: 1fr;
+  }
+
   .tryon-panel {
     padding: var(--space-lg);
   }
