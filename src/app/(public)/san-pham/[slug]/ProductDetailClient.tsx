@@ -627,6 +627,9 @@ export default function ProductDetailClient({
               <FiCamera /> Đeo thử kính
             </button>
           </div>
+          <Link className="product-info__tryon-link" href="/thu-kinh-ao">
+            Thử thêm nhiều gọng kính online <FiArrowRight aria-hidden="true" />
+          </Link>
 
           {/* Product Addons / Variants */}
           {product.addon_groups &&
