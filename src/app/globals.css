@@ -109,7 +109,11 @@ html {
   -moz-osx-font-smoothing: grayscale;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  /* `hidden` creates an extra scroll container in Chromium and prevents
+     sticky controls inside the admin editor from tracking the viewport.
+     `clip` keeps the mobile overflow guard without changing the scroll
+     container used by position: sticky. */
+  overflow-x: clip;
   overscroll-behavior-x: none;
 }
 
@@ -120,7 +124,7 @@ body {
   line-height: 1.7;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  overflow-x: clip;
   overscroll-behavior-x: none;
   position: relative;
   letter-spacing: 0.01em;

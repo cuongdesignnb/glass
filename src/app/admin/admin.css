@@ -7,6 +7,10 @@
   min-height: 100vh;
   background: #0f0f1a;
   color: #e0e0e0;
+  /* Keep sticky editor controls below the persistent admin topbar. The
+     topbar's regular save action is taller than the compact buttons. */
+  --admin-topbar-height: 72px;
+  --admin-topbar-height-mobile: 72px;
 }
 
 /* Sidebar */
@@ -136,6 +140,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 32px;
+  min-height: var(--admin-topbar-height);
+  box-sizing: border-box;
   background: rgba(10,10,20,0.8);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255,255,255,0.06);
@@ -355,7 +361,7 @@ select.admin-form__input option {
 
 .tiptap-toolbar {
   position: sticky;
-  top: 56px;
+  top: var(--admin-topbar-height);
   z-index: 40;
   display: flex;
   flex-wrap: wrap;
@@ -425,7 +431,7 @@ select.admin-form__input option {
 
 @media (max-width: 640px) {
   .tiptap-toolbar {
-    top: 52px;
+    top: var(--admin-topbar-height-mobile);
   }
 }
 

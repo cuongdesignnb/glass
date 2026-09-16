@@ -223,12 +223,12 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
         </div>
 
         {/* Upload metadata */}
-        {pendingFiles.length > 0 && (
-          <div style={{ padding: '14px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(201,169,110,0.06)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '10px' }}>
-              <strong style={{ color: 'var(--color-gold)', fontSize: '0.8125rem' }}>
-                {pendingFiles.length} ảnh sẵn sàng tải lên
-              </strong>
+        <div style={{ padding: '14px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(201,169,110,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '6px' }}>
+            <strong style={{ color: 'var(--color-gold)', fontSize: '0.8125rem' }}>
+              {pendingFiles.length > 0 ? `${pendingFiles.length} ảnh sẵn sàng tải lên` : 'Thông tin ảnh tải lên'}
+            </strong>
+            {pendingFiles.length > 0 && (
               <button
                 type="button"
                 onClick={() => { setPendingFiles([]); setUploadAlt(''); setUploadCaption(''); setUploadError(''); }}
@@ -236,40 +236,46 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
               >
                 Bỏ chọn
               </button>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '10px' }}>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>
-                Alt ảnh <span style={{ color: '#f87171' }}>*</span>
-                <input
-                  type="text"
-                  value={uploadAlt}
-                  onChange={e => { setUploadAlt(e.target.value); setUploadError(''); }}
-                  maxLength={255}
-                  required
-                  aria-label="Alt ảnh"
-                  placeholder="Mô tả nội dung ảnh"
-                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px', padding: '8px 10px', color: '#fff', outline: 'none' }}
-                />
-              </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>
-                Chú thích ảnh <span style={{ color: 'rgba(255,255,255,0.35)' }}>(tuỳ chọn)</span>
-                <input
-                  type="text"
-                  value={uploadCaption}
-                  onChange={e => setUploadCaption(e.target.value)}
-                  maxLength={1000}
-                  aria-label="Chú thích ảnh"
-                  placeholder="Ghi chú hiển thị cùng ảnh"
-                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px', padding: '8px 10px', color: '#fff', outline: 'none' }}
-                />
-              </label>
-            </div>
-            {pendingFiles.length > 1 && (
-              <p style={{ margin: '8px 0 0', color: 'rgba(255,255,255,0.45)', fontSize: '0.6875rem' }}>
-                Với nhiều ảnh, tên file sẽ được thêm vào Alt để mỗi ảnh có mô tả riêng.
-              </p>
             )}
-            {uploadError && <p style={{ margin: '8px 0 0', color: '#f87171', fontSize: '0.75rem' }}>{uploadError}</p>}
+          </div>
+          <p style={{ margin: '0 0 10px', color: 'rgba(255,255,255,0.5)', fontSize: '0.6875rem' }}>
+            Alt ảnh là bắt buộc cho mọi file mới. Bạn có thể nhập trước khi chọn file.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '10px' }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>
+              Alt ảnh <span style={{ color: '#f87171' }}>*</span>
+              <input
+                type="text"
+                value={uploadAlt}
+                onChange={e => { setUploadAlt(e.target.value); setUploadError(''); }}
+                maxLength={255}
+                required
+                aria-label="Alt ảnh"
+                data-testid="media-picker-upload-alt"
+                placeholder="Mô tả nội dung ảnh"
+                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px', padding: '8px 10px', color: '#fff', outline: 'none' }}
+              />
+            </label>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>
+              Chú thích ảnh <span style={{ color: 'rgba(255,255,255,0.35)' }}>(tuỳ chọn)</span>
+              <input
+                type="text"
+                value={uploadCaption}
+                onChange={e => setUploadCaption(e.target.value)}
+                maxLength={1000}
+                aria-label="Chú thích ảnh"
+                placeholder="Ghi chú hiển thị cùng ảnh"
+                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px', padding: '8px 10px', color: '#fff', outline: 'none' }}
+              />
+            </label>
+          </div>
+          {pendingFiles.length > 1 && (
+            <p style={{ margin: '8px 0 0', color: 'rgba(255,255,255,0.45)', fontSize: '0.6875rem' }}>
+              Với nhiều ảnh, tên file sẽ được thêm vào Alt để mỗi ảnh có mô tả riêng.
+            </p>
+          )}
+          {uploadError && <p style={{ margin: '8px 0 0', color: '#f87171', fontSize: '0.75rem' }}>{uploadError}</p>}
+          {pendingFiles.length > 0 ? (
             <button
               type="button"
               className="admin-btn admin-btn--primary admin-btn--sm"
@@ -279,8 +285,12 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
             >
               <FiUploadCloud /> {uploading ? 'Đang tải lên...' : 'Tải ảnh lên'}
             </button>
-          </div>
-        )}
+          ) : (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '10px', color: 'rgba(255,255,255,0.4)', fontSize: '0.6875rem' }}>
+              <FiImage /> Chưa chọn file — Alt sẽ được giữ lại khi bạn chọn ảnh.
+            </span>
+          )}
+        </div>
 
         {/* Upload Progress */}
         {uploadProgress && (

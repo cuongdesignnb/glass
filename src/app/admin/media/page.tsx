@@ -154,51 +154,63 @@ export default function AdminMediaPage() {
           </p>
         </div>
 
-        {pendingFiles.length > 0 && (
-          <div style={{ marginBottom: '20px', padding: '16px', border: '1px solid rgba(201,169,110,0.35)', borderRadius: '12px', background: 'rgba(201,169,110,0.06)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '12px' }}>
-              <strong style={{ color: 'var(--color-gold)', fontSize: '0.875rem' }}>{pendingFiles.length} ảnh sẵn sàng tải lên</strong>
+        <div style={{ marginBottom: '20px', padding: '16px', border: '1px solid rgba(201,169,110,0.35)', borderRadius: '12px', background: 'rgba(201,169,110,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '6px' }}>
+            <strong style={{ color: 'var(--color-gold)', fontSize: '0.875rem' }}>
+              {pendingFiles.length > 0 ? `${pendingFiles.length} ảnh sẵn sàng tải lên` : 'Thông tin ảnh tải lên'}
+            </strong>
+            {pendingFiles.length > 0 && (
               <button type="button" onClick={() => { setPendingFiles([]); setUploadAlt(''); setUploadCaption(''); }} className="admin-btn admin-btn--secondary admin-btn--sm">
                 Bỏ chọn
               </button>
-            </div>
-            <div className="admin-form__row">
-              <label className="admin-form__group">
-                <span className="admin-form__label">Alt ảnh <span style={{ color: '#f87171' }}>*</span></span>
-                <input
-                  className="admin-form__input"
-                  type="text"
-                  value={uploadAlt}
-                  onChange={e => setUploadAlt(e.target.value)}
-                  maxLength={255}
-                  required
-                  aria-label="Alt ảnh"
-                  placeholder="Mô tả nội dung ảnh"
-                />
-              </label>
-              <label className="admin-form__group">
-                <span className="admin-form__label">Chú thích ảnh <span style={{ color: 'rgba(255,255,255,0.35)' }}>(tuỳ chọn)</span></span>
-                <input
-                  className="admin-form__input"
-                  type="text"
-                  value={uploadCaption}
-                  onChange={e => setUploadCaption(e.target.value)}
-                  maxLength={1000}
-                  aria-label="Chú thích ảnh"
-                  placeholder="Ghi chú hiển thị cùng ảnh"
-                />
-              </label>
-            </div>
-            {pendingFiles.length > 1 && (
-              <p style={{ margin: '8px 0 0', color: 'rgba(255,255,255,0.45)', fontSize: '0.75rem' }}>
-                Với nhiều ảnh, tên file sẽ được thêm vào Alt để mỗi ảnh có mô tả riêng.
-              </p>
             )}
+          </div>
+          <p style={{ margin: '0 0 12px', color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem' }}>
+            Alt ảnh là bắt buộc cho mọi file mới. Chọn file bằng nút Upload hoặc kéo thả, sau đó kiểm tra mô tả trước khi tải lên.
+          </p>
+          <div className="admin-form__row">
+            <label className="admin-form__group">
+              <span className="admin-form__label">Alt ảnh <span style={{ color: '#f87171' }}>*</span></span>
+              <input
+                className="admin-form__input"
+                type="text"
+                value={uploadAlt}
+                onChange={e => setUploadAlt(e.target.value)}
+                maxLength={255}
+                required
+                aria-label="Alt ảnh"
+                data-testid="media-upload-alt"
+                placeholder="Mô tả nội dung ảnh"
+              />
+            </label>
+            <label className="admin-form__group">
+              <span className="admin-form__label">Chú thích ảnh <span style={{ color: 'rgba(255,255,255,0.35)' }}>(tuỳ chọn)</span></span>
+              <input
+                className="admin-form__input"
+                type="text"
+                value={uploadCaption}
+                onChange={e => setUploadCaption(e.target.value)}
+                maxLength={1000}
+                aria-label="Chú thích ảnh"
+                placeholder="Ghi chú hiển thị cùng ảnh"
+              />
+            </label>
+          </div>
+          {pendingFiles.length > 1 && (
+            <p style={{ margin: '8px 0 0', color: 'rgba(255,255,255,0.45)', fontSize: '0.75rem' }}>
+              Với nhiều ảnh, tên file sẽ được thêm vào Alt để mỗi ảnh có mô tả riêng.
+            </p>
+          )}
+          {pendingFiles.length > 0 ? (
             <button type="button" className="admin-btn admin-btn--primary admin-btn--sm" onClick={() => void handleUpload()} disabled={uploading || !uploadAlt.trim()} style={{ marginTop: '12px' }}>
               <FiUploadCloud /> {uploading ? 'Đang tải lên...' : 'Tải ảnh lên'}
             </button>
-          </div>
-        )}
+          ) : (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '10px', color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>
+              <FiImage /> Chưa chọn file — Alt sẽ được giữ lại khi bạn chọn ảnh.
+            </span>
+          )}
+        </div>
 
         {/* Search */}
         <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
