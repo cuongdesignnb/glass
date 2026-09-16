@@ -52,7 +52,7 @@ export default function AdminSettingsPage() {
   const [showMediaPicker, setShowMediaPicker] = useState(false);
   const [mediaTarget, setMediaTarget] = useState("");
   const [revealedKeys, setRevealedKeys] = useState<Set<string>>(new Set());
-  const [editorInsertFn, setEditorInsertFn] = useState<((url: string) => void) | null>(null);
+  const [editorInsertFn, setEditorInsertFn] = useState<((url: string, alt?: string, caption?: string) => void) | null>(null);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
   const [savingFavicon, setSavingFavicon] = useState(false);
   const [uploadingBusinessRegistrationImage, setUploadingBusinessRegistrationImage] = useState(false);
@@ -1056,7 +1056,7 @@ export default function AdminSettingsPage() {
                 src={
                   resolveMediaUrl(settings[field.key])
                 }
-                alt=""
+                alt={field.label}
                 style={{
                   height: "40px",
                   borderRadius: "4px",
@@ -1354,7 +1354,7 @@ export default function AdminSettingsPage() {
                     </button>
                     {settings["about_banner"] && (
                       <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
-                        <img src={settings["about_banner"].startsWith("http") ? settings["about_banner"] : `${process.env.NEXT_PUBLIC_API_URL?.replace("/api", "")}${settings["about_banner"]}`} alt="" style={{ height: "40px", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.1)" }} />
+                        <img src={settings["about_banner"].startsWith("http") ? settings["about_banner"] : `${process.env.NEXT_PUBLIC_API_URL?.replace("/api", "")}${settings["about_banner"]}`} alt="Ảnh banner giới thiệu" style={{ height: "40px", borderRadius: "4px", border: "1px solid rgba(255,255,255,0.1)" }} />
                         <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.4)" }}>{settings["about_banner"]}</span>
                         <button type="button" onClick={() => updateSetting("about_banner", "")} style={{ color: "rgba(255,255,255,0.3)", background: "none", border: "none", cursor: "pointer" }}><FiX /></button>
                       </div>
@@ -1369,7 +1369,7 @@ export default function AdminSettingsPage() {
 
                 <div className="admin-form__group">
                   <label className="admin-form__label">Nội dung giới thiệu (Trình soạn thảo trực quan)</label>
-                  <div style={{ background: '#13132B', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+                  <div style={{ background: '#13132B', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
                     <RichEditor
                       content={settings["about_content"] || ""}
                       onChange={(html) => updateSetting("about_content", html)}
@@ -2000,9 +2000,13 @@ export default function AdminSettingsPage() {
       <MediaPicker
         isOpen={showMediaPicker}
         onClose={() => setShowMediaPicker(false)}
-        onSelect={(url) => {
+        onSelect={(url, item) => {
           if (mediaTarget === "editor" && editorInsertFn) {
-            editorInsertFn(url.startsWith("http") ? url : `${process.env.NEXT_PUBLIC_API_URL?.replace("/api", "")}${url}`);
+            editorInsertFn(
+              url.startsWith("http") ? url : `${process.env.NEXT_PUBLIC_API_URL?.replace("/api", "")}${url}`,
+              item?.alt || "Hình ảnh MITOO",
+              item?.caption || "",
+            );
           } else if (mediaTarget === "site_favicon") {
             void persistFavicon(url, "Đã chọn favicon từ Media Library");
           } else {

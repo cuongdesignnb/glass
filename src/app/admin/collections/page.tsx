@@ -382,7 +382,7 @@ export default function AdminCollectionsPage() {
                   {form.image && (
                     <div style={{ position: 'relative' }}>
                       <img src={form.image.startsWith('http') ? form.image : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${form.image}`}
-                        alt="" style={{ width: '160px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }} />
+                        alt={form.name || 'Ảnh bộ sưu tập'} style={{ width: '160px', height: '100px', objectFit: 'cover', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }} />
                       <button onClick={() => setForm({ ...form, image: '' })}
                         style={{ position: 'absolute', top: '-6px', right: '-6px', width: '20px', height: '20px', borderRadius: '50%', background: '#ef4444', color: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.625rem' }}>
                         <FiX />
@@ -405,7 +405,7 @@ export default function AdminCollectionsPage() {
                 }}>
                   {form.image && (
                     <img src={form.image.startsWith('http') ? form.image : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${form.image}`}
-                      alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                      alt={form.name || 'Ảnh bộ sưu tập'} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                   )}
                   <div style={{ 
                     position: 'absolute', inset: 0, 

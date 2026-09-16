@@ -985,7 +985,7 @@ export default function ProductDetailClient({
                     <div className="review-form__images">
                       {reviewImages.map((file, i) => (
                         <div key={i} className="review-form__image-preview">
-                          <img src={URL.createObjectURL(file)} alt="" />
+                          <img src={URL.createObjectURL(file)} alt={`Ảnh đánh giá ${i + 1}`} />
                           <button
                             type="button"
                             onClick={() =>
@@ -1101,7 +1101,7 @@ export default function ProductDetailClient({
                                   ? img
                                   : `${apiMediaUrl}${img}`
                               }
-                              alt={`Review ${i + 1}`}
+                              alt={`Ảnh đánh giá của ${review.customer_name} ${i + 1}`}
                               width={80}
                               height={80}
                               style={{ objectFit: 'cover', borderRadius: '4px' }}

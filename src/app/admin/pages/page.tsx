@@ -16,7 +16,7 @@ export default function AdminPages() {
   const [editingId, setEditingId] = useState<number | null>(null);
   
   const [showMediaPicker, setShowMediaPicker] = useState(false);
-  const [editorInsertFn, setEditorInsertFn] = useState<((url: string) => void) | null>(null);
+  const [editorInsertFn, setEditorInsertFn] = useState<((url: string, alt?: string, caption?: string) => void) | null>(null);
 
   const [form, setForm] = useState({
     title: '', slug: '', content: '',
@@ -226,9 +226,13 @@ export default function AdminPages() {
       <MediaPicker
         isOpen={showMediaPicker}
         onClose={() => setShowMediaPicker(false)}
-        onSelect={(url) => {
+        onSelect={(url, item) => {
           if (editorInsertFn) {
-            editorInsertFn(url.startsWith('http') ? url : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${url}`);
+            editorInsertFn(
+              url.startsWith('http') ? url : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${url}`,
+              item?.alt || 'Hình ảnh MITOO',
+              item?.caption || '',
+            );
           }
         }}
       />

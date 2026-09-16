@@ -165,7 +165,7 @@ export default function AdminArticleCategoriesPage() {
                   {form.image && (
                     <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <img src={form.image.startsWith('http') ? form.image : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${form.image}`}
-                        alt="" style={{ width: '48px', height: '48px', borderRadius: '6px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} />
+                        alt={form.name || 'Ảnh danh mục bài viết'} style={{ width: '48px', height: '48px', borderRadius: '6px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} />
                       <button onClick={() => setForm({ ...form, image: '' })} style={{ color: 'rgba(255,255,255,0.3)', background: 'none', border: 'none', cursor: 'pointer' }}><FiX /></button>
                     </div>
                   )}

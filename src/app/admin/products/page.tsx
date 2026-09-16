@@ -392,7 +392,7 @@ export default function AdminProductsPage() {
                         <div style={{ width: '50px', height: '50px', borderRadius: '10px', overflow: 'hidden', background: 'linear-gradient(135deg, rgba(201,169,110,0.15), rgba(15,52,96,0.1))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           {product.thumbnail ? (
                             <img src={product.thumbnail.startsWith('http') ? product.thumbnail : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${product.thumbnail}`}
-                              alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              alt={product.thumbnail_alt || product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           ) : (
                             <RiGlassesLine style={{ color: 'rgba(201,169,110,0.3)', fontSize: '1.5rem' }} />
                           )}

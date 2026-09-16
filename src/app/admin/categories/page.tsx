@@ -222,7 +222,7 @@ export default function AdminCategoriesPage() {
                 <p style={{ margin: '0 0 12px', color: 'rgba(255,255,255,0.48)', fontSize: '0.75rem' }}>
                   AI tạo cấu trúc HTML với H2/H3, đoạn văn và danh sách; hãy rà soát nội dung trước khi lưu.
                 </p>
-                <div style={{ background: '#13132B', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+                <div style={{ background: '#13132B', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
                   <RichEditor
                     content={form.description}
                     onChange={(html) => setForm(prev => ({ ...prev, description: html }))}
@@ -244,7 +244,7 @@ export default function AdminCategoriesPage() {
                   {form.image && (
                     <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <img src={form.image.startsWith('http') ? form.image : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${form.image}`}
-                        alt="" style={{ width: '48px', height: '48px', borderRadius: '6px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} />
+                        alt={form.name || 'Ảnh danh mục'} style={{ width: '48px', height: '48px', borderRadius: '6px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.1)' }} />
                       <button onClick={() => setForm({ ...form, image: '' })} style={{ color: 'rgba(255,255,255,0.3)', background: 'none', border: 'none', cursor: 'pointer' }}><FiX /></button>
                     </div>
                   )}
@@ -258,7 +258,7 @@ export default function AdminCategoriesPage() {
                   {form.icon && (
                     <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <img src={form.icon.startsWith('http') ? form.icon : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${form.icon}`}
-                        alt="" style={{ width: '48px', height: '48px', borderRadius: '6px', objectFit: 'contain', border: '1px solid rgba(255,255,255,0.1)' }} />
+                        alt={`${form.name || 'Danh mục'} icon`} style={{ width: '48px', height: '48px', borderRadius: '6px', objectFit: 'contain', border: '1px solid rgba(255,255,255,0.1)' }} />
                       <button onClick={() => setForm({ ...form, icon: '' })} style={{ color: 'rgba(255,255,255,0.3)', background: 'none', border: 'none', cursor: 'pointer' }}><FiX /></button>
                     </div>
                   )}

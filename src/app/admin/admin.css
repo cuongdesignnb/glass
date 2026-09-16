@@ -348,17 +348,22 @@ select.admin-form__input option {
 .tiptap-editor {
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: var(--radius-md);
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
   background: rgba(255,255,255,0.04);
 }
 
 .tiptap-toolbar {
+  position: sticky;
+  top: 56px;
+  z-index: 40;
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
   padding: 8px 10px;
-  background: rgba(255,255,255,0.06);
+  background: #1a1a2e;
   border-bottom: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.14);
 }
 
 .tiptap-toolbar button {
@@ -417,6 +422,12 @@ select.admin-form__input option {
 .tiptap-content hr { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 1.5em 0; }
 .tiptap-content strong { color: #fff; }
 .tiptap-content mark { background: rgba(201,169,110,0.3); color: #fff; padding: 0 4px; border-radius: 2px; }
+
+@media (max-width: 640px) {
+  .tiptap-toolbar {
+    top: 52px;
+  }
+}
 
 .ProseMirror p.is-editor-empty:first-child::before {
   color: rgba(255,255,255,0.25);

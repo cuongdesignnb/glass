@@ -76,9 +76,19 @@ class MediaController extends Controller
         $request->validate([
             'file' => 'required|file|max:10240', // max 10MB
             'folder' => 'nullable|string',
-            'alt' => 'nullable|string',
+            // Every uploaded media asset must carry descriptive alternative
+            // text. The admin upload surfaces collect this before sending the
+            // file, keeping library records usable wherever they are reused.
+            'alt' => 'required|string|max:255',
             'caption' => 'nullable|string|max:1000',
         ]);
+
+        $alt = trim((string) $request->input('alt'));
+        if ($alt === '') {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'alt' => 'Alternative text is required for uploaded media.',
+            ]);
+        }
 
         // Tăng memory limit cho xử lý ảnh
         ini_set('memory_limit', '512M');
@@ -145,7 +155,7 @@ class MediaController extends Controller
                 'size' => filesize($fullPath),
                 'width' => $width,
                 'height' => $height,
-                'alt' => $request->get('alt', $baseName),
+                'alt' => $alt,
                 'caption' => $request->get('caption'),
                 'folder' => $folder,
             ]);
@@ -178,7 +188,7 @@ class MediaController extends Controller
                     'size' => filesize($fullPath),
                     'width' => $width,
                     'height' => $height,
-                    'alt' => $request->get('alt', $baseName),
+                    'alt' => $alt,
                     'caption' => $request->get('caption'),
                     'folder' => $folder,
                 ]);
@@ -207,7 +217,7 @@ class MediaController extends Controller
                     'size' => $file->getSize(),
                     'width' => $width,
                     'height' => $height,
-                    'alt' => $request->get('alt', $baseName),
+                    'alt' => $alt,
                     'caption' => $request->get('caption'),
                     'folder' => $folder,
                 ]);
@@ -227,7 +237,7 @@ class MediaController extends Controller
                 'url' => "/storage/{$relativePath}",
                 'mime_type' => $mimeType,
                 'size' => $file->getSize(),
-                'alt' => $request->get('alt', $baseName),
+                'alt' => $alt,
                 'caption' => $request->get('caption'),
                 'folder' => $folder,
             ]);
@@ -258,10 +268,19 @@ class MediaController extends Controller
     public function update(Request $request, Media $media)
     {
         $data = $request->validate([
-            'alt' => 'nullable|string|max:255',
+            'alt' => 'sometimes|required|string|max:255',
             'caption' => 'nullable|string|max:1000',
             'folder' => 'nullable|string|max:100',
         ]);
+
+        if (array_key_exists('alt', $data)) {
+            $data['alt'] = trim((string) $data['alt']);
+            if ($data['alt'] === '') {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'alt' => 'Alternative text cannot be empty.',
+                ]);
+            }
+        }
 
         $media->update($data);
 

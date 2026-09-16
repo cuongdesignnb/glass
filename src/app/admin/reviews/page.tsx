@@ -226,7 +226,7 @@ export default function AdminReviewsPage() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
                       {selectedReview.images.map((img: string, i: number) => (
                         <div key={i} style={{ aspectRatio: '1', borderRadius: '8px', overflow: 'hidden', background: 'rgba(255,255,255,0.06)' }}>
-                          <img src={img.startsWith('http') ? img : `${API_MEDIA_URL}${img}`} alt={`Review ${i + 1}`}
+                          <img src={img.startsWith('http') ? img : `${API_MEDIA_URL}${img}`} alt={`Ảnh đánh giá của ${selectedReview.customer_name} ${i + 1}`}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         </div>
                       ))}

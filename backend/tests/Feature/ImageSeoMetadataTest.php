@@ -79,6 +79,37 @@ class ImageSeoMetadataTest extends TestCase
             ->assertJsonPath('caption', 'Thiết kế kim loại thanh mảnh.');
     }
 
+    public function test_media_upload_requires_alt_text(): void
+    {
+        Sanctum::actingAs($this->createAdmin());
+
+        $this->post('/api/media/upload', [
+            'file' => UploadedFile::fake()->image('frame.jpg'),
+        ])->assertStatus(422)
+            ->assertJsonValidationErrors('alt');
+    }
+
+    public function test_media_alt_cannot_be_cleared_after_upload(): void
+    {
+        Sanctum::actingAs($this->createAdmin());
+
+        $media = Media::create([
+            'filename' => 'frame.webp',
+            'original_name' => 'frame.webp',
+            'path' => 'uploads/frame.webp',
+            'url' => '/storage/uploads/frame.webp',
+            'mime_type' => 'image/webp',
+            'size' => 100,
+            'alt' => 'Gọng kính MITOO',
+            'folder' => 'general',
+        ]);
+
+        $this->putJson('/api/media/'.$media->id, [
+            'alt' => '',
+        ])->assertStatus(422)
+            ->assertJsonValidationErrors('alt');
+    }
+
     public function test_valid_ico_upload_preserves_original_bytes(): void
     {
         config(['filesystems.default' => 'public']);
@@ -113,6 +144,7 @@ class ImageSeoMetadataTest extends TestCase
         foreach ($invalidFixtures as $label => $bytes) {
             $this->post('/api/media/upload', [
                 'file' => UploadedFile::fake()->createWithContent($label.'.ico', $bytes),
+                'alt' => 'Invalid ICO fixture',
             ])->assertStatus(422, $label);
         }
     }

@@ -125,7 +125,7 @@ export default function AdminBannersPage() {
                   {form.image && (
                     <div style={{ marginTop: '8px', borderRadius: '8px', overflow: 'hidden', height: '80px', width: '160px', background: 'rgba(255,255,255,0.06)' }}>
                       <img src={form.image.startsWith('http') ? form.image : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${form.image}`}
-                        alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        alt={`${form.title || 'Banner'} desktop`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
                   )}
                 </div>
@@ -138,7 +138,7 @@ export default function AdminBannersPage() {
                   {form.image_mobile && (
                     <div style={{ marginTop: '8px', borderRadius: '8px', overflow: 'hidden', height: '80px', width: '80px', background: 'rgba(255,255,255,0.06)' }}>
                       <img src={form.image_mobile.startsWith('http') ? form.image_mobile : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${form.image_mobile}`}
-                        alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        alt={`${form.title || 'Banner'} mobile`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
                   )}
                 </div>
@@ -199,7 +199,7 @@ export default function AdminBannersPage() {
                   <td>
                     <div style={{ width: '120px', height: '60px', borderRadius: '8px', overflow: 'hidden', background: 'rgba(255,255,255,0.06)' }}>
                       {banner.image && <img src={banner.image.startsWith('http') ? banner.image : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${banner.image}`}
-                        alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                        alt={banner.title || 'Banner'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
                     </div>
                   </td>
                   <td>

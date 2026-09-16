@@ -13,6 +13,11 @@ interface MediaPickerProps {
   multiple?: boolean;
 }
 
+function suggestedAlt(file: File): string {
+  const baseName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return baseName || 'Hình ảnh MITOO';
+}
+
 export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultiple, multiple = false }: MediaPickerProps) {
   const { token } = useToken();
   const [media, setMedia] = useState<any[]>([]);
@@ -22,6 +27,10 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
   const [selectedMultiple, setSelectedMultiple] = useState<Set<string>>(new Set());
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [uploadAlt, setUploadAlt] = useState('');
+  const [uploadCaption, setUploadCaption] = useState('');
+  const [uploadError, setUploadError] = useState('');
   const [deleting, setDeleting] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -31,6 +40,10 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
       loadMedia();
       setSelected('');
       setSelectedMultiple(new Set());
+      setPendingFiles([]);
+      setUploadAlt('');
+      setUploadCaption('');
+      setUploadError('');
     }
   }, [isOpen, token]);
 
@@ -53,10 +66,26 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
     return () => clearTimeout(timer);
   }, [search]);
 
-  const handleUpload = useCallback(async (files: FileList | File[]) => {
-    if (!token || files.length === 0) return;
+  const stageFiles = useCallback((files: FileList | File[]) => {
+    const nextFiles = Array.from(files);
+    if (nextFiles.length === 0) return;
+
+    setPendingFiles(prev => [...prev, ...nextFiles]);
+    setUploadError('');
+    setUploadAlt(prev => prev || suggestedAlt(nextFiles[0]));
+  }, []);
+
+  const handleUpload = useCallback(async () => {
+    if (!token || pendingFiles.length === 0) return;
+    const baseAlt = uploadAlt.trim();
+    if (!baseAlt) {
+      setUploadError('Vui lòng nhập Alt ảnh trước khi tải lên.');
+      return;
+    }
+
     setUploading(true);
-    const fileArr = Array.from(files);
+    setUploadError('');
+    const fileArr = pendingFiles;
     let count = 0;
 
     for (const file of fileArr) {
@@ -66,6 +95,13 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
         const formData = new FormData();
         formData.append('file', file);
         formData.append('folder', 'general');
+        // Keep every uploaded media record descriptive. For a batch upload,
+        // add the filename only when it differs from the shared base alt.
+        const fileAlt = fileArr.length === 1 || baseAlt.toLowerCase() === suggestedAlt(file).toLowerCase()
+          ? baseAlt
+          : `${baseAlt} - ${suggestedAlt(file)}`;
+        formData.append('alt', fileAlt.slice(0, 255));
+        if (uploadCaption.trim()) formData.append('caption', uploadCaption.trim());
         await adminApi.uploadMedia(token, formData);
       } catch (err) {
         console.error(`Upload failed: ${file.name}`, err);
@@ -74,8 +110,11 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
 
     setUploadProgress('');
     setUploading(false);
+    setPendingFiles([]);
+    setUploadAlt('');
+    setUploadCaption('');
     loadMedia();
-  }, [token]);
+  }, [pendingFiles, token, uploadAlt, uploadCaption]);
 
   const handleDelete = async (e: React.MouseEvent, item: any) => {
     e.stopPropagation();
@@ -95,8 +134,8 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
     e.preventDefault();
     setDragOver(false);
     const files = e.dataTransfer.files;
-    if (files.length > 0) handleUpload(files);
-  }, [handleUpload]);
+    if (files.length > 0) stageFiles(files);
+  }, [stageFiles]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -109,7 +148,7 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      handleUpload(e.target.files);
+      stageFiles(e.target.files);
       e.target.value = '';
     }
   };
@@ -182,6 +221,66 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
             {uploading ? 'Uploading...' : 'Upload'}
           </button>
         </div>
+
+        {/* Upload metadata */}
+        {pendingFiles.length > 0 && (
+          <div style={{ padding: '14px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(201,169,110,0.06)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '10px' }}>
+              <strong style={{ color: 'var(--color-gold)', fontSize: '0.8125rem' }}>
+                {pendingFiles.length} ảnh sẵn sàng tải lên
+              </strong>
+              <button
+                type="button"
+                onClick={() => { setPendingFiles([]); setUploadAlt(''); setUploadCaption(''); setUploadError(''); }}
+                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '0.75rem' }}
+              >
+                Bỏ chọn
+              </button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '10px' }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>
+                Alt ảnh <span style={{ color: '#f87171' }}>*</span>
+                <input
+                  type="text"
+                  value={uploadAlt}
+                  onChange={e => { setUploadAlt(e.target.value); setUploadError(''); }}
+                  maxLength={255}
+                  required
+                  aria-label="Alt ảnh"
+                  placeholder="Mô tả nội dung ảnh"
+                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px', padding: '8px 10px', color: '#fff', outline: 'none' }}
+                />
+              </label>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>
+                Chú thích ảnh <span style={{ color: 'rgba(255,255,255,0.35)' }}>(tuỳ chọn)</span>
+                <input
+                  type="text"
+                  value={uploadCaption}
+                  onChange={e => setUploadCaption(e.target.value)}
+                  maxLength={1000}
+                  aria-label="Chú thích ảnh"
+                  placeholder="Ghi chú hiển thị cùng ảnh"
+                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px', padding: '8px 10px', color: '#fff', outline: 'none' }}
+                />
+              </label>
+            </div>
+            {pendingFiles.length > 1 && (
+              <p style={{ margin: '8px 0 0', color: 'rgba(255,255,255,0.45)', fontSize: '0.6875rem' }}>
+                Với nhiều ảnh, tên file sẽ được thêm vào Alt để mỗi ảnh có mô tả riêng.
+              </p>
+            )}
+            {uploadError && <p style={{ margin: '8px 0 0', color: '#f87171', fontSize: '0.75rem' }}>{uploadError}</p>}
+            <button
+              type="button"
+              className="admin-btn admin-btn--primary admin-btn--sm"
+              onClick={() => void handleUpload()}
+              disabled={uploading || !uploadAlt.trim()}
+              style={{ marginTop: '10px' }}
+            >
+              <FiUploadCloud /> {uploading ? 'Đang tải lên...' : 'Tải ảnh lên'}
+            </button>
+          </div>
+        )}
 
         {/* Upload Progress */}
         {uploadProgress && (

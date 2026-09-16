@@ -155,7 +155,7 @@ export default function AdminArticlesPage() {
                   <td>
                     <div style={{ width: '60px', height: '40px', borderRadius: '6px', overflow: 'hidden', background: 'rgba(255,255,255,0.06)' }}>
                       {article.thumbnail && <img src={article.thumbnail.startsWith('http') ? article.thumbnail : `${process.env.NEXT_PUBLIC_API_URL?.replace('/api','')}${article.thumbnail}`}
-                        alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                        alt={article.thumbnail_alt || article.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
                     </div>
                   </td>
                   <td>
