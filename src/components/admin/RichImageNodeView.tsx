@@ -60,7 +60,16 @@ export default function RichImageNodeView({ node, editor, selected, getPos, exte
   };
 
   const deleteImage = () => {
-    editor.chain().focus().deleteNode('richImage').run();
+    if (typeof getPos !== 'function') return;
+
+    const position = getPos();
+    editor.chain().command(({ tr }) => {
+      const currentNode = tr.doc.nodeAt(position);
+      if (!currentNode || currentNode.type.name !== 'richImage') return false;
+
+      tr.delete(position, position + currentNode.nodeSize);
+      return true;
+    }).run();
   };
 
   const openEditPanel = () => {

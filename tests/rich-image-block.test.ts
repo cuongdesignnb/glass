@@ -37,7 +37,10 @@ test('image node view exposes contextual editing controls without media side eff
   assert.match(nodeView, /value=\{caption\}/);
   assert.match(nodeView, /Vui lòng nhập Alt ảnh/);
   assert.match(nodeView, /updateAttributes\('richImage'/);
-  assert.match(nodeView, /deleteNode\('richImage'\)/);
+  assert.match(nodeView, /const deleteImage = \(\) =>/);
+  assert.match(nodeView, /const position = getPos\(\)/);
+  assert.match(nodeView, /currentNode\.type\.name !== 'richImage'/);
+  assert.match(nodeView, /tr\.delete\(position, position \+ currentNode\.nodeSize\)/);
   assert.match(nodeView, /extension\.options\.onReplace/);
   assert.match(editor, /tr\.setNodeMarkup\(position/);
   assert.doesNotMatch(nodeView, /DELETE\s+\/api\/media/);
