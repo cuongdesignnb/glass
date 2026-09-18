@@ -16,6 +16,13 @@ function stopToolbarMouseDown(event: React.MouseEvent) {
   event.stopPropagation();
 }
 
+function stopPanelMouseDown(event: React.MouseEvent) {
+  // Let inputs receive their native focus/cursor behavior. The panel is
+  // already outside the editable document selection, so only propagation
+  // needs to be stopped here.
+  event.stopPropagation();
+}
+
 export default function RichImageNodeView({ node, editor, selected, getPos, extension }: NodeViewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [alt, setAlt] = useState(String(node.attrs.alt || ''));
@@ -54,6 +61,20 @@ export default function RichImageNodeView({ node, editor, selected, getPos, exte
 
   const deleteImage = () => {
     editor.chain().focus().deleteNode('richImage').run();
+  };
+
+  const openEditPanel = () => {
+    setAlt(String(node.attrs.alt || ''));
+    setCaption(String(node.attrs.caption || ''));
+    setError('');
+    setIsEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setAlt(String(node.attrs.alt || ''));
+    setCaption(String(node.attrs.caption || ''));
+    setError('');
+    setIsEditing(false);
   };
 
   return (
@@ -100,7 +121,7 @@ export default function RichImageNodeView({ node, editor, selected, getPos, exte
             </button>
           ))}
           <span className="rich-image-context-toolbar__separator" aria-hidden="true" />
-          <button type="button" onClick={() => { setError(''); setIsEditing(true); }} title="Sửa ảnh" aria-label="Sửa ảnh">
+          <button type="button" onClick={openEditPanel} title="Sửa ảnh" aria-label="Sửa ảnh">
             <FiEdit2 /> <span>Sửa ảnh</span>
           </button>
           <button type="button" onClick={replaceImage} title="Thay ảnh" aria-label="Thay ảnh">
@@ -113,7 +134,7 @@ export default function RichImageNodeView({ node, editor, selected, getPos, exte
       )}
 
       {selected && isEditing && (
-        <div className="rich-image-edit-panel" role="dialog" aria-label="Thông tin ảnh" onMouseDown={stopToolbarMouseDown} contentEditable={false}>
+        <div className="rich-image-edit-panel" role="dialog" aria-label="Thông tin ảnh" onMouseDown={stopPanelMouseDown} contentEditable={false}>
           <div className="rich-image-edit-panel__title">Thông tin ảnh</div>
           <label>
             ALT ảnh *
@@ -134,7 +155,7 @@ export default function RichImageNodeView({ node, editor, selected, getPos, exte
           </label>
           {error && <div className="rich-image-edit-panel__error" role="alert">{error}</div>}
           <div className="rich-image-edit-panel__actions">
-            <button type="button" onClick={() => { setError(''); setIsEditing(false); }}>Hủy</button>
+            <button type="button" onClick={cancelEdit}>Hủy</button>
             <button type="button" className="is-primary" onClick={saveDetails}>Lưu thay đổi</button>
           </div>
         </div>

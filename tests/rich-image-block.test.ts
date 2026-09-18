@@ -44,6 +44,27 @@ test('image node view exposes contextual editing controls without media side eff
   assert.doesNotMatch(editor, /deleteMedia|delete\(.*media/i);
 });
 
+test('edit panel keeps native input focus and restores saved attrs on cancel', () => {
+  const panelHandler = nodeView.match(/function stopPanelMouseDown\([\s\S]*?\n}\n/);
+  assert.ok(panelHandler, 'panel mouse handler should exist');
+  assert.match(panelHandler[0], /event\.stopPropagation\(\)/);
+  assert.doesNotMatch(panelHandler[0], /preventDefault/);
+  assert.match(nodeView, /onMouseDown=\{stopPanelMouseDown\}/);
+  assert.match(nodeView, /const openEditPanel = \(\) =>/);
+  assert.match(nodeView, /setAlt\(String\(node\.attrs\.alt \|\| ''\)\)/);
+  assert.match(nodeView, /setCaption\(String\(node\.attrs\.caption \|\| ''\)\)/);
+  assert.match(nodeView, /onClick=\{openEditPanel\}/);
+  assert.match(nodeView, /const cancelEdit = \(\) =>/);
+  assert.match(nodeView, /onClick=\{cancelEdit\}/);
+  assert.match(nodeView, /setError\(''\)/);
+
+  const cancelHandler = nodeView.match(/const cancelEdit = \(\) => \{[\s\S]*?\n  \};/);
+  assert.ok(cancelHandler, 'cancel handler should exist');
+  assert.doesNotMatch(cancelHandler[0], /editor\.|updateAttributes|\.run\(\)/);
+  assert.match(nodeView, /useEffect\(\(\) => \{[\s\S]*setAlt\(String\(node\.attrs\.alt/);
+  assert.match(nodeView, /useEffect\(\(\) => \{[\s\S]*setCaption\(String\(node\.attrs\.caption/);
+});
+
 test('new inserts and replacements reuse MediaPicker metadata at the same node', () => {
   assert.match(editor, /onMediaPick\(insertRichImage\)/);
   assert.match(editor, /type:\s*'richImage'/);
