@@ -460,6 +460,8 @@ export const adminApi = {
   },
   uploadMedia: (token: string, formData: FormData) =>
     fetchApi("/media/upload", { method: "POST", body: formData, token }),
+  updateMedia: (token: string, id: number, data: { alt: string; caption?: string | null }) =>
+    fetchApi(`/media/${id}`, { method: "PUT", body: JSON.stringify(data), token }),
   deleteMedia: (token: string, id: number) =>
     fetchApi(`/media/${id}`, { method: "DELETE", token }),
 

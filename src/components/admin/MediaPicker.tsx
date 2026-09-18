@@ -31,6 +31,11 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
   const [uploadAlt, setUploadAlt] = useState('');
   const [uploadCaption, setUploadCaption] = useState('');
   const [uploadError, setUploadError] = useState('');
+  const [selectedAlt, setSelectedAlt] = useState('');
+  const [selectedCaption, setSelectedCaption] = useState('');
+  const [metadataSaving, setMetadataSaving] = useState(false);
+  const [metadataError, setMetadataError] = useState('');
+  const [metadataSuccess, setMetadataSuccess] = useState('');
   const [deleting, setDeleting] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -44,6 +49,10 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
       setUploadAlt('');
       setUploadCaption('');
       setUploadError('');
+      setSelectedAlt('');
+      setSelectedCaption('');
+      setMetadataError('');
+      setMetadataSuccess('');
     }
   }, [isOpen, token]);
 
@@ -74,6 +83,20 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
     setUploadError('');
     setUploadAlt(prev => prev || suggestedAlt(nextFiles[0]));
   }, []);
+
+  const clearSelectedMetadata = () => {
+    setSelectedAlt('');
+    setSelectedCaption('');
+    setMetadataError('');
+    setMetadataSuccess('');
+  };
+
+  const hydrateSelectedMetadata = (item: any | null) => {
+    setSelectedAlt(item?.alt || '');
+    setSelectedCaption(item?.caption || '');
+    setMetadataError('');
+    setMetadataSuccess('');
+  };
 
   const handleUpload = useCallback(async () => {
     if (!token || pendingFiles.length === 0) return;
@@ -124,8 +147,24 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
     try {
       await adminApi.deleteMedia(token, item.id);
       setMedia(prev => prev.filter(m => m.id !== item.id));
-      if (selected === item.url) setSelected('');
-      setSelectedMultiple(prev => { const next = new Set(prev); next.delete(item.url); return next; });
+      const wasSingleSelected = selected === item.url;
+      const wasMultipleSelected = selectedMultiple.has(item.url);
+      const nextMultiple = new Set(selectedMultiple);
+      nextMultiple.delete(item.url);
+
+      if (!multiple && wasSingleSelected) {
+        setSelected('');
+        clearSelectedMetadata();
+      }
+      setSelectedMultiple(nextMultiple);
+      if (multiple && wasMultipleSelected) {
+        if (nextMultiple.size === 1) {
+          const onlyUrl = Array.from(nextMultiple)[0];
+          hydrateSelectedMetadata(media.find(mediaItem => mediaItem.url === onlyUrl) || null);
+        } else {
+          clearSelectedMetadata();
+        }
+      }
     } catch (err) { console.error(err); }
     finally { setDeleting(null); }
   };
@@ -155,17 +194,64 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
 
   const handleItemClick = (url: string) => {
     if (multiple) {
-      setSelectedMultiple(prev => {
-        const next = new Set(prev);
-        if (next.has(url)) {
-          next.delete(url);
-        } else {
-          next.add(url);
-        }
-        return next;
-      });
+      const next = new Set(selectedMultiple);
+      if (next.has(url)) {
+        next.delete(url);
+      } else {
+        next.add(url);
+      }
+      setSelectedMultiple(next);
+      if (next.size === 1) {
+        const onlyUrl = Array.from(next)[0];
+        hydrateSelectedMetadata(media.find(mediaItem => mediaItem.url === onlyUrl) || null);
+      } else {
+        clearSelectedMetadata();
+      }
     } else {
-      setSelected(url);
+      if (selected === url) {
+        setSelected('');
+        clearSelectedMetadata();
+      } else {
+        const item = media.find(mediaItem => mediaItem.url === url);
+        setSelected(url);
+        hydrateSelectedMetadata(item || null);
+      }
+    }
+  };
+
+  const selectedUrl = multiple
+    ? selectedMultiple.size === 1 ? Array.from(selectedMultiple)[0] : ''
+    : selected;
+  const selectedItem = selectedUrl ? media.find(item => item.url === selectedUrl) : null;
+
+  const handleSaveMetadata = async () => {
+    if (!token || !selectedItem) return;
+    const alt = selectedAlt.trim();
+    if (!alt) {
+      setMetadataError('Vui lòng nhập Alt ảnh.');
+      setMetadataSuccess('');
+      return;
+    }
+
+    const caption = selectedCaption.trim();
+    setMetadataSaving(true);
+    setMetadataError('');
+    setMetadataSuccess('');
+    try {
+      const updated = await adminApi.updateMedia(token, selectedItem.id, {
+        alt,
+        caption: caption || null,
+      });
+      setMedia(prev => prev.map(item => item.id === selectedItem.id
+        ? { ...item, ...updated, alt, caption: caption || null }
+        : item));
+      setSelectedAlt(alt);
+      setSelectedCaption(caption);
+      setMetadataSuccess('Đã lưu ALT và chú thích ảnh.');
+    } catch (err: any) {
+      setMetadataError(err?.message || 'Không thể lưu thông tin ảnh.');
+    } finally {
+      setMetadataSaving(false);
     }
   };
 
@@ -299,6 +385,67 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
             {uploadProgress}
           </div>
         )}
+
+        {/* Existing media metadata */}
+        {selectedItem ? (
+          <div
+            data-testid="media-existing-metadata"
+            style={{ padding: '14px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.03)' }}
+          >
+            <strong style={{ display: 'block', color: 'var(--color-gold)', fontSize: '0.8125rem', marginBottom: '6px' }}>
+              Thông tin ảnh đã chọn
+            </strong>
+            <p style={{ margin: '0 0 10px', color: 'rgba(255,255,255,0.5)', fontSize: '0.6875rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {selectedItem.original_name || selectedItem.filename}
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '10px' }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>
+                Alt ảnh <span style={{ color: '#f87171' }}>*</span>
+                <input
+                  type="text"
+                  value={selectedAlt}
+                  onChange={e => { setSelectedAlt(e.target.value); setMetadataError(''); setMetadataSuccess(''); }}
+                  maxLength={255}
+                  required
+                  aria-label="Alt ảnh đã chọn"
+                  data-testid="media-existing-alt"
+                  placeholder="Mô tả nội dung ảnh"
+                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px', padding: '8px 10px', color: '#fff', outline: 'none' }}
+                />
+              </label>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)' }}>
+                Chú thích ảnh <span style={{ color: 'rgba(255,255,255,0.35)' }}>(tuỳ chọn)</span>
+                <input
+                  type="text"
+                  value={selectedCaption}
+                  onChange={e => { setSelectedCaption(e.target.value); setMetadataError(''); setMetadataSuccess(''); }}
+                  maxLength={1000}
+                  aria-label="Chú thích ảnh đã chọn"
+                  data-testid="media-existing-caption"
+                  placeholder="Ghi chú hiển thị cùng ảnh"
+                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px', padding: '8px 10px', color: '#fff', outline: 'none' }}
+                />
+              </label>
+            </div>
+            {metadataError && <p data-testid="media-existing-metadata-error" style={{ margin: '8px 0 0', color: '#f87171', fontSize: '0.75rem' }}>{metadataError}</p>}
+            {metadataSuccess && <p data-testid="media-existing-metadata-success" style={{ margin: '8px 0 0', color: '#34d399', fontSize: '0.75rem' }}>{metadataSuccess}</p>}
+            <button
+              type="button"
+              className="admin-btn admin-btn--primary admin-btn--sm"
+              onClick={() => void handleSaveMetadata()}
+              disabled={metadataSaving}
+              data-testid="media-existing-metadata-save"
+              style={{ marginTop: '10px' }}
+            >
+              {metadataSaving && <FiLoader style={{ animation: 'spin 1s linear infinite' }} />}
+              {metadataSaving ? 'Đang lưu...' : 'Lưu thông tin ảnh'}
+            </button>
+          </div>
+        ) : multiple && selectedMultiple.size > 1 ? (
+          <div data-testid="media-existing-metadata-multi" style={{ padding: '12px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.55)', fontSize: '0.75rem' }}>
+            Chọn một ảnh để chỉnh ALT và chú thích.
+          </div>
+        ) : null}
 
         {/* Body: Drag & Drop + Grid */}
         <div
