@@ -795,6 +795,31 @@
 .article-content h3 { font-size: 1.25rem; color: var(--color-rose); }
 .article-content p { margin-bottom: var(--space-lg); }
 .article-content img { max-width: 100%; border-radius: var(--radius-lg); margin: var(--space-xl) 0; }
+.article-content figure.article-image {
+  width: 100%;
+  max-width: 100%;
+  margin: var(--space-xl) auto;
+  text-align: center;
+}
+.article-content figure.article-image img {
+  display: block;
+  max-width: 100%;
+  width: auto;
+  height: auto;
+  margin: 0 auto;
+}
+.article-content figure.article-image--left { text-align: left; }
+.article-content figure.article-image--left img { margin-left: 0; margin-right: auto; }
+.article-content figure.article-image--center { text-align: center; }
+.article-content figure.article-image--right { text-align: right; }
+.article-content figure.article-image--right img { margin-left: auto; margin-right: 0; }
+.article-content figure.article-image figcaption {
+  margin-top: var(--space-sm);
+  color: var(--color-gray-500);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  text-align: inherit;
+}
 .article-content ul, .article-content ol { padding-left: var(--space-xl); margin-bottom: var(--space-lg); }
 .article-content li { margin-bottom: var(--space-sm); }
 .article-content blockquote {
