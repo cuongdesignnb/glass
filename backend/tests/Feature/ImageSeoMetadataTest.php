@@ -110,6 +110,41 @@ class ImageSeoMetadataTest extends TestCase
             ->assertJsonValidationErrors('alt');
     }
 
+    public function test_media_metadata_update_does_not_change_binary_fields(): void
+    {
+        Sanctum::actingAs($this->createAdmin());
+
+        $media = Media::create([
+            'filename' => 'frame-original.webp',
+            'original_name' => 'frame-original.webp',
+            'path' => 'uploads/frame-original.webp',
+            'url' => '/storage/uploads/frame-original.webp',
+            'mime_type' => 'image/webp',
+            'size' => 12345,
+            'width' => 1200,
+            'height' => 800,
+            'alt' => 'Alt cũ',
+            'caption' => 'Chú thích cũ',
+            'folder' => 'products',
+        ]);
+
+        $binaryFields = [
+            'filename', 'original_name', 'path', 'url', 'mime_type',
+            'size', 'width', 'height',
+        ];
+        $originalBinary = $media->only($binaryFields);
+
+        $this->putJson('/api/media/'.$media->id, [
+            'alt' => 'Alt mới',
+            'caption' => 'Chú thích mới',
+        ])->assertOk()
+            ->assertJsonPath('alt', 'Alt mới')
+            ->assertJsonPath('caption', 'Chú thích mới');
+
+        $media->refresh();
+        $this->assertSame($originalBinary, $media->only($binaryFields));
+    }
+
     public function test_valid_ico_upload_preserves_original_bytes(): void
     {
         config(['filesystems.default' => 'public']);
@@ -152,8 +187,8 @@ class ImageSeoMetadataTest extends TestCase
     private function validIcoBytes(int $imageOffset = 22, int $bytesInRes = 4): string
     {
         return "\x00\x00\x01\x00\x01\x00"
-            . pack('C4vvVV', 1, 1, 0, 0, 1, 32, $bytesInRes, $imageOffset)
-            . "\x00\x00\x00\x00";
+            .pack('C4vvVV', 1, 1, 0, 0, 1, 32, $bytesInRes, $imageOffset)
+            ."\x00\x00\x00\x00";
     }
 
     private function createAdmin(): User

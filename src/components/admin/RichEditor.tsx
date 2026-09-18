@@ -52,10 +52,23 @@ export default function RichEditor({ content, onChange, placeholder = 'Viết n�
   if (!editor) return <div className="skeleton" style={{ height: '300px', borderRadius: '8px' }} />;
 
   const addLink = () => {
-    const url = prompt('Nhập URL:');
-    if (url) {
-      editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+    const previousUrl = editor.getAttributes('link').href || '';
+    const editingExistingLink = editor.isActive('link');
+    const url = prompt(editingExistingLink ? 'Sửa URL:' : 'Nhập URL:', previousUrl);
+
+    // Cancel must leave both the selection and the existing mark untouched.
+    if (url === null) return;
+
+    const nextUrl = url.trim();
+    const chain = editor.chain().focus().extendMarkRange('link');
+
+    // An empty URL means remove the link rather than emitting href="".
+    if (!nextUrl) {
+      if (editingExistingLink) chain.unsetLink().run();
+      return;
     }
+
+    chain.setLink({ href: nextUrl }).run();
   };
 
   const addImage = () => {
@@ -118,7 +131,15 @@ export default function RichEditor({ content, onChange, placeholder = 'Viết n�
 
         <div className="separator" />
 
-        <button type="button" onClick={addLink} title="Thêm link"><FiLink /></button>
+        <button
+          type="button"
+          onClick={addLink}
+          className={editor.isActive('link') ? 'is-active' : ''}
+          title={editor.isActive('link') ? 'Sửa link' : 'Thêm link'}
+          aria-label={editor.isActive('link') ? 'Sửa link' : 'Thêm link'}
+        >
+          <FiLink />
+        </button>
         <button type="button" onClick={addImage} title="Thêm ảnh"><FiImage /></button>
         <button type="button" onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Đường kẻ"><FiMinus /></button>
       </div>
