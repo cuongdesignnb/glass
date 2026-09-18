@@ -7,9 +7,9 @@ import TextAlign from '@tiptap/extension-text-align';
 import Highlight from '@tiptap/extension-highlight';
 import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
-import Image from '@tiptap/extension-image';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { FiBold, FiItalic, FiUnderline, FiList, FiAlignLeft, FiAlignCenter, FiAlignRight, FiLink, FiImage, FiMinus, FiCode } from 'react-icons/fi';
+import RichImage from './RichImageExtension';
 
 interface RichEditorProps {
   content: string;
@@ -19,6 +19,12 @@ interface RichEditorProps {
 }
 
 export default function RichEditor({ content, onChange, placeholder = 'Viết nội dung tại đây...', onMediaPick }: RichEditorProps) {
+  const onMediaPickRef = useRef(onMediaPick);
+
+  useEffect(() => {
+    onMediaPickRef.current = onMediaPick;
+  }, [onMediaPick]);
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -30,7 +36,33 @@ export default function RichEditor({ content, onChange, placeholder = 'Viết n�
       Highlight,
       Placeholder.configure({ placeholder }),
       Link.configure({ openOnClick: false }),
-      Image,
+      RichImage.configure({
+        onReplace: ({ editor: currentEditor, getPos, node }) => {
+          const picker = onMediaPickRef.current;
+          if (!picker) return;
+
+          picker((url: string, alt?: string, caption?: string) => {
+            const nextAlt = (alt || '').trim();
+            if (!url || !nextAlt) {
+              if (url && !nextAlt) alert('Vui lòng nhập Alt ảnh.');
+              return;
+            }
+
+            const position = getPos();
+            currentEditor.chain().focus().command(({ tr }) => {
+              const currentNode = tr.doc.nodeAt(position);
+              if (!currentNode || currentNode.type.name !== 'richImage') return false;
+              tr.setNodeMarkup(position, undefined, {
+                ...currentNode.attrs,
+                src: url,
+                alt: nextAlt,
+                caption: (caption || '').trim(),
+              });
+              return true;
+            }).run();
+          });
+        },
+      }),
     ],
     content: content || '',
     onUpdate: ({ editor }) => {
@@ -71,19 +103,38 @@ export default function RichEditor({ content, onChange, placeholder = 'Viết n�
     chain.setLink({ href: nextUrl }).run();
   };
 
+  const insertRichImage = (url: string, alt?: string, caption?: string) => {
+    const nextAlt = (alt || '').trim();
+    if (!url) return;
+    if (!nextAlt) {
+      alert('Vui lòng nhập Alt ảnh.');
+      return;
+    }
+
+    editor.chain().focus().insertContent({
+      type: 'richImage',
+      attrs: {
+        src: url,
+        alt: nextAlt,
+        caption: (caption || '').trim(),
+        align: 'center',
+      },
+    }).run();
+  };
+
   const addImage = () => {
     if (onMediaPick) {
-      onMediaPick((url: string, alt?: string, caption?: string) => {
-        if (url) {
-          editor.chain().focus().setImage({ src: url, alt: alt || '', title: caption || undefined }).run();
-        }
-      });
+      onMediaPick(insertRichImage);
     } else {
       const url = prompt('Nhập URL ảnh:');
       if (url) {
-        const alt = prompt('Nhập mô tả ảnh (alt):') || '';
+        const alt = prompt('Nhập mô tả ảnh (alt):');
+        if (!alt || !alt.trim()) {
+          alert('Vui lòng nhập Alt ảnh.');
+          return;
+        }
         const caption = prompt('Nhập chú thích ảnh (không bắt buộc):') || '';
-        editor.chain().focus().setImage({ src: url, alt, title: caption || undefined }).run();
+        insertRichImage(url, alt, caption);
       }
     }
   };
