@@ -11,6 +11,45 @@ import { useEffect, useRef } from 'react';
 import { FiBold, FiItalic, FiUnderline, FiList, FiAlignLeft, FiAlignCenter, FiAlignRight, FiLink, FiImage, FiMinus, FiCode } from 'react-icons/fi';
 import RichImage from './RichImageExtension';
 
+// Tiptap's Link extension defaults to target="_blank" and
+// rel="noopener noreferrer nofollow". That is a safe default for some
+// external-link use cases, but it is not appropriate for normal editorial
+// links in article content. Keep the URL validation and parsing behavior from
+// the official extension while making target/rel opt-in and preserving any
+// attributes that were explicitly stored in existing HTML.
+const EditorialLink = Link.extend({
+  addOptions() {
+    const parentOptions = this.parent?.() || {};
+    return {
+      ...parentOptions,
+      HTMLAttributes: {
+        ...(parentOptions.HTMLAttributes || {}),
+        target: null,
+        rel: null,
+      },
+    };
+  },
+
+  addAttributes() {
+    const parentAttributes = this.parent?.() || {};
+    return {
+      ...parentAttributes,
+      target: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute('target'),
+      },
+      rel: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute('rel'),
+      },
+      class: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.getAttribute('class'),
+      },
+    };
+  },
+});
+
 interface RichEditorProps {
   content: string;
   onChange: (html: string) => void;
@@ -35,7 +74,10 @@ export default function RichEditor({ content, onChange, placeholder = 'Viết n�
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Highlight,
       Placeholder.configure({ placeholder }),
-      Link.configure({ openOnClick: false }),
+      EditorialLink.configure({
+        openOnClick: false,
+        HTMLAttributes: { target: null, rel: null },
+      }),
       RichImage.configure({
         onReplace: ({ editor: currentEditor, getPos, node }) => {
           const picker = onMediaPickRef.current;
@@ -84,7 +126,8 @@ export default function RichEditor({ content, onChange, placeholder = 'Viết n�
   if (!editor) return <div className="skeleton" style={{ height: '300px', borderRadius: '8px' }} />;
 
   const addLink = () => {
-    const previousUrl = editor.getAttributes('link').href || '';
+    const previousAttributes = editor.getAttributes('link');
+    const previousUrl = previousAttributes.href || '';
     const editingExistingLink = editor.isActive('link');
     const url = prompt(editingExistingLink ? 'Sửa URL:' : 'Nhập URL:', previousUrl);
 
@@ -100,7 +143,23 @@ export default function RichEditor({ content, onChange, placeholder = 'Viết n�
       return;
     }
 
-    chain.setLink({ href: nextUrl }).run();
+    const linkAttributes: { href: string; target?: string | null; rel?: string | null } = { href: nextUrl };
+
+    // Existing attributes are never silently rewritten. When an editor
+    // explicitly edits an existing link, expose the current values so the
+    // author can keep them, clear them, or intentionally set a new value.
+    if (editingExistingLink) {
+      const target = prompt('Target (để trống để mở cùng tab):', previousAttributes.target || '');
+      if (target === null) return;
+
+      const rel = prompt('Rel (để trống nếu không cần):', previousAttributes.rel || '');
+      if (rel === null) return;
+
+      linkAttributes.target = target.trim() || null;
+      linkAttributes.rel = rel.trim() || null;
+    }
+
+    chain.setLink(linkAttributes).run();
   };
 
   const insertRichImage = (url: string, alt?: string, caption?: string) => {

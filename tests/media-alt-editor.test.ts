@@ -29,11 +29,12 @@ test('all admin media uploads collect descriptive alt text before sending', () =
 });
 
 test('rich editor edits links without losing existing href or relative URLs', () => {
-  assert.match(richEditor, /getAttributes\('link'\)\.href/);
+  assert.match(richEditor, /const previousAttributes = editor\.getAttributes\('link'\)/);
+  assert.match(richEditor, /const previousUrl = previousAttributes\.href/);
   assert.match(richEditor, /prompt\(editingExistingLink \? 'Sửa URL:' : 'Nhập URL:', previousUrl\)/);
   assert.match(richEditor, /if \(url === null\) return/);
   assert.match(richEditor, /chain\.unsetLink\(\)\.run\(\)/);
-  assert.match(richEditor, /chain\.setLink\(\{ href: nextUrl \}\)\.run\(\)/);
+  assert.match(richEditor, /chain\.setLink\(linkAttributes\)\.run\(\)/);
   assert.match(richEditor, /className=\{editor\.isActive\('link'\) \? 'is-active' : ''\}/);
   assert.match(richEditor, /title=\{editor\.isActive\('link'\) \? 'Sửa link' : 'Thêm link'\}/);
 });

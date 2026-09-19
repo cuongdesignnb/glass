@@ -104,5 +104,5 @@ test('Vietnamese labels and normal article save path remain covered', () => {
   assert.match(nodeView, /Thử|ALT ảnh|Chú thích ảnh/);
   assert.match(editor, /onChange\(editor\.getHTML\(\)\)/);
   assert.match(editor, /RichImage\.configure/);
-  assert.match(editor, /Link\.configure\(\{ openOnClick: false \}\)/);
+  assert.match(editor, /EditorialLink\.configure\([\s\S]*openOnClick: false/);
 });
