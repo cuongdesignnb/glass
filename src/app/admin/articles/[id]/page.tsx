@@ -33,7 +33,7 @@ export default function ArticleFormPage() {
 
   const [form, setForm] = useState({
     title: '', slug: '', excerpt: '', content: '', thumbnail: '', thumbnail_alt: '', thumbnail_caption: '',
-    author: '', tags: [] as string[], is_published: false, is_featured: false,
+    author: '', author_role: '', tags: [] as string[], is_published: false, is_featured: false,
     meta_title: '', meta_desc: '', meta_keywords: '', og_image: '',
     article_category_id: '' as string | number,
   });
@@ -67,7 +67,7 @@ export default function ArticleFormPage() {
           content: article.content || '', thumbnail: article.thumbnail || '',
           thumbnail_alt: article.thumbnail_alt || article.title || '',
           thumbnail_caption: article.thumbnail_caption || '',
-          author: article.author || '', tags: article.tags || [],
+          author: article.author || '', author_role: article.author_role || '', tags: article.tags || [],
           is_published: article.is_published ?? false, is_featured: article.is_featured ?? false,
           meta_title: article.meta_title || '', meta_desc: article.meta_desc || '',
           meta_keywords: article.meta_keywords || '', og_image: article.og_image || '',
@@ -390,6 +390,12 @@ export default function ArticleFormPage() {
                   <label className="admin-form__label">Tác giả</label>
                   <input className="admin-form__input" value={form.author}
                     onChange={e => setForm({ ...form, author: e.target.value })} placeholder="Tên tác giả" />
+                </div>
+                <div className="admin-form__group">
+                  <label className="admin-form__label">Vai trò tác giả</label>
+                  <input className="admin-form__input" value={form.author_role}
+                    onChange={e => setForm({ ...form, author_role: e.target.value })}
+                    placeholder="Ví dụ: Biên tập nội dung kính mắt MITOO" />
                 </div>
                 <div className="admin-form__group">
                   <label className="admin-form__label">Tags (phân cách bằng dấu phẩy)</label>
