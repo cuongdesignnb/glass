@@ -230,24 +230,27 @@ final class SlugHistory
         }
 
         $class = self::modelClass($entityType);
+        $current = $class::query()->where('slug', $slug)->first();
+        if ($current !== null && (
+            $entityType !== self::ARTICLE
+            || (bool) $current->getAttribute('is_published')
+        )) {
+            // Preserve the fast path for every current public slug. A
+            // consolidation mapping may only take over an unpublished
+            // article URL, never a live page.
+            return null;
+        }
+
         $history = SlugRedirect::query()
             ->where('entity_type', $entityType)
             ->where('old_slug', $slug)
             ->first();
 
-        $current = $class::query()->where('slug', $slug)->first();
-        if ($current !== null) {
-            // A still-published article with this current slug must remain
-            // authoritative until its owner explicitly unpublishes it.
-            // Only a cross-article mapping may take over an unpublished slug.
-            if (
-                $entityType !== self::ARTICLE
-                || (bool) $current->getAttribute('is_published')
-                || $history === null
-                || (int) $history->entity_id === (int) $current->getKey()
-            ) {
-                return null;
-            }
+        if ($current !== null && (
+            $history === null
+            || (int) $history->entity_id === (int) $current->getKey()
+        )) {
+            return null;
         }
 
         if ($history === null) {
