@@ -129,6 +129,93 @@ final class SlugHistory
     }
 
     /**
+     * Record a direct redirect from a secondary article's current slug to a
+     * different, published primary article without changing either slug.
+     * The source article continues to win while it is published; the mapping
+     * becomes active only after the source is unpublished.
+     */
+    public static function recordArticleConsolidationRedirect(Article $source, Article $target): SlugRedirect
+    {
+        $sourceId = (int) $source->getKey();
+        $targetId = (int) $target->getKey();
+        if ($sourceId === $targetId) {
+            throw ValidationException::withMessages([
+                'slug' => 'Nguồn và đích chuyển hướng phải là hai bài viết khác nhau.',
+            ]);
+        }
+
+        $articleIds = [$sourceId, $targetId];
+        sort($articleIds, SORT_NUMERIC);
+
+        return DB::transaction(function () use ($articleIds, $sourceId, $targetId): SlugRedirect {
+            $articles = Article::query()
+                ->whereIn('id', $articleIds)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
+
+            /** @var Article|null $lockedSource */
+            $lockedSource = $articles->get($sourceId);
+            /** @var Article|null $lockedTarget */
+            $lockedTarget = $articles->get($targetId);
+            if ($lockedSource === null || $lockedTarget === null) {
+                throw ValidationException::withMessages([
+                    'slug' => 'Không tìm thấy bài viết nguồn hoặc bài viết đích.',
+                ]);
+            }
+
+            $sourceSlug = (string) $lockedSource->slug;
+            $targetSlug = (string) $lockedTarget->slug;
+            if ($sourceSlug === '' || $targetSlug === '' || $sourceSlug === $targetSlug) {
+                throw ValidationException::withMessages([
+                    'slug' => 'Slug nguồn và đích phải hợp lệ và khác nhau.',
+                ]);
+            }
+
+            if (! $lockedTarget->is_published) {
+                throw ValidationException::withMessages([
+                    'slug' => 'Bài viết đích phải được xuất bản trước khi tạo chuyển hướng.',
+                ]);
+            }
+
+            if (! $lockedSource->is_published) {
+                throw ValidationException::withMessages([
+                    'slug' => 'Bài viết nguồn phải còn được xuất bản để chuyển hướng chưa được kích hoạt.',
+                ]);
+            }
+
+            $currentOwner = Article::query()->where('slug', $sourceSlug)->first();
+            if ($currentOwner === null || (int) $currentOwner->getKey() !== $sourceId) {
+                throw ValidationException::withMessages([
+                    'slug' => 'Slug nguồn không còn thuộc bài viết nguồn.',
+                ]);
+            }
+
+            $existing = SlugRedirect::query()
+                ->where('entity_type', self::ARTICLE)
+                ->where('old_slug', $sourceSlug)
+                ->lockForUpdate()
+                ->first();
+            if ($existing !== null) {
+                if ((int) $existing->entity_id === $targetId) {
+                    return $existing;
+                }
+
+                throw ValidationException::withMessages([
+                    'slug' => 'Slug nguồn đã được gán cho một chuyển hướng khác.',
+                ]);
+            }
+
+            return SlugRedirect::create([
+                'entity_type' => self::ARTICLE,
+                'entity_id' => $targetId,
+                'old_slug' => $sourceSlug,
+            ]);
+        });
+    }
+
+    /**
      * Build the public 308 response for a historical slug, or return null.
      * The current entity is resolved by ID and must still be publicly visible.
      */
@@ -143,21 +230,36 @@ final class SlugHistory
         }
 
         $class = self::modelClass($entityType);
-        $current = $class::query()->where('slug', $slug)->first();
-        if ($current !== null) {
-            return null;
-        }
-
         $history = SlugRedirect::query()
             ->where('entity_type', $entityType)
             ->where('old_slug', $slug)
             ->first();
+
+        $current = $class::query()->where('slug', $slug)->first();
+        if ($current !== null) {
+            // A still-published article with this current slug must remain
+            // authoritative until its owner explicitly unpublishes it.
+            // Only a cross-article mapping may take over an unpublished slug.
+            if (
+                $entityType !== self::ARTICLE
+                || (bool) $current->getAttribute('is_published')
+                || $history === null
+                || (int) $history->entity_id === (int) $current->getKey()
+            ) {
+                return null;
+            }
+        }
+
         if ($history === null) {
             return null;
         }
 
         $entity = $class::query()->find($history->entity_id);
-        if ($entity === null || ! self::isPubliclyVisible($entityType, $entity)) {
+        if (
+            $entity === null
+            || ! self::isPubliclyVisible($entityType, $entity)
+            || (string) $entity->getAttribute('slug') === $slug
+        ) {
             return null;
         }
 
