@@ -59,6 +59,7 @@ class ArticleController extends Controller
         }
 
         $article = Article::with('category')
+            ->published()
             ->where(function ($query) use ($slugOrId) {
                 $query->where('slug', $slugOrId)
                     ->orWhere('id', is_numeric($slugOrId) ? $slugOrId : 0);
