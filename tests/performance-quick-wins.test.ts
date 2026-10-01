@@ -194,10 +194,16 @@ test('listing pagination and product category breadcrumbs expose crawlable canon
   assert.doesNotMatch(productDetailClient, /category_id=/);
 });
 
-test('zalo chat loads only after explicit intent and provides first-action feedback', () => {
+test('chat widgets use configured direct links and no longer depend on the Zalo SDK', () => {
   const chatWidget = read('src/components/layout/ChatWidget.tsx');
-  assert.match(chatWidget, /zaloState === 'loading'/);
-  assert.match(chatWidget, /script\.onerror/);
-  assert.match(chatWidget, /https:\/\/zalo\.me/);
-  assert.doesNotMatch(chatWidget, /pointerenter|addEventListener\(['"]focus/);
+  const chatConfig = read('src/lib/chat-widget.ts');
+  assert.match(chatWidget, /href=\{zaloUrl\}/);
+  assert.match(chatWidget, /href=\{messengerUrl\}/);
+  assert.match(chatWidget, /resolveChatWidgetUrl\('zalo', settings\)/);
+  assert.match(chatWidget, /resolveChatWidgetUrl\('messenger', settings\)/);
+  assert.match(chatConfig, /settings\.chat_zalo_url/);
+  assert.match(chatConfig, /settings\.chat_messenger_url/);
+  assert.match(chatConfig, /https:\/\/zalo\.me/);
+  assert.match(chatConfig, /https:\/\/m\.me/);
+  assert.doesNotMatch(chatWidget, /sp\.zalo\.me\/plugins\/sdk\.js|data-oaid|zaloState/);
 });

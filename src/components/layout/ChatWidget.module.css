@@ -1,0 +1,96 @@
+.stack {
+  position: fixed;
+  right: 24px;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.button {
+  position: relative;
+  display: inline-flex;
+  width: 56px;
+  height: 56px;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 50%;
+  color: #fff;
+  text-decoration: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.button:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 7px 20px rgba(0, 0, 0, 0.25);
+}
+
+.button:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}
+
+.zalo {
+  background: #0068ff;
+}
+
+.messenger {
+  background: linear-gradient(135deg, #0695ff, #a334fa 62%, #ff6968);
+}
+
+.customIcon {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+}
+
+.tooltip {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 10px);
+  padding: 6px 9px;
+  border-radius: 6px;
+  background: rgba(25, 25, 30, 0.94);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(4px, -50%);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.button:hover .tooltip,
+.button:focus-visible .tooltip {
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+
+@media (max-width: 768px) {
+  .stack {
+    right: 14px;
+    bottom: calc(var(--bottom-nav-height, 64px) + 12px + env(safe-area-inset-bottom, 0px));
+    gap: 10px;
+  }
+
+  .button {
+    width: 52px;
+    height: 52px;
+  }
+
+  .tooltip {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .tooltip {
+    transition: none;
+  }
+}
