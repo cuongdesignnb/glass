@@ -2,6 +2,7 @@ import { resolveMediaUrl } from './media.ts';
 
 export type ChatChannel = 'zalo' | 'messenger';
 export type ChatSettings = Record<string, string | undefined>;
+export type ZaloDisplayMode = 'disabled' | 'livechat' | 'direct';
 
 function safeWebUrl(value: string): string | null {
   const candidate = value.trim();
@@ -38,6 +39,25 @@ export function resolveChatWidgetUrl(channel: ChatChannel, settings: ChatSetting
   const directValue = (channel === 'zalo' ? settings.chat_zalo_url : settings.chat_messenger_url)?.trim() || '';
   if (directValue) return safeWebUrl(directValue);
   return legacyFallback(channel, settings);
+}
+
+/**
+ * Prefer the first-party OA chat widget whenever an OA ID is configured.
+ * The safe direct/legacy URL is retained for SDK failure and no-OA fallback.
+ */
+export function resolveZaloDisplayMode(settings: ChatSettings): ZaloDisplayMode {
+  const oaId = settings.zalo_oa_id?.trim() || '';
+  const fallbackUrl = resolveChatWidgetUrl('zalo', settings);
+  const enabledSetting = settings.chat_zalo_enabled;
+  const enabled = enabledSetting === '0'
+    ? false
+    : enabledSetting === '1'
+      ? true
+      : Boolean(oaId || fallbackUrl);
+
+  if (!enabled) return 'disabled';
+  if (oaId) return 'livechat';
+  return fallbackUrl ? 'direct' : 'disabled';
 }
 
 /** Missing enable flags preserve an already configured legacy/direct channel. */
