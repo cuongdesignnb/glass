@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import { publicApi } from '@/lib/api';
 import { generateMeta } from '@/lib/seo';
 import { formatPrice } from '@/lib/constants';
-import { productApiParams, normalizeProductSearchParams, type RawSearchParams } from '@/lib/listing-params';
+import { categoryListingCanonicalUrl, productApiParams, normalizeProductSearchParams, type RawSearchParams } from '@/lib/listing-params';
 import CategoryDescription from './CategoryDescription';
 import CategoryChildrenHub, { plainText } from './CategoryChildrenHub';
 import Breadcrumb from '@/components/layout/Breadcrumb';
@@ -30,8 +30,7 @@ export async function generateMetadata({ params, searchParams = {} }: Props): Pr
   const title = category.meta_title || `${category.name} | Kính mắt MITOO`;
   const description = category.meta_desc || plainText(category.description) || `Khám phá sản phẩm ${category.name} chính hãng tại MITOO.`;
   const resolved = searchParams instanceof Promise ? await searchParams : searchParams;
-  const page = typeof resolved?.page === 'string' ? resolved.page : Array.isArray(resolved?.page) ? resolved.page[0] : '';
-  const url = `/danh-muc/${encodeURIComponent(category.slug)}${page && page !== '1' ? `?page=${encodeURIComponent(page)}` : ''}`;
+  const url = categoryListingCanonicalUrl(category.slug, resolved);
   return generateMeta({ title, description, url });
 }
 
