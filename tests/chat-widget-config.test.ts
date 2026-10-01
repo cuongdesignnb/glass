@@ -6,6 +6,7 @@ import {
   isChatWidgetEnabled,
   resolveChatIconUrl,
   resolveChatWidgetUrl,
+  resolveZaloDisplayMode,
 } from '../src/lib/chat-widget.ts';
 import { PUBLIC_SETTING_KEYS } from '../src/lib/settingsUtils.ts';
 
@@ -52,6 +53,15 @@ test('explicit off hides a widget; an unset flag preserves any configured channe
   assert.equal(isChatWidgetEnabled('messenger', { chat_messenger_enabled: '1' }), true);
 });
 
+test('Zalo selects live chat for an enabled OA and direct fallback without an OA', () => {
+  assert.equal(resolveZaloDisplayMode({ chat_zalo_enabled: '1', zalo_oa_id: '12345' }), 'livechat');
+  assert.equal(resolveZaloDisplayMode({ zalo_oa_id: '12345' }), 'livechat');
+  assert.equal(resolveZaloDisplayMode({ chat_zalo_enabled: '1', chat_zalo_url: 'https://zalo.me/mitoo' }), 'direct');
+  assert.equal(resolveZaloDisplayMode({ zalo_phone: '0901234567' }), 'direct');
+  assert.equal(resolveZaloDisplayMode({ chat_zalo_enabled: '1' }), 'disabled');
+  assert.equal(resolveZaloDisplayMode({ chat_zalo_enabled: '0', zalo_oa_id: '12345' }), 'disabled');
+});
+
 test('custom media icons resolve safely and invalid schemes fall back to built-in icons', () => {
   assert.equal(resolveChatIconUrl('/storage/uploads/chat-icons/zalo.webp', 'https://mitoo.vn/api'), 'https://mitoo.vn/storage/uploads/chat-icons/zalo.webp');
   assert.equal(resolveChatIconUrl('javascript:alert(1)', 'https://mitoo.vn/api'), null);
@@ -88,14 +98,23 @@ test('all new public settings are allowlisted and current no-store/read-back sav
   assert.match(settingsApi, /'Cache-Control'\s*=>\s*'no-store, no-cache/);
 });
 
-test('floating controls are direct accessible links without the Zalo SDK or excess motion', () => {
+test('Zalo OA uses the custom accessible live-chat trigger and direct fallback; Messenger remains a direct link', () => {
   assert.match(widget, /href=\{zaloUrl\}/);
   assert.match(widget, /href=\{messengerUrl\}/);
+  assert.match(widget, /type="button"/);
+  assert.match(widget, /onClick=\{handleZaloLiveChatClick\}/);
+  assert.match(widget, /aria-busy=\{zaloState === 'loading'\}/);
+  assert.match(widget, /data-oaid=\{settings\.zalo_oa_id/);
+  assert.match(widget, /data-welcome-message=\{welcomeMessage\}/);
+  assert.match(widget, /data-autopopup="0"/);
+  assert.match(widget, /zaloState === 'failed'/);
   assert.equal((widget.match(/target="_blank"/g) || []).length, 2);
   assert.equal((widget.match(/rel="noopener noreferrer"/g) || []).length, 2);
   assert.match(widget, /aria-label="Chat qua Zalo"/);
   assert.match(widget, /aria-label="Chat qua Facebook Messenger"/);
-  assert.doesNotMatch(widget, /sp\.zalo\.me\/plugins\/sdk\.js|data-oaid/);
+  assert.match(widget, /chat_zalo_icon/);
+  assert.match(widget, /chat_messenger_icon/);
+  assert.doesNotMatch(widget, /messenger.*SDK|Facebook.*SDK/);
   const styles = readFileSync('src/components/layout/ChatWidget.module.css', 'utf8');
   assert.match(styles, /env\(safe-area-inset-bottom/);
   assert.match(styles, /prefers-reduced-motion: reduce/);

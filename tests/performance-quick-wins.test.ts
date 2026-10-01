@@ -194,16 +194,25 @@ test('listing pagination and product category breadcrumbs expose crawlable canon
   assert.doesNotMatch(productDetailClient, /category_id=/);
 });
 
-test('chat widgets use configured direct links and no longer depend on the Zalo SDK', () => {
+test('chat widgets lazy-load Zalo OA live chat while preserving configured direct fallbacks', () => {
   const chatWidget = read('src/components/layout/ChatWidget.tsx');
   const chatConfig = read('src/lib/chat-widget.ts');
+  const zaloLivechat = read('src/lib/zalo-livechat.ts');
   assert.match(chatWidget, /href=\{zaloUrl\}/);
   assert.match(chatWidget, /href=\{messengerUrl\}/);
-  assert.match(chatWidget, /resolveChatWidgetUrl\('zalo', settings\)/);
+  assert.match(chatWidget, /resolveZaloDisplayMode\(settings\)/);
+  assert.match(chatWidget, /onPointerEnter=\{prepareZaloSdk\}/);
+  assert.match(chatWidget, /onFocus=\{prepareZaloSdk\}/);
+  assert.match(chatWidget, /data-oaid=\{settings\.zalo_oa_id/);
+  assert.match(chatWidget, /data-welcome-message=\{welcomeMessage\}/);
   assert.match(chatWidget, /resolveChatWidgetUrl\('messenger', settings\)/);
   assert.match(chatConfig, /settings\.chat_zalo_url/);
   assert.match(chatConfig, /settings\.chat_messenger_url/);
   assert.match(chatConfig, /https:\/\/zalo\.me/);
   assert.match(chatConfig, /https:\/\/m\.me/);
-  assert.doesNotMatch(chatWidget, /sp\.zalo\.me\/plugins\/sdk\.js|data-oaid|zaloState/);
+  assert.match(zaloLivechat, /https:\/\/sp\.zalo\.me\/plugins\/sdk\.js/);
+  assert.match(zaloLivechat, /ZALO_SDK_SCRIPT_ID/);
+  assert.match(zaloLivechat, /openZaloLiveChat/);
+  assert.match(zaloLivechat, /hideZaloSdkBubble/);
+  assert.doesNotMatch(chatWidget, /Facebook.*SDK|messenger.*SDK/);
 });

@@ -1,12 +1,15 @@
 'use client';
 
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useSettings } from '@/lib/useSettings';
 import {
   isChatWidgetEnabled,
   resolveChatIconUrl,
   resolveChatWidgetUrl,
+  resolveZaloDisplayMode,
 } from '@/lib/chat-widget';
+import { clickZaloLiveChatTrigger, hideZaloSdkBubble, loadZaloSdk, openZaloLiveChat } from '@/lib/zalo-livechat';
 import styles from './ChatWidget.module.css';
 
 function ZaloIcon() {
@@ -32,16 +35,94 @@ export default function ChatWidget() {
 
   const zaloUrl = resolveChatWidgetUrl('zalo', settings);
   const messengerUrl = resolveChatWidgetUrl('messenger', settings);
-  const showZalo = isChatWidgetEnabled('zalo', settings, zaloUrl);
+  const zaloMode = resolveZaloDisplayMode(settings);
+  const showZalo = zaloMode !== 'disabled';
   const showMessenger = isChatWidgetEnabled('messenger', settings, messengerUrl);
   const zaloIcon = resolveChatIconUrl(settings.chat_zalo_icon, apiUrl);
   const messengerIcon = resolveChatIconUrl(settings.chat_messenger_icon, apiUrl);
+  const welcomeMessage = settings.zalo_welcome?.trim() || '';
+  const [zaloState, setZaloState] = useState<'idle' | 'loading' | 'ready' | 'failed'>('idle');
+  const [mountZaloWidget, setMountZaloWidget] = useState(false);
+  const sdkLoadPromise = useRef<Promise<void> | null>(null);
+  const openRequested = useRef(false);
 
-  if ((!showZalo || !zaloUrl) && (!showMessenger || !messengerUrl)) return null;
+  const ensureZaloSdk = useCallback(() => {
+    if (!sdkLoadPromise.current) sdkLoadPromise.current = loadZaloSdk();
+    return sdkLoadPromise.current;
+  }, []);
+
+  const prepareZaloSdk = useCallback(() => {
+    if (zaloMode !== 'livechat' || zaloState !== 'idle') return;
+    hideZaloSdkBubble();
+    void ensureZaloSdk().catch(() => setZaloState('failed'));
+  }, [ensureZaloSdk, zaloMode, zaloState]);
+
+  const handleZaloLiveChatClick = useCallback(() => {
+    hideZaloSdkBubble();
+    if (zaloState === 'ready') {
+      try {
+        clickZaloLiveChatTrigger(document);
+      } catch {
+        setZaloState('failed');
+      }
+      return;
+    }
+
+    if (zaloState === 'loading') return;
+    openRequested.current = true;
+    setZaloState('loading');
+    setMountZaloWidget(true);
+  }, [zaloState]);
+
+  useEffect(() => {
+    if (!mountZaloWidget || !openRequested.current || zaloMode !== 'livechat') return;
+
+    let cancelled = false;
+    void ensureZaloSdk()
+      .then(() => {
+        if (cancelled) return;
+        return openZaloLiveChat(document, window.ZaloSocialSDK);
+      })
+      .then(() => {
+        if (cancelled) return;
+        openRequested.current = false;
+        setZaloState('ready');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        openRequested.current = false;
+        setZaloState('failed');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ensureZaloSdk, mountZaloWidget, zaloMode]);
+
+  if ((!showZalo || (zaloMode === 'direct' && !zaloUrl)) && (!showMessenger || !messengerUrl)) return null;
 
   return (
     <nav className={styles.stack} aria-label="Liên hệ nhanh" data-testid="chat-widget-stack">
-      {showZalo && zaloUrl && (
+      {showZalo && zaloMode === 'livechat' && zaloState !== 'failed' && (
+        <button
+          type="button"
+          className={`${styles.button} ${styles.zalo} ${zaloState === 'loading' ? styles.loading : ''}`}
+          aria-label="Chat qua Zalo"
+          aria-busy={zaloState === 'loading'}
+          title={zaloState === 'loading' ? 'Đang kết nối Zalo' : 'Chat qua Zalo'}
+          data-testid="chat-widget-zalo"
+          onPointerEnter={prepareZaloSdk}
+          onFocus={prepareZaloSdk}
+          onClick={handleZaloLiveChatClick}
+        >
+          {zaloIcon ? (
+            <Image src={zaloIcon} alt="" aria-hidden="true" width={42} height={42} className={styles.customIcon} unoptimized />
+          ) : <ZaloIcon />}
+          <span className={styles.tooltip} aria-hidden="true">Chat Zalo</span>
+          {zaloState === 'loading' && <span className={styles.srOnly} role="status">Đang kết nối Zalo</span>}
+        </button>
+      )}
+      {showZalo && (zaloMode === 'direct' || zaloState === 'failed') && zaloUrl && (
         <a
           className={`${styles.button} ${styles.zalo}`}
           href={zaloUrl}
@@ -56,6 +137,22 @@ export default function ChatWidget() {
           ) : <ZaloIcon />}
           <span className={styles.tooltip} aria-hidden="true">Chat Zalo</span>
         </a>
+      )}
+      {mountZaloWidget && zaloMode === 'livechat' && zaloState !== 'failed' && (
+        <div
+          className={styles.sdkHost}
+          aria-hidden="true"
+          data-testid="zalo-livechat-host"
+        >
+          <div
+            className="zalo-chat-widget"
+            data-oaid={settings.zalo_oa_id?.trim() || ''}
+            data-welcome-message={welcomeMessage}
+            data-autopopup="0"
+            data-width="350"
+            data-height="420"
+          />
+        </div>
       )}
       {showMessenger && messengerUrl && (
         <a
