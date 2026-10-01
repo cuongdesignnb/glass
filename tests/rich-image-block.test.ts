@@ -48,7 +48,7 @@ test('image node view exposes contextual editing controls without media side eff
 });
 
 test('edit panel keeps native input focus and restores saved attrs on cancel', () => {
-  const panelHandler = nodeView.match(/function stopPanelMouseDown\([\s\S]*?\n}\n/);
+  const panelHandler = nodeView.match(/function stopPanelMouseDown\([\s\S]*?\r?\n}\r?\n/);
   assert.ok(panelHandler, 'panel mouse handler should exist');
   assert.match(panelHandler[0], /event\.stopPropagation\(\)/);
   assert.doesNotMatch(panelHandler[0], /preventDefault/);

@@ -7,6 +7,9 @@ import { adminApi } from "@/lib/api";
 import { useToken } from "@/lib/useToken";
 import MediaPicker from "@/components/admin/MediaPicker";
 import { resolveMediaUrl } from "@/lib/media";
+import { isChatWidgetEnabled, resolveChatIconUrl } from "@/lib/chat-widget";
+import chatWidgetSettingsStyles from "./ChatWidgetSettings.module.css";
+import Image from "next/image";
 import {
   FiSave,
   FiGlobe,
@@ -507,8 +510,8 @@ export default function AdminSettingsPage() {
         key: "zalo_oa_id",
         label: "Zalo OA ID",
         placeholder: "4564283129778229325",
-        section: "Chat Widget – 2 nút chat luôn hiển thị góc phải màn hình",
-        hint: "ID của Zalo Official Account. Lấy tại oa.zalo.me → Cài đặt → Thông tin OA.",
+        section: "Cài đặt nâng cao / tương thích cũ",
+        hint: "Không bắt buộc nếu đã nhập Link Zalo ở thẻ cấu hình chat phía trên. Giữ để tương thích với cấu hình cũ.",
       },
       {
         key: "zalo_phone",
@@ -520,25 +523,13 @@ export default function AdminSettingsPage() {
         key: "zalo_welcome",
         label: "Zalo – Lời chào",
         placeholder: "Xin chào! Mình có thể giúp gì cho bạn?",
-        hint: "Tin nhắn chào mừng khi mở chat Zalo.",
-      },
-      {
-        key: "chat_zalo_icon",
-        label: "Zalo – Icon tuỳ chỉnh",
-        isImage: true,
-        hint: "Upload icon Zalo (PNG/SVG, nền trong suốt). Kích thước đề nghị: 60×60px. Để trống = dùng icon mặc định.",
+        hint: "Chỉ giữ cho tích hợp chat cũ; nút link trực tiếp không dùng lời chào này.",
       },
       {
         key: "messenger_page_id",
         label: "Facebook Messenger Page ID",
         placeholder: "123456789012345",
-        hint: "Page ID của Facebook Fanpage. Lấy tại Facebook → Page Settings → About → Page ID.",
-      },
-      {
-        key: "chat_messenger_icon",
-        label: "Messenger – Icon tuỳ chỉnh",
-        isImage: true,
-        hint: "Upload icon Messenger (PNG/SVG, nền trong suốt). Kích thước đề nghị: 60×60px. Để trống = dùng icon mặc định.",
+        hint: "Không bắt buộc nếu đã nhập Link Messenger ở thẻ cấu hình chat phía trên. Giữ để tương thích với cấu hình cũ.",
       },
     ],
 
@@ -1240,6 +1231,96 @@ export default function AdminSettingsPage() {
     );
   };
 
+  const renderChatWidgetCard = (channel: "zalo" | "messenger") => {
+    const isZalo = channel === "zalo";
+    const title = isZalo ? "Zalo" : "Facebook Messenger";
+    const enabledKey = isZalo ? "chat_zalo_enabled" : "chat_messenger_enabled";
+    const urlKey = isZalo ? "chat_zalo_url" : "chat_messenger_url";
+    const iconKey = isZalo ? "chat_zalo_icon" : "chat_messenger_icon";
+    const linkLabel = isZalo ? "Link Zalo" : "Link Messenger";
+    const enabled = isChatWidgetEnabled(channel, settings);
+    const iconUrl = resolveChatIconUrl(settings[iconKey], process.env.NEXT_PUBLIC_API_URL);
+    const pickerButtonLabel = isZalo ? "Upload / chọn icon Zalo" : "Upload / chọn icon Messenger";
+
+    return (
+      <section key={channel} className={chatWidgetSettingsStyles.card} data-testid={`chat-settings-${channel}`}>
+        <header className={chatWidgetSettingsStyles.cardHeader}>
+          <h2 className={chatWidgetSettingsStyles.title}>{title}</h2>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={enabled}
+            aria-label={`Hiển thị nút ${title}`}
+            className={chatWidgetSettingsStyles.toggle}
+            data-testid={`${enabledKey}-toggle`}
+            onClick={() => updateSetting(enabledKey, enabled ? "0" : "1")}
+          >
+            {enabled ? <FiToggleRight /> : <FiToggleLeft />}
+            <span>{enabled ? "Đang bật" : "Đang tắt"}</span>
+          </button>
+        </header>
+
+        <div className={chatWidgetSettingsStyles.field}>
+          <label className={chatWidgetSettingsStyles.label} htmlFor={`${urlKey}-input`}>{linkLabel}</label>
+          <input
+            id={`${urlKey}-input`}
+            className="admin-form__input"
+            type="url"
+            inputMode="url"
+            autoComplete="url"
+            value={settings[urlKey] || ""}
+            onChange={(event) => updateSetting(urlKey, event.target.value)}
+            placeholder={isZalo ? "https://zalo.me/xxxxxxxx" : "https://m.me/your-page"}
+            data-testid={urlKey}
+          />
+          <p className={chatWidgetSettingsStyles.hint}>
+            {isZalo
+              ? "Nhập URL Zalo/OA muốn mở khi khách bấm nút chat. Link này được ưu tiên hơn số điện thoại và OA ID cũ."
+              : "Nhập URL Messenger/Facebook muốn mở khi khách bấm nút chat. Link này được ưu tiên hơn Page ID cũ."}
+          </p>
+        </div>
+
+        <div className={chatWidgetSettingsStyles.field}>
+          <span className={chatWidgetSettingsStyles.label}>{isZalo ? "Icon Zalo" : "Icon Messenger"}</span>
+          <div className={chatWidgetSettingsStyles.iconPreview}>
+            {iconUrl ? (
+              <Image src={iconUrl} alt="" aria-hidden="true" width={48} height={48} unoptimized />
+            ) : (
+              <span className={chatWidgetSettingsStyles.iconPath}>Đang dùng icon mặc định</span>
+            )}
+            {settings[iconKey] && <span className={chatWidgetSettingsStyles.iconPath}>{settings[iconKey]}</span>}
+          </div>
+          <div className={chatWidgetSettingsStyles.actions}>
+            <button
+              type="button"
+              className={`admin-btn admin-btn--secondary admin-btn--sm ${chatWidgetSettingsStyles.mediaButton}`}
+              data-testid={`${iconKey}-picker`}
+              onClick={() => {
+                setMediaTarget(iconKey);
+                setShowMediaPicker(true);
+              }}
+            >
+              <FiImage /> {pickerButtonLabel}
+            </button>
+            {settings[iconKey] && (
+              <button
+                type="button"
+                className={chatWidgetSettingsStyles.clearButton}
+                data-testid={`${iconKey}-clear`}
+                onClick={() => updateSetting(iconKey, "")}
+              >
+                <FiX /> Xoá icon tùy chỉnh
+              </button>
+            )}
+          </div>
+          <p className={chatWidgetSettingsStyles.hint}>
+            PNG, SVG hoặc WebP nền trong suốt, ảnh vuông khoảng 60×60 hoặc 120×120. Chọn nút để mở Media Library; tại đó có thể tải ảnh mới (nhập Alt) hoặc chọn ảnh có sẵn. Bấm Lưu Cài Đặt để lưu lựa chọn.
+          </p>
+        </div>
+      </section>
+    );
+  };
+
   return (
     <>
       <div className="admin-topbar">
@@ -1275,6 +1356,13 @@ export default function AdminSettingsPage() {
             </button>
           ))}
         </div>
+
+        {activeTab === "social" && (
+          <div className={chatWidgetSettingsStyles.cards} data-testid="chat-widget-settings-cards">
+            {renderChatWidgetCard("zalo")}
+            {renderChatWidgetCard("messenger")}
+          </div>
+        )}
 
         {/* Fields */}
         {grouped.map((group, gi) => (
@@ -1999,6 +2087,7 @@ export default function AdminSettingsPage() {
 
       <MediaPicker
         isOpen={showMediaPicker}
+        uploadFolder={mediaTarget === "chat_zalo_icon" || mediaTarget === "chat_messenger_icon" ? "chat-icons" : "general"}
         onClose={() => setShowMediaPicker(false)}
         onSelect={(url, item) => {
           if (mediaTarget === "editor" && editorInsertFn) {

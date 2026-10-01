@@ -11,6 +11,7 @@ interface MediaPickerProps {
   onSelect: (url: string, item: any) => void;
   onSelectMultiple?: (urls: string[], items: any[]) => void;
   multiple?: boolean;
+  uploadFolder?: string;
 }
 
 function suggestedAlt(file: File): string {
@@ -18,7 +19,7 @@ function suggestedAlt(file: File): string {
   return baseName || 'Hình ảnh MITOO';
 }
 
-export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultiple, multiple = false }: MediaPickerProps) {
+export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultiple, multiple = false, uploadFolder = 'general' }: MediaPickerProps) {
   const { token } = useToken();
   const [media, setMedia] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -110,6 +111,7 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
     setUploadError('');
     const fileArr = pendingFiles;
     let count = 0;
+    const failedFiles: File[] = [];
 
     for (const file of fileArr) {
       count++;
@@ -117,7 +119,7 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
       try {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('folder', 'general');
+        formData.append('folder', uploadFolder);
         // Keep every uploaded media record descriptive. For a batch upload,
         // add the filename only when it differs from the shared base alt.
         const fileAlt = fileArr.length === 1 || baseAlt.toLowerCase() === suggestedAlt(file).toLowerCase()
@@ -125,19 +127,29 @@ export default function MediaPicker({ isOpen, onClose, onSelect, onSelectMultipl
           : `${baseAlt} - ${suggestedAlt(file)}`;
         formData.append('alt', fileAlt.slice(0, 255));
         if (uploadCaption.trim()) formData.append('caption', uploadCaption.trim());
-        await adminApi.uploadMedia(token, formData);
-      } catch (err) {
-        console.error(`Upload failed: ${file.name}`, err);
+        const uploaded = await adminApi.uploadMedia(token, formData);
+        const mediaItem = uploaded?.data || uploaded;
+        if (typeof mediaItem?.url !== 'string' || !mediaItem.url.trim()) {
+          throw new Error('Máy chủ không trả về đường dẫn ảnh đã tải lên.');
+        }
+      } catch {
+        failedFiles.push(file);
       }
     }
 
     setUploadProgress('');
     setUploading(false);
-    setPendingFiles([]);
-    setUploadAlt('');
-    setUploadCaption('');
-    loadMedia();
-  }, [pendingFiles, token, uploadAlt, uploadCaption]);
+    setPendingFiles(failedFiles);
+    if (failedFiles.length === 0) {
+      setUploadAlt('');
+      setUploadCaption('');
+      setUploadError('');
+      void loadMedia();
+    } else {
+      setUploadError(`Không tải được ${failedFiles.length} ảnh. Các file lỗi vẫn được giữ để thử lại.`);
+      if (failedFiles.length < fileArr.length) void loadMedia();
+    }
+  }, [pendingFiles, token, uploadAlt, uploadCaption, uploadFolder]);
 
   const handleDelete = async (e: React.MouseEvent, item: any) => {
     e.stopPropagation();

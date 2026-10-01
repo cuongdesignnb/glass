@@ -15,7 +15,8 @@ class SettingController extends Controller
         'seo_title', 'seo_description', 'seo_keywords',
         'social_facebook', 'social_instagram', 'social_youtube', 'social_tiktok',
         'zalo_oa_id', 'zalo_phone', 'zalo_welcome', 'chat_zalo_icon',
-        'chat_messenger_icon', 'messenger_page_id',
+        'chat_zalo_enabled', 'chat_zalo_url',
+        'chat_messenger_icon', 'messenger_page_id', 'chat_messenger_enabled', 'chat_messenger_url',
         'hero_image', 'hero_image_mobile', 'hero_title', 'hero_subtitle',
         'hero_cta_text', 'hero_tag', 'hero_overlay', 'hero_text_color', 'hero_desc_color',
         'homepage_testimonial_1_image', 'homepage_testimonial_2_image', 'homepage_testimonial_3_image',
@@ -120,6 +121,7 @@ class SettingController extends Controller
 
         foreach ($request->settings as $setting) {
             $this->validateOpenAiSetting($setting['key'], $setting['value'] ?? '');
+            $this->validateChatSetting($setting['key'], $setting['value'] ?? '');
 
             Setting::setValue(
                 $setting['key'],
@@ -132,6 +134,41 @@ class SettingController extends Controller
             'message' => 'Cập nhật cài đặt thành công',
             'data' => Setting::getAllSettings(),
         ]);
+    }
+
+    private function validateChatSetting(string $key, string $value): void
+    {
+        $value = trim($value);
+
+        if (in_array($key, ['chat_zalo_enabled', 'chat_messenger_enabled'], true)
+            && ! in_array($value, ['0', '1'], true)
+        ) {
+            throw ValidationException::withMessages([
+                'settings' => ['Trạng thái nút chat chỉ được nhận giá trị 0 hoặc 1.'],
+            ]);
+        }
+
+        if (! in_array($key, ['chat_zalo_url', 'chat_messenger_url'], true) || $value === '') {
+            return;
+        }
+
+        $parts = parse_url($value);
+        $scheme = is_array($parts) ? strtolower((string) ($parts['scheme'] ?? '')) : '';
+        $host = is_array($parts) ? ($parts['host'] ?? null) : null;
+        $hasCredentials = is_array($parts) && (isset($parts['user']) || isset($parts['pass']));
+
+        // This follows the existing footer-link policy: ordinary HTTP/HTTPS
+        // links are allowed; executable and non-web URL schemes are not.
+        if (! filter_var($value, FILTER_VALIDATE_URL)
+            || ! in_array($scheme, ['http', 'https'], true)
+            || ! $host
+            || $hasCredentials
+            || strlen($value) > 2048
+        ) {
+            throw ValidationException::withMessages([
+                'settings' => ['Link chat phải là URL HTTP hoặc HTTPS hợp lệ.'],
+            ]);
+        }
     }
 
     private function validateOpenAiSetting(string $key, string $value): void

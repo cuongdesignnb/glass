@@ -1,194 +1,78 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useSettings } from '@/lib/useSettings';
 import Image from 'next/image';
+import { useSettings } from '@/lib/useSettings';
+import {
+  isChatWidgetEnabled,
+  resolveChatIconUrl,
+  resolveChatWidgetUrl,
+} from '@/lib/chat-widget';
+import styles from './ChatWidget.module.css';
+
+function ZaloIcon() {
+  return (
+    <svg viewBox="0 0 32 32" width="31" height="31" fill="none" aria-hidden="true" focusable="false">
+      <path d="M6 5.5h20a2.5 2.5 0 0 1 2.5 2.5v13a2.5 2.5 0 0 1-2.5 2.5h-9l-6.3 4v-4H6A2.5 2.5 0 0 1 3.5 21V8A2.5 2.5 0 0 1 6 5.5Z" fill="currentColor" />
+      <path d="M10 12h11l-7.5 7H22" stroke="#0068ff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function MessengerIcon() {
+  return (
+    <svg viewBox="0 0 28 28" width="30" height="30" fill="currentColor" aria-hidden="true" focusable="false">
+      <path d="M14 2.042c-6.76 0-12 4.952-12 11.64 0 3.72 1.56 6.88 4.08 9.08V26l3.24-1.8c.96.28 1.92.42 3 .42h.36c6.76 0 11.64-4.952 11.64-11.64S20.76 2.042 14 2.042zm1.2 15.6l-3.12-3.36-5.88 3.36 6.36-6.72 3.12 3.36 5.88-3.36-6.36 6.72z" />
+    </svg>
+  );
+}
 
 export default function ChatWidget() {
   const { settings } = useSettings();
-  const zaloLoaded = useRef(false);
-  const [zaloState, setZaloState] = useState<'idle' | 'loading' | 'ready' | 'failed'>('idle');
-
-  const zaloOaId = settings['zalo_oa_id'];
-  const zaloPhone = settings['zalo_phone'];
-  const messengerPageId = settings['messenger_page_id'];
-  const zaloWelcome = settings['zalo_welcome'] || 'Xin chào! Mình có thể giúp gì cho bạn?';
-  const messengerIcon = settings['chat_messenger_icon'];
-
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
 
-  const hasZalo = !!(zaloOaId || zaloPhone);
-  const hasMessenger = !!messengerPageId;
+  const zaloUrl = resolveChatWidgetUrl('zalo', settings);
+  const messengerUrl = resolveChatWidgetUrl('messenger', settings);
+  const showZalo = isChatWidgetEnabled('zalo', settings, zaloUrl);
+  const showMessenger = isChatWidgetEnabled('messenger', settings, messengerUrl);
+  const zaloIcon = resolveChatIconUrl(settings.chat_zalo_icon, apiUrl);
+  const messengerIcon = resolveChatIconUrl(settings.chat_messenger_icon, apiUrl);
 
-  // The third-party iframe changes size several times while booting. Load it only
-  // after intent on the stable placeholder so those movements cannot create CLS.
-  useEffect(() => {
-    if (!zaloOaId) return;
-    const trigger = document.getElementById('zalo-chat-widget-trigger');
-    if (!trigger) return;
-
-    const loadScript = () => {
-      if (zaloLoaded.current) return;
-      setZaloState('loading');
-      if (document.getElementById('zalo-sdk-script')) {
-        zaloLoaded.current = true;
-        setZaloState('ready');
-        return;
-      }
-
-      const script = document.createElement('script');
-      script.id = 'zalo-sdk-script';
-      script.src = 'https://sp.zalo.me/plugins/sdk.js';
-      script.async = true;
-      script.defer = true;
-      script.onload = () => {
-        setZaloState('ready');
-        window.setTimeout(() => trigger.focus(), 0);
-      };
-      script.onerror = () => {
-        setZaloState('failed');
-      };
-      document.body.appendChild(script);
-      zaloLoaded.current = true;
-      cleanup();
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        loadScript();
-      }
-    };
-
-    const cleanup = () => {
-      trigger.removeEventListener('pointerdown', loadScript);
-      trigger.removeEventListener('keydown', handleKeyDown);
-    };
-
-    trigger.addEventListener('pointerdown', loadScript, { passive: true });
-    trigger.addEventListener('keydown', handleKeyDown);
-
-    return cleanup;
-  }, [zaloOaId]);
-
-  // Inject global CSS for messenger pulse + zalo z-index
-  useEffect(() => {
-    if (document.getElementById('chat-widget-styles')) return;
-    const style = document.createElement('style');
-    style.id = 'chat-widget-styles';
-    style.textContent = `
-      @keyframes msg-ring {
-        0% { box-shadow: 0 0 0 0 rgba(163,52,250,0.4); }
-        70% { box-shadow: 0 0 0 14px rgba(163,52,250,0); }
-        100% { box-shadow: 0 0 0 0 rgba(163,52,250,0); }
-      }
-      #zalo-chat-widget-root { z-index: 9999 !important; }
-      #zalo-chat-widget-trigger {
-        position: fixed;
-        right: 24px;
-        bottom: 24px;
-        z-index: 9999;
-        width: 56px;
-        height: 56px;
-        border-radius: 50%;
-        background: #0068ff;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.18);
-        color: #fff;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font: 700 13px/1 sans-serif;
-        cursor: pointer;
-      }
-    `;
-    document.head.appendChild(style);
-  }, []);
-
-  if (!hasZalo && !hasMessenger) return null;
-
-  const resolveIcon = (path: string) => {
-    if (!path) return '';
-    if (path.startsWith('http')) return path;
-    if (path.startsWith('/')) return `${apiUrl}${path}`;
-    return path;
-  };
-
-  const messengerBottom = hasZalo && zaloOaId ? 90 : 24;
+  if ((!showZalo || !zaloUrl) && (!showMessenger || !messengerUrl)) return null;
 
   return (
-    <>
-      {/* Zalo OA Chat Widget — SDK creates embedded live chat */}
-      {zaloOaId && (
-        <div
-          id="zalo-chat-widget-trigger"
-          className="zalo-chat-widget"
-          data-oaid={zaloOaId}
-          data-welcome-message={zaloWelcome}
-          data-autopopup="0"
-          data-width="350"
-          data-height="420"
-          role="button"
-          tabIndex={0}
-          aria-busy={zaloState === 'loading'}
-          aria-label="Mở chat Zalo"
-        >
-          {zaloState === 'loading' ? '...' : zaloState === 'failed' ? (
-            <a
-              href={`https://zalo.me/${zaloPhone || zaloOaId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Open Zalo in a new tab"
-              style={{ color: 'inherit', textDecoration: 'none' }}
-            >
-              Zalo
-            </a>
-          ) : 'Zalo'}
-        </div>
-      )}
-
-      {/* Messenger floating button */}
-      {hasMessenger && (
+    <nav className={styles.stack} aria-label="Liên hệ nhanh" data-testid="chat-widget-stack">
+      {showZalo && zaloUrl && (
         <a
-          href={`https://m.me/${messengerPageId}`}
+          className={`${styles.button} ${styles.zalo}`}
+          href={zaloUrl}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label="Chat Messenger"
-          title="Chat qua Messenger"
-          style={{
-            position: 'fixed',
-            bottom: `${messengerBottom}px`,
-            right: '24px',
-            zIndex: 9998,
-            width: '56px',
-            height: '56px',
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #0695FF, #A334FA, #FF6968)',
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            textDecoration: 'none',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
-            overflow: 'hidden',
-            animation: 'msg-ring 2.5s infinite',
-          }}
+          aria-label="Chat qua Zalo"
+          title="Chat qua Zalo"
+          data-testid="chat-widget-zalo"
         >
-          {messengerIcon ? (
-            <Image
-              src={resolveIcon(messengerIcon)}
-              alt="Messenger"
-              width={40}
-              height={40}
-              style={{ objectFit: 'contain' }}
-              unoptimized
-            />
-          ) : (
-            <svg viewBox="0 0 28 28" fill="currentColor" width="30" height="30">
-              <path d="M14 2.042c-6.76 0-12 4.952-12 11.64 0 3.72 1.56 6.88 4.08 9.08V26l3.24-1.8c.96.28 1.92.42 3 .42h.36c6.76 0 11.64-4.952 11.64-11.64S20.76 2.042 14 2.042zm1.2 15.6l-3.12-3.36-5.88 3.36 6.36-6.72 3.12 3.36 5.88-3.36-6.36 6.72z"/>
-            </svg>
-          )}
+          {zaloIcon ? (
+            <Image src={zaloIcon} alt="" aria-hidden="true" width={42} height={42} className={styles.customIcon} unoptimized />
+          ) : <ZaloIcon />}
+          <span className={styles.tooltip} aria-hidden="true">Chat Zalo</span>
         </a>
       )}
-    </>
+      {showMessenger && messengerUrl && (
+        <a
+          className={`${styles.button} ${styles.messenger}`}
+          href={messengerUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Chat qua Facebook Messenger"
+          title="Chat qua Messenger"
+          data-testid="chat-widget-messenger"
+        >
+          {messengerIcon ? (
+            <Image src={messengerIcon} alt="" aria-hidden="true" width={42} height={42} className={styles.customIcon} unoptimized />
+          ) : <MessengerIcon />}
+          <span className={styles.tooltip} aria-hidden="true">Messenger</span>
+        </a>
+      )}
+    </nav>
   );
 }
