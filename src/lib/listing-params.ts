@@ -130,6 +130,14 @@ export function productCategoryUrl(category: { slug?: unknown } | null | undefin
   return slug ? `/danh-muc/${encodeURIComponent(slug)}` : '/san-pham';
 }
 
+/** Build a category page canonical from the same normalized page value used by the listing. */
+export function categoryListingCanonicalUrl(slug: string, rawSearchParams: RawSearchParams = {}): string {
+  const page = normalizeProductSearchParams(rawSearchParams).page;
+  const pageSuffix = page === '1' ? '' : `?page=${encodeURIComponent(page)}`;
+
+  return `/danh-muc/${encodeURIComponent(slug)}${pageSuffix}`;
+}
+
 export function normalizeArticleSearchParams(raw: RawSearchParams = {}): ArticleListingFilters {
   const sort = firstValue(raw.sort);
   return {
