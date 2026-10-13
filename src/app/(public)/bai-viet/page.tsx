@@ -1,10 +1,12 @@
 import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
 import { generateMeta, generateCollectionPageSchema, generateBreadcrumbSchema } from '@/lib/seo';
 import { publicApi } from '@/lib/api';
 import {
   articleApiParams,
   articleListingCanonicalPolicy,
   articleListingUrl,
+  isOutOfRangePage,
   normalizeArticleSearchParams,
   type RawSearchParams,
 } from '@/lib/listing-params';
@@ -29,9 +31,10 @@ export default async function ArticlesPage({ searchParams = {} }: { searchParams
   const seoPolicy = articleListingCanonicalPolicy(searchParams);
   const listingUrl = articleListingUrl(filters);
   const [articleResponse, categoryResponse] = await Promise.all([
-    publicApi.getArticles(articleApiParams(filters)).catch(() => ({ data: [], current_page: 1, last_page: 1, total: 0 })),
+    publicApi.getArticles(articleApiParams(filters)).catch(() => null),
     publicApi.getArticleCategories({}).catch(() => []),
   ]);
+  if (isOutOfRangePage(filters.page, articleResponse)) notFound();
   const articles = Array.isArray(articleResponse?.data) ? articleResponse.data : [];
   const categories = Array.isArray(categoryResponse)
     ? categoryResponse.filter((category: any) => category.is_active !== false)

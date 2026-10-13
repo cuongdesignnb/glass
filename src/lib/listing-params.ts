@@ -125,6 +125,20 @@ export function productListingCanonicalPolicy(
   };
 }
 
+/**
+ * A page past the last real page of a successful listing response must 404 instead of
+ * rendering an empty, indexable grid. A failed API call (null response) is not out of range.
+ */
+export function isOutOfRangePage(
+  requestedPage: string | number,
+  response: { last_page?: unknown } | null | undefined,
+): boolean {
+  if (!response) return false;
+  const lastPage = Number(response.last_page);
+  if (!Number.isFinite(lastPage)) return false;
+  return Number(requestedPage) > Math.max(1, lastPage);
+}
+
 export function productCategoryUrl(category: { slug?: unknown } | null | undefined): string {
   const slug = token(String(category?.slug || ''));
   return slug ? `/danh-muc/${encodeURIComponent(slug)}` : '/san-pham';
