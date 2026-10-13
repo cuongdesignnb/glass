@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import { publicApi } from '@/lib/api';
 import { generateMeta } from '@/lib/seo';
 import { formatPrice } from '@/lib/constants';
-import { categoryListingCanonicalUrl, productApiParams, normalizeProductSearchParams, type RawSearchParams } from '@/lib/listing-params';
+import { categoryListingCanonicalUrl, isOutOfRangePage, productApiParams, normalizeProductSearchParams, type RawSearchParams } from '@/lib/listing-params';
 import CategoryDescription from './CategoryDescription';
 import CategoryChildrenHub, { plainText } from './CategoryChildrenHub';
 import Breadcrumb from '@/components/layout/Breadcrumb';
@@ -41,7 +41,8 @@ export default async function CategoryPage({ params, searchParams = {} }: Props)
   const resolved = searchParams instanceof Promise ? await searchParams : searchParams;
   const page = typeof resolved?.page === 'string' ? resolved.page : Array.isArray(resolved?.page) ? resolved.page[0] : '1';
   const filters = normalizeProductSearchParams({ category: category.slug, page });
-  const response = await publicApi.getProducts(productApiParams(filters)).catch(() => ({ data: [], current_page: 1, last_page: 1, total: 0 }));
+  const response = await publicApi.getProducts(productApiParams(filters)).catch(() => null);
+  if (isOutOfRangePage(filters.page, response)) notFound();
   const products = Array.isArray(response?.data) ? response.data : [];
   const currentPage = Number(response?.current_page) || 1;
   const lastPage = Number(response?.last_page) || 1;

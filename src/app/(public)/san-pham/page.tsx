@@ -2,7 +2,8 @@ import { Metadata } from 'next';
 import { generateMeta, generateCollectionPageSchema, generateBreadcrumbSchema } from '@/lib/seo';
 import { getPublicSettings } from '@/lib/settings';
 import { publicApi } from '@/lib/api';
-import { normalizeProductSearchParams, productApiParams, productListingCanonicalPolicy, productListingUrl, type RawSearchParams } from '@/lib/listing-params';
+import { notFound } from 'next/navigation';
+import { isOutOfRangePage, normalizeProductSearchParams, productApiParams, productListingCanonicalPolicy, productListingUrl, type RawSearchParams } from '@/lib/listing-params';
 import ProductListingClient from './ProductListingClient';
 
 export async function generateMetadata({ searchParams = {} }: { searchParams?: RawSearchParams }): Promise<Metadata> {
@@ -24,10 +25,11 @@ export default async function ProductListingPage({ searchParams = {} }: { search
   const filters = normalizeProductSearchParams(searchParams);
   const seoPolicy = productListingCanonicalPolicy(searchParams);
   const [productResponse, categoryResponse, attributeResponse] = await Promise.all([
-    publicApi.getProducts(productApiParams(filters)).catch(() => ({ data: [], current_page: 1, last_page: 1, total: 0 })),
+    publicApi.getProducts(productApiParams(filters)).catch(() => null),
     publicApi.getCategories(false).catch(() => []),
     publicApi.getProductAttributes().catch(() => ({})),
   ]);
+  if (isOutOfRangePage(filters.page, productResponse)) notFound();
   const products = Array.isArray(productResponse?.data) ? productResponse.data : [];
   const categories = Array.isArray(categoryResponse)
     ? categoryResponse.filter((category: any) => category.is_active !== false)
