@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { generateBreadcrumbSchema } from '@/lib/seo';
+import './Breadcrumb.css';
 
 interface BreadcrumbItem {
   name: string;

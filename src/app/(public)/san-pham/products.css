@@ -1,14 +1,74 @@
 /* Products Page Styles — Minimalist */
 
 .products-header {
-  background: var(--color-bg);
-  padding: var(--space-3xl) 0 var(--space-2xl);
+  background: linear-gradient(180deg, var(--color-bg-warm) 0%, var(--color-bg) 100%);
+  padding: var(--space-2xl) 0 var(--space-2xl);
   text-align: center;
   border-bottom: 1px solid var(--color-gray-200);
 }
 
 .products-header h1 {
+  position: relative;
   color: var(--color-text-heading) !important;
+  padding-bottom: var(--space-md);
+}
+
+/* Short brand-gold rule under the title */
+.products-header h1::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 48px;
+  height: 2px;
+  transform: translateX(-50%);
+  border-radius: var(--radius-full);
+  background: var(--color-brand);
+}
+
+/* Breadcrumb in the header: one centered row, quiet until hovered */
+.products-header .breadcrumb {
+  margin-bottom: var(--space-lg);
+}
+
+.products-header .breadcrumb__list {
+  justify-content: center;
+  gap: 2px;
+}
+
+.products-header .breadcrumb__item {
+  font-size: 0.8125rem;
+  letter-spacing: 0.02em;
+}
+
+.products-header .breadcrumb__link {
+  color: var(--color-gray-500);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.products-header .breadcrumb__separator {
+  margin: 0 4px;
+  color: var(--color-gray-300);
+}
+
+.products-header .breadcrumb__current {
+  color: var(--color-brand-dark);
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .products-header {
+    padding: var(--space-xl) 0 var(--space-xl);
+  }
+
+  .products-header .breadcrumb {
+    margin-bottom: var(--space-md);
+  }
+
+  .products-header .breadcrumb__item {
+    font-size: 0.75rem;
+  }
 }
 
 .products-header p {
