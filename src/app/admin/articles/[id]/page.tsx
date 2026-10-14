@@ -59,7 +59,7 @@ export default function ArticleFormPage() {
 
   const loadArticle = async () => {
     try {
-      const data = await adminApi.getArticles(token!, {});
+      const data = await adminApi.getArticles(token!, { per_page: '500' });
       const article = (data.data || []).find((a: any) => a.id === Number(params?.id));
       if (article) {
         setForm({
@@ -74,6 +74,8 @@ export default function ArticleFormPage() {
           article_category_id: article.article_category_id || '',
         });
         setTagsInput((article.tags || []).join(', '));
+      } else {
+        toast.error(`Không tìm thấy bài viết #${params?.id}. Không lưu để tránh ghi đè nội dung.`);
       }
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
