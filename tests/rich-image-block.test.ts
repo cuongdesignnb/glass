@@ -106,3 +106,7 @@ test('Vietnamese labels and normal article save path remain covered', () => {
   assert.match(editor, /RichImage\.configure/);
   assert.match(editor, /EditorialLink\.configure\([\s\S]*openOnClick: false/);
 });
+
+test('legacy AI figure markup keeps its caption inside the image block', () => {
+  assert.match(extension, /tag:\s*'figure\.ai-article-image'/);
+});
