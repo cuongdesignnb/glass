@@ -1,0 +1,32 @@
+/* Breadcrumb: loaded by the component so every page that renders it is styled. */
+.breadcrumb {
+  margin-bottom: var(--space-lg);
+}
+.breadcrumb__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.breadcrumb__item {
+  display: flex;
+  align-items: center;
+  font-size: 0.8125rem;
+}
+.breadcrumb__link {
+  color: var(--color-gray-500);
+  transition: color 0.2s;
+}
+.breadcrumb__link:hover { color: var(--color-gold); }
+.breadcrumb__separator {
+  color: var(--color-gray-400);
+  margin: 0 6px;
+  font-size: 0.875rem;
+}
+.breadcrumb__current {
+  color: var(--color-gold-dark);
+  font-weight: 500;
+}
