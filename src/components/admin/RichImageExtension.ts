@@ -84,6 +84,9 @@ const RichImage = Node.create<RichImageOptions>({
       // New semantic image blocks are parsed before the nested <img> rule.
       { tag: 'figure[data-type="rich-image"]', getAttrs: element => readRichImageAttrs(element as HTMLElement) },
       { tag: 'figure.article-image', getAttrs: element => readRichImageAttrs(element as HTMLElement) },
+      // Older AI-generated articles use <figure class="ai-article-image"> with a <figcaption>.
+      // Without this rule only the <img> was parsed and the caption became a stray paragraph.
+      { tag: 'figure.ai-article-image', getAttrs: element => readRichImageAttrs(element as HTMLElement) },
       // Legacy content used title as the caption. Keep it when the article is opened and saved.
       { tag: 'img', getAttrs: element => readRichImageAttrs(element as HTMLElement) },
     ];
