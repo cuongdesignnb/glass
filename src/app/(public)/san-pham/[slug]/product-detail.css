@@ -865,6 +865,9 @@
 }
 .rich-content p { margin-bottom: 16px; }
 .rich-content ul, .rich-content ol { padding-left: 24px; margin-bottom: 16px; }
+/* The rich editor wraps list item text in <p>; keep list items compact */
+.rich-content li > p { margin-bottom: 0; }
+.rich-content li > p + p { margin-top: 8px; }
 .rich-content img {
   max-width: 100%;
   height: auto !important;
