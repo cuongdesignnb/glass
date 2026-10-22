@@ -874,6 +874,22 @@
   border-radius: 8px;
   margin: 16px 0;
 }
+/* Images inserted from the rich editor are wrapped in <figure class="article-image">.
+   Keep them compact and centered instead of filling the whole description column. */
+.rich-content figure.article-image {
+  margin: 20px 0;
+  text-align: center;
+}
+.rich-content figure.article-image img {
+  display: block;
+  max-width: min(100%, 420px);
+  margin: 0 auto;
+}
+.rich-content figure.article-image figcaption {
+  margin-top: 8px;
+  font-size: 0.8125rem;
+  color: var(--color-gray-500) !important;
+}
 .rich-content a {
   color: var(--color-brand) !important;
   text-decoration: underline;
