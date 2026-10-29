@@ -121,6 +121,34 @@ class ArticleConsolidationRedirectTest extends TestCase
         $this->assertSame(self::SECONDARY_SLUG, $secondary->fresh()->slug);
     }
 
+    public function test_artisan_command_records_mapping_and_unpublishes_source(): void
+    {
+        $primary = $this->createArticle(self::PRIMARY_SLUG, 'Bài chính', true);
+        $secondary = $this->createArticle(self::SECONDARY_SLUG, 'Bài phụ', true);
+
+        $this->artisan('articles:consolidate', [
+            'source' => $secondary->id,
+            'target' => $primary->id,
+            '--unpublish' => true,
+        ])->assertSuccessful();
+
+        $this->assertFalse((bool) $secondary->fresh()->is_published);
+        $this->get('/api/public/articles/'.self::SECONDARY_SLUG)->assertStatus(308);
+    }
+
+    public function test_artisan_command_fails_for_unpublished_target(): void
+    {
+        $primary = $this->createArticle(self::PRIMARY_SLUG, 'Bài chính', false);
+        $secondary = $this->createArticle(self::SECONDARY_SLUG, 'Bài phụ', true);
+
+        $this->artisan('articles:consolidate', [
+            'source' => $secondary->id,
+            'target' => $primary->id,
+        ])->assertFailed();
+
+        $this->assertDatabaseCount('slug_redirects', 0);
+    }
+
     private function createArticle(string $slug, string $title, bool $published): Article
     {
         return Article::create([
