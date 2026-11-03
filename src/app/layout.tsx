@@ -98,6 +98,9 @@ export async function generateMetadata(): Promise<Metadata> {
     description,
     keywords,
     manifest: '/manifest.json',
+    verification: {
+      other: { 'msvalidate.01': '09B32C5267B05FAD46B604B5782CE8BF' },
+    },
     icons: {
       icon: [{ url: faviconUrl, sizes: 'any' }],
       shortcut: [faviconUrl],
