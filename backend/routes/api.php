@@ -138,8 +138,8 @@ Route::prefix('public')->group(function () {
 // ==========================================
 // AUTH ROUTES
 // ==========================================
-Route::post('/auth/login', [AuthController::class, 'login']);
-Route::post('/auth/register', [AuthController::class, 'register']);
+Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
+Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
 
 // ==========================================
 // CUSTOMER AUTH ROUTES

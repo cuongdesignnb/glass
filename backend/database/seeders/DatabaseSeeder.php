@@ -20,7 +20,7 @@ class DatabaseSeeder extends Seeder
         User::create([
             'name' => 'Admin',
             'email' => 'admin@glass.vn',
-            'password' => Hash::make('password'),
+            'password' => Hash::make(env('ADMIN_SEED_PASSWORD') ?: \Illuminate\Support\Str::random(32)),
             'role' => 'admin',
         ]);
 

@@ -81,7 +81,8 @@ export default function AdminLoginPage() {
                 type="email"
                 className="admin-form__input"
                 style={{ paddingLeft: "40px", width: "100%" }}
-                placeholder="admin@glass.vn"
+                placeholder="Email quản trị"
+                autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -127,17 +128,6 @@ export default function AdminLoginPage() {
             {loading ? "Đang đăng nhập..." : "Đăng Nhập"}
           </button>
         </form>
-
-        <p
-          style={{
-            textAlign: "center",
-            marginTop: "24px",
-            fontSize: "0.8125rem",
-            color: "rgba(255,255,255,0.3)",
-          }}
-        >
-          Mặc định: admin@glass.vn / password
-        </p>
       </div>
     </div>
   );
