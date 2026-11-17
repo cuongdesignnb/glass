@@ -146,6 +146,9 @@ export default async function RootLayout({
   const settings = await getPublicSettings();
   const customFont = resolveCustomFont(settings);
   const fontStyle = customFont ? buildFontStyle(customFont) : null;
+  const sameAs = ['social_facebook', 'social_instagram', 'social_tiktok', 'social_youtube']
+    .map((key) => (settings[key] || '').trim())
+    .filter((url) => /^https?:\/\//.test(url));
 
   return (
     <html lang="vi" className={customFont ? undefined : `${inter.variable} ${playfair.variable}`}>
@@ -194,7 +197,50 @@ export default async function RootLayout({
                 areaServed: 'VN',
                 availableLanguage: 'Vietnamese',
               },
-              sameAs: [],
+              sameAs,
+            }),
+          }}
+        />
+        {/* Global Schema: LocalBusiness (physical shop) */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Optician',
+              '@id': `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/#localbusiness`,
+              name: settings['site_name'] || 'MITOO',
+              url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+              image: settings['site_logo']
+                ? resolveMediaUrl(settings['site_logo'], PUBLIC_API)
+                : `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/logo.png`,
+              telephone: settings['contact_phone'],
+              email: settings['contact_email'],
+              address: {
+                '@type': 'PostalAddress',
+                streetAddress: '195 Phố Mới',
+                addressLocality: 'Yên Phong',
+                addressRegion: 'Bắc Ninh',
+                postalCode: '16000',
+                addressCountry: 'VN',
+              },
+              openingHoursSpecification: [
+                {
+                  '@type': 'OpeningHoursSpecification',
+                  dayOfWeek: [
+                    'Monday',
+                    'Tuesday',
+                    'Wednesday',
+                    'Thursday',
+                    'Friday',
+                    'Saturday',
+                    'Sunday',
+                  ],
+                  opens: '08:00',
+                  closes: '21:30',
+                },
+              ],
+              sameAs,
             }),
           }}
         />
