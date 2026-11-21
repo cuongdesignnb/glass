@@ -27,6 +27,7 @@ import {
   FiSliders,
   FiDatabase,
   FiClock,
+  FiShoppingBag,
 } from "react-icons/fi";
 import { Toaster } from "react-hot-toast";
 import { useSettings } from "@/lib/useSettings";
@@ -57,6 +58,7 @@ const adminMenuItems = [
   { name: "Đánh Giá", icon: <FiStar />, href: "/admin/reviews" },
   { name: "Khách Hàng", icon: <FiUsers />, href: "/admin/users" },
   { name: "Voucher", icon: <FiGift />, href: "/admin/vouchers" },
+  { name: "Landing Page", icon: <FiShoppingBag />, href: "/admin/landing-pages" },
   { name: "Thông Báo", icon: <FiBell />, href: "/admin/notifications" },
   { section: "AI & Công Cụ" },
   { name: "AI Content", icon: <FiCpu />, href: "/admin/ai-content" },
