@@ -147,6 +147,12 @@ export const publicApi = {
   // Vouchers
   getVouchers: () => fetchApi("/public/vouchers"),
 
+  // Landing pages (storefront on shop.mitoo.vn)
+  getLandingPage: (slug: string) =>
+    fetchApi(`/public/landing-pages/${encodeURIComponent(slug)}`, {
+      cache: "no-store",
+    }),
+
   // Orders
   createOrder: (data: any, token?: string) =>
     fetchApi("/public/orders", {
