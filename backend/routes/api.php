@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\FaqController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\AdminUserController;
 use App\Http\Controllers\Api\CollectionController;
+use App\Http\Controllers\Api\LandingPageController;
 use App\Http\Controllers\Api\VoucherController;
 use App\Http\Controllers\Api\AddonGroupController;
 use App\Http\Controllers\Api\ProductAttributeController;
@@ -61,6 +62,7 @@ Route::prefix('public')->group(function () {
     Route::get('/faqs', [FaqController::class, 'index']);
     Route::get('/collections', [CollectionController::class, 'index']);
     Route::get('/collections/{slugOrId}', [CollectionController::class, 'show']);
+    Route::get('/landing-pages/{slug}', [LandingPageController::class, 'publicShow']);
     Route::get('/vouchers', [VoucherController::class, 'publicIndex']);
     Route::get('/addon-groups', [AddonGroupController::class, 'index']);
     Route::get('/product-attributes', [ProductAttributeController::class, 'publicIndex']);
@@ -221,6 +223,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Collections
     Route::apiResource('collections', CollectionController::class);
     Route::put('/collections-reorder', [CollectionController::class, 'reorder']);
+
+    // Landing pages (admin)
+    Route::apiResource('landing-pages', LandingPageController::class)->parameters([
+        'landing-pages' => 'landing_page',
+    ]);
 
     // Vouchers
     Route::apiResource('vouchers', VoucherController::class);

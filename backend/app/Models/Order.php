@@ -12,7 +12,7 @@ class Order extends Model
         'customer_name', 'customer_email', 'customer_phone',
         'address', 'city', 'city_id', 'district', 'district_id', 'ward', 'ward_id',
         'subtotal', 'shipping', 'discount', 'total',
-        'status', 'payment_method', 'payment_status', 'note',
+        'status', 'payment_method', 'payment_status', 'note', 'source',
         'voucher_code', 'points_used', 'points_discount',
         // Viettel Post shipping
         'vtp_order_number', 'vtp_status_code', 'vtp_status_name',
