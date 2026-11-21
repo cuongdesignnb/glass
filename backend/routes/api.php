@@ -96,7 +96,7 @@ Route::prefix('public')->group(function () {
     });
 
     // Orders (public create)
-    Route::post('/orders', [OrderController::class, 'store']);
+    Route::post('/orders', [OrderController::class, 'store'])->middleware('throttle:20,1');
     Route::post('/orders/validate-voucher', [OrderController::class, 'validateVoucher']);
     Route::get('/orders/{id}/payment-status', function ($id) {
         $order = \App\Models\Order::findOrFail($id);
