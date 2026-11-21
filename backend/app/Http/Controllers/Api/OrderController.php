@@ -8,8 +8,10 @@ use App\Models\OrderItem;
 use App\Models\Voucher;
 use App\Models\User;
 use App\Models\LoyaltyTransaction;
+use App\Models\Product;
 use App\Models\Setting;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
@@ -32,6 +34,83 @@ class OrderController extends Controller
 
         $perPage = $request->get('per_page', 20);
         return response()->json($query->paginate($perPage));
+    }
+
+    /**
+     * Replace client-supplied prices with catalogue prices.
+     *
+     * Unit price = sale price (when set) or regular price, plus the price of
+     * every selected add-on option, matching what the storefront displays.
+     *
+     * @param  array<int, array<string, mixed>>  $items
+     * @return array<int, array<string, mixed>>
+     *
+     * @throws ValidationException
+     */
+    private function repriceItems(array $items): array
+    {
+        $products = Product::query()
+            ->active()
+            ->with(['addonGroups.options', 'addonPrices'])
+            ->whereIn('id', collect($items)->pluck('product_id')->unique()->all())
+            ->get()
+            ->keyBy('id');
+
+        $priced = [];
+
+        foreach ($items as $index => $item) {
+            $product = $products->get((int) $item['product_id']);
+
+            if ($product === null) {
+                throw ValidationException::withMessages([
+                    "items.{$index}.product_id" => 'Sản phẩm không còn được bán.',
+                ]);
+            }
+
+            $unitPrice = (float) ($product->sale_price > 0 ? $product->sale_price : $product->price);
+
+            $addons = [];
+            $addonTotal = 0.0;
+
+            foreach (($item['addons'] ?? []) as $addon) {
+                $groupName = is_array($addon) ? ($addon['groupName'] ?? null) : null;
+                $optionName = is_array($addon) ? ($addon['optionName'] ?? null) : null;
+
+                $group = $product->addonGroups->first(fn ($g) => $g->name === $groupName);
+                $option = $group?->options->first(fn ($o) => $o->name === $optionName);
+                $priceRow = $option ? $product->addonPrices->firstWhere('option_id', $option->id) : null;
+
+                if ($option === null || ($priceRow !== null && ! $priceRow->is_available)) {
+                    throw ValidationException::withMessages([
+                        "items.{$index}.addons" => 'Tùy chọn đã chọn không còn khả dụng.',
+                    ]);
+                }
+
+                $addonPrice = (float) ($priceRow->additional_price ?? 0);
+                $addonTotal += $addonPrice;
+                $addons[] = [
+                    'groupName' => $group->name,
+                    'optionName' => $option->name,
+                    'price' => $addonPrice,
+                ];
+            }
+
+            $priced[] = [
+                'product_id' => $product->id,
+                'name' => $product->name,
+                'slug' => $product->slug,
+                'image' => $item['image'] ?? $product->thumbnail,
+                'price' => $unitPrice + $addonTotal,
+                'quantity' => (int) $item['quantity'],
+                'prescription' => $item['prescription'] ?? null,
+                'color' => $item['color'] ?? null,
+                'color_name' => $item['color_name'] ?? null,
+                'addons' => $addons,
+                'addon_total' => $addonTotal,
+            ];
+        }
+
+        return $priced;
     }
 
     public function show(Order $order)
@@ -57,18 +136,24 @@ class OrderController extends Controller
             'voucher_code' => 'nullable|string',
             'points_used' => 'nullable|integer|min:0',
             'items' => 'required|array|min:1',
-            'items.*.product_id' => 'nullable|exists:products,id',
-            'items.*.name' => 'required|string',
-            'items.*.slug' => 'required|string',
+            // Price, name, slug and add-on totals are never trusted from the
+            // client: repriceItems() rebuilds them from the product catalogue.
+            'items.*.product_id' => 'required|integer|exists:products,id',
+            'items.*.name' => 'nullable|string',
+            'items.*.slug' => 'nullable|string',
             'items.*.image' => 'nullable|string',
-            'items.*.price' => 'required|numeric|min:0',
-            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.price' => 'nullable|numeric|min:0',
+            'items.*.quantity' => 'required|integer|min:1|max:50',
             'items.*.prescription' => 'nullable|string',
             'items.*.color' => 'nullable|string',
             'items.*.color_name' => 'nullable|string',
             'items.*.addons' => 'nullable|array',
             'items.*.addon_total' => 'nullable|numeric|min:0',
         ]);
+
+        // Rebuild every line from the catalogue so a tampered request cannot
+        // set its own price.
+        $data['items'] = $this->repriceItems($data['items']);
 
         // Calculate totals
         $subtotal = collect($data['items'])->sum(fn($item) => $item['price'] * $item['quantity']);
