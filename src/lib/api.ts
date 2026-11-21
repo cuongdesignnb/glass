@@ -646,6 +646,25 @@ export const adminApi = {
   deleteVoucher: (token: string, id: number) =>
     fetchApi(`/vouchers/${id}`, { method: "DELETE", token }),
 
+  // Landing pages
+  getLandingPages: (token: string) => fetchApi("/landing-pages", { token }),
+  getLandingPage: (token: string, id: number) =>
+    fetchApi(`/landing-pages/${id}`, { token }),
+  createLandingPage: (token: string, data: any) =>
+    fetchApi("/landing-pages", {
+      method: "POST",
+      body: JSON.stringify(data),
+      token,
+    }),
+  updateLandingPage: (token: string, id: number, data: any) =>
+    fetchApi(`/landing-pages/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+      token,
+    }),
+  deleteLandingPage: (token: string, id: number) =>
+    fetchApi(`/landing-pages/${id}`, { method: "DELETE", token }),
+
   // Orders
   getOrders: (token: string, params?: Record<string, string>) => {
     const query = params ? "?" + new URLSearchParams(params).toString() : "";
