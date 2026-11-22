@@ -303,66 +303,81 @@ export default function LandingClient({ page, products, shop }: { page: PageData
     ? `https://img.vietqr.io/image/${encodeURIComponent(bank.bank_name)}-${encodeURIComponent(bank.account_number)}-compact.png?amount=${Math.round(Number(order.total) || 0)}&addInfo=${encodeURIComponent(bank.transfer_content || order.payment_code || '')}&accountName=${encodeURIComponent(bank.account_name || '')}`
     : '';
 
-  const fromPrice = products.length ? Math.min(...products.map(unitPrice)) : 0;
+  const best = products.length ? products.reduce((m, p) => (unitPrice(p) < unitPrice(m) ? p : m)) : null;
 
   return (
     <div className="lp">
       <Pixels fb={page.fb_pixel_id} tt={page.tiktok_pixel_id} ga={page.google_ads_id} />
 
-      {(page.promo_text || countdown) && (
-        <div className="lp-promo">
-          <span>{page.promo_text}</span>
-          {countdown && (
-            <span className="lp-countdown" aria-label="Thời gian ưu đãi còn lại">
-              {countdown.d > 0 && <b>{countdown.d}<i>ngày</i></b>}
-              <b>{pad2(countdown.h)}<i>giờ</i></b>
-              <b>{pad2(countdown.m)}<i>phút</i></b>
-              <b>{pad2(countdown.s)}<i>giây</i></b>
-            </span>
-          )}
+      <header className="lp-top">
+        <a className="lp-brand" href={shop.mainSite} rel="noopener">{shop.name}</a>
+        {shop.phone && <a className="lp-top__call" href={`tel:${shop.phone}`}>Gọi {shop.phone}</a>}
+      </header>
+
+      {page.hero_image && (
+        <div className="lp-gallery">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={page.hero_image} alt={page.headline} fetchPriority="high" />
         </div>
       )}
 
-      <header className="lp-nav">
-        <a className="lp-brand" href={shop.mainSite} rel="noopener">{shop.name}</a>
-        {shop.phone && <a className="lp-hotline" href={`tel:${shop.phone}`}>Hotline {shop.phone}</a>}
-      </header>
-
-      <section className="lp-hero">
-        <div className="lp-hero__text">
-          <h1>{page.headline}</h1>
-          {page.subheadline && <p className="lp-hero__sub">{page.subheadline}</p>}
-          <div className="lp-hero__cta">
-            <button className="lp-btn lp-btn--primary lp-btn--lg" onClick={mainCta}>{page.cta_text}</button>
-            {fromPrice > 0 && <span className="lp-hero__from">Chỉ từ <b>{vnd(fromPrice)}</b></span>}
-          </div>
-          <ul className="lp-chips">
-            <li>Thanh toán khi nhận hàng</li>
-            <li>Kiểm tra hàng trước khi trả tiền</li>
-            <li>Hỗ trợ đổi trả</li>
-          </ul>
-        </div>
-        {page.hero_image && (
-          <div className="lp-hero__img">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={page.hero_image} alt={page.headline} fetchPriority="high" />
+      <section className="lp-buy">
+        {(page.promo_text || countdown) && (
+          <div className="lp-flash">
+            <div className="lp-flash__l">
+              <b>⚡ Flash Sale</b>
+              {page.promo_text && <span>{page.promo_text}</span>}
+            </div>
+            {countdown && (
+              <div className="lp-flash__t" aria-label="Thời gian ưu đãi còn lại">
+                <small>Kết thúc sau</small>
+                <span className="lp-countdown">
+                  {countdown.d > 0 && <b>{countdown.d}d</b>}
+                  <b>{pad2(countdown.h)}</b><i>:</i><b>{pad2(countdown.m)}</b><i>:</i><b>{pad2(countdown.s)}</b>
+                </span>
+              </div>
+            )}
           </div>
         )}
+        <div className="lp-buy__body">
+          {best && (
+            <div className="lp-priceRow">
+              <b>{vnd(unitPrice(best))}</b>
+              {unitPrice(best) < best.price && (
+                <>
+                  <s>{vnd(best.price)}</s>
+                  <em>-{Math.round((1 - unitPrice(best) / best.price) * 100)}%</em>
+                </>
+              )}
+              {products.length > 1 && <span className="lp-priceRow__from">giá từ</span>}
+            </div>
+          )}
+          <h1>{page.headline}</h1>
+          {page.subheadline && <p className="lp-buy__sub">{page.subheadline}</p>}
+        </div>
+      </section>
+
+      <section className="lp-card-block lp-perks">
+        <div><span>🚚</span>Miễn phí vận chuyển đơn từ {vnd(shop.shippingThreshold)}</div>
+        <div><span>💵</span>Thanh toán khi nhận hàng (COD) hoặc chuyển khoản QR</div>
+        <div><span>🔍</span>Được kiểm tra hàng trước khi thanh toán</div>
       </section>
 
       {page.benefits.length > 0 && (
-        <section className="lp-section lp-benefits">
-          {page.benefits.map((b, i) => (
-            <div className="lp-benefit" key={i}>
-              <span className="lp-benefit__icon" aria-hidden="true">✓</span>
-              <h3>{b.title}</h3>
-              {b.text && <p>{b.text}</p>}
-            </div>
-          ))}
+        <section className="lp-card-block">
+          <h2 className="lp-h2">Cam kết của shop</h2>
+          <ul className="lp-promises">
+            {page.benefits.map((b, i) => (
+              <li key={i}>
+                <span aria-hidden="true">✓</span>
+                <div><b>{b.title}</b>{b.text && <small>{b.text}</small>}</div>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
-      <section className="lp-section" id="san-pham">
+      <section className="lp-card-block" id="san-pham">
         <h2 className="lp-h2">Chọn mẫu bạn thích</h2>
         {products.length === 0 ? (
           <p className="lp-muted">Sản phẩm đang được cập nhật, vui lòng quay lại sau.</p>
@@ -374,16 +389,16 @@ export default function LandingClient({ page, products, shop }: { page: PageData
               return (
                 <article className="lp-card" key={p.id}>
                   <div className="lp-card__img">
-                    {off > 0 && <span className="lp-badge">-{off}%</span>}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     {p.image ? <img src={p.image} alt={p.name} loading="lazy" /> : <div className="lp-noimg" />}
                   </div>
                   <h3 className="lp-card__name">{p.name}</h3>
                   <div className="lp-card__price">
                     <b>{vnd(price)}</b>
-                    {off > 0 && <s>{vnd(p.price)}</s>}
+                    {off > 0 && <em>-{off}%</em>}
                   </div>
-                  <button className="lp-btn lp-btn--primary lp-btn--block" onClick={() => buy(p)}>Mua ngay</button>
+                  {off > 0 && <s className="lp-card__old">{vnd(p.price)}</s>}
+                  <button className="lp-btn lp-btn--primary lp-btn--block lp-btn--sm" onClick={() => buy(p)}>Mua ngay</button>
                 </article>
               );
             })}
@@ -392,14 +407,16 @@ export default function LandingClient({ page, products, shop }: { page: PageData
       </section>
 
       {page.testimonials.length > 0 && (
-        <section className="lp-section lp-alt">
-          <h2 className="lp-h2">Khách hàng nói gì</h2>
+        <section className="lp-card-block">
+          <h2 className="lp-h2">Đánh giá của khách hàng ({page.testimonials.length})</h2>
           <div className="lp-reviews">
             {page.testimonials.map((t, i) => (
               <figure className="lp-review" key={i}>
-                <Stars n={t.rating || 5} />
+                <div className="lp-review__head">
+                  <span className="lp-avatar" aria-hidden="true">{(t.name || '?').trim().charAt(0).toUpperCase()}</span>
+                  <div><b>{t.name}</b><Stars n={t.rating || 5} /></div>
+                </div>
                 <blockquote>{t.text}</blockquote>
-                <figcaption>{t.name}</figcaption>
               </figure>
             ))}
           </div>
@@ -407,7 +424,7 @@ export default function LandingClient({ page, products, shop }: { page: PageData
       )}
 
       {page.faqs.length > 0 && (
-        <section className="lp-section">
+        <section className="lp-card-block">
           <h2 className="lp-h2">Câu hỏi thường gặp</h2>
           <div className="lp-faq">
             {page.faqs.map((f, i) => (
@@ -420,21 +437,19 @@ export default function LandingClient({ page, products, shop }: { page: PageData
         </section>
       )}
 
-      <section className="lp-final">
-        <h2>{page.headline}</h2>
-        <button className="lp-btn lp-btn--light lp-btn--lg" onClick={mainCta}>{page.cta_text}</button>
-      </section>
-
       <footer className="lp-footer">
         <div>© {new Date().getFullYear()} {shop.name}</div>
         <a href={shop.mainSite} rel="noopener">{shop.mainSite.replace(/^https?:\/\//, '')}</a>
       </footer>
 
-      {/* Mobile sticky bar */}
+      {/* Bottom buy bar */}
       <div className="lp-sticky">
-        {shop.phone && <a className="lp-btn lp-btn--ghost" href={`tel:${shop.phone}`}>Gọi ngay</a>}
-        <button className="lp-btn lp-btn--primary" onClick={mainCta}>
-          {lines.length > 0 ? `Đặt hàng (${vnd(total)})` : page.cta_text}
+        <a className="lp-sticky__ico" href={shop.mainSite} rel="noopener"><span>🏬</span>Cửa hàng</a>
+        {shop.phone ? (
+          <a className="lp-sticky__ico" href={`tel:${shop.phone}`}><span>📞</span>Gọi shop</a>
+        ) : null}
+        <button className="lp-btn lp-btn--primary lp-sticky__buy" onClick={mainCta}>
+          {lines.length > 0 ? `${page.cta_text} · ${vnd(total)}` : page.cta_text}
         </button>
       </div>
 
