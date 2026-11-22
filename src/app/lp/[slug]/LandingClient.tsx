@@ -126,8 +126,57 @@ function useCountdown(endIso: string | null) {
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
+// Inline SVG icons (no emoji, so rendering is identical on every device).
+type IconProps = { className?: string };
+const svgBase = {
+  width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
+  strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true,
+};
+const IcChevron = ({ dir = 'right' }: { dir?: 'left' | 'right' }) => (
+  <svg {...svgBase} width={16} height={16}><path d={dir === 'right' ? 'M9 6l6 6-6 6' : 'M15 6l-6 6 6 6'} /></svg>
+);
+const IcTag = (_p: IconProps) => (
+  <svg {...svgBase} width={30} height={30}><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z" /><circle cx="7.5" cy="7.5" r="1.5" /></svg>
+);
+const IcBolt = () => (
+  <svg {...svgBase} width={18} height={18} fill="currentColor" strokeWidth={1}><path d="M13 2 4 14h6l-1 8 9-12h-6z" /></svg>
+);
+const IcBookmark = () => (
+  <svg {...svgBase} width={22} height={22} className="lp-info__save"><path d="M6 3h12v18l-6-4-6 4z" /></svg>
+);
+const IcTruck = () => (
+  <svg {...svgBase} width={17} height={17}><path d="M1 6h13v10H1zM14 10h4l3 3v3h-7z" /><circle cx="6" cy="18" r="2" /><circle cx="17" cy="18" r="2" /></svg>
+);
+const IcShield = () => (
+  <svg {...svgBase} width={16} height={16}><path d="M12 3 4 6v6c0 5 3.4 8 8 9 4.6-1 8-4 8-9V6z" /><path d="m9 12 2 2 4-4" /></svg>
+);
+const IcEye = () => (
+  <svg {...svgBase} width={16} height={16}><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
+);
+const IcPhone = () => (
+  <svg {...svgBase} width={20} height={20}><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" /></svg>
+);
+const IcStore = () => (
+  <svg {...svgBase} width={20} height={20}><path d="M3 9 4.5 4h15L21 9M3 9v11h18V9M3 9h18M9 20v-6h6v6" /></svg>
+);
+const IcCheck = () => (
+  <svg {...svgBase} width={12} height={12} strokeWidth={3}><path d="m5 12 5 5 9-10" /></svg>
+);
+const IcClose = () => (
+  <svg {...svgBase} width={18} height={18}><path d="M6 6l12 12M18 6 6 18" /></svg>
+);
+const IcStar = ({ off }: { off?: boolean }) => (
+  <svg {...svgBase} width={13} height={13} strokeWidth={1.5} fill={off ? 'none' : 'currentColor'} className={off ? 'lp-star lp-star--off' : 'lp-star'}>
+    <path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" />
+  </svg>
+);
+
 function Stars({ n = 5 }: { n?: number }) {
-  return <span className="lp-stars" aria-label={`${n} sao`}>{'★'.repeat(n)}{'☆'.repeat(5 - n)}</span>;
+  return (
+    <span className="lp-stars" aria-label={`${n} sao`}>
+      {[1, 2, 3, 4, 5].map((i) => <IcStar key={i} off={i > n} />)}
+    </span>
+  );
 }
 
 export default function LandingClient({ page, products, shop }: { page: PageData; products: Product[]; shop: Shop }) {
@@ -304,80 +353,135 @@ export default function LandingClient({ page, products, shop }: { page: PageData
     : '';
 
   const best = products.length ? products.reduce((m, p) => (unitPrice(p) < unitPrice(m) ? p : m)) : null;
+  const bestOff = best && unitPrice(best) < best.price ? Math.round((1 - unitPrice(best) / best.price) * 100) : 0;
+  const rated = page.testimonials.length
+    ? page.testimonials.reduce((s, t) => s + (t.rating || 5), 0) / page.testimonials.length
+    : 0;
+  const hoursLeft = countdown ? countdown.d * 24 + countdown.h : 0;
+  const shopHost = shop.mainSite.replace(/^https?:\/\//, '');
+
+  const gallery = useMemo(
+    () => Array.from(new Set([page.hero_image, ...products.map((p) => p.image)].filter(Boolean))),
+    [page.hero_image, products],
+  );
+  const [slide, setSlide] = useState(0);
+  const galRef = useRef<HTMLDivElement>(null);
+  const goSlide = (i: number) => {
+    const el = galRef.current;
+    if (!el || gallery.length === 0) return;
+    const n = (i + gallery.length) % gallery.length;
+    el.scrollTo({ left: n * el.clientWidth, behavior: 'smooth' });
+    setSlide(n);
+  };
+  const onGalScroll = () => {
+    const el = galRef.current;
+    if (el && el.clientWidth) setSlide(Math.round(el.scrollLeft / el.clientWidth));
+  };
+  const toProducts = () => document.getElementById('san-pham')?.scrollIntoView({ behavior: 'smooth' });
 
   return (
     <div className="lp">
       <Pixels fb={page.fb_pixel_id} tt={page.tiktok_pixel_id} ga={page.google_ads_id} />
 
-      <header className="lp-top">
-        <a className="lp-brand" href={shop.mainSite} rel="noopener">{shop.name}</a>
-        {shop.phone && <a className="lp-top__call" href={`tel:${shop.phone}`}>Gọi {shop.phone}</a>}
-      </header>
-
-      {page.hero_image && (
-        <div className="lp-gallery">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={page.hero_image} alt={page.headline} fetchPriority="high" />
-        </div>
+      {gallery.length > 0 && (
+        <section className="lp-gal" aria-label="Hình ảnh sản phẩm">
+          <div className="lp-gal__view">
+            <div className="lp-gal__track" ref={galRef} onScroll={onGalScroll}>
+              {gallery.map((src, i) => (
+                <div className="lp-gal__slide" key={src + i}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt={`${page.headline} ${i + 1}`} loading={i === 0 ? 'eager' : 'lazy'} {...(i === 0 ? { fetchPriority: 'high' as const } : {})} />
+                </div>
+              ))}
+            </div>
+            {gallery.length > 1 && (
+              <>
+                <button type="button" className="lp-gal__nav lp-gal__nav--prev" onClick={() => goSlide(slide - 1)} aria-label="Ảnh trước"><IcChevron dir="left" /></button>
+                <button type="button" className="lp-gal__nav lp-gal__nav--next" onClick={() => goSlide(slide + 1)} aria-label="Ảnh sau"><IcChevron dir="right" /></button>
+                <span className="lp-gal__count">{slide + 1}/{gallery.length}</span>
+              </>
+            )}
+          </div>
+          {gallery.length > 1 && (
+            <div className="lp-gal__thumbs">
+              {gallery.map((src, i) => (
+                <button type="button" key={src + i} className={i === slide ? 'is-on' : ''} onClick={() => goSlide(i)} aria-label={`Xem ảnh ${i + 1}`}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt="" loading="lazy" />
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
       )}
 
-      <section className="lp-buy">
+      <div className="lp-pricebar">
+        <div className="lp-pricebar__l">
+          <IcTag />
+          <div>
+            {products.length > 1 && <small>Giá chỉ từ</small>}
+            {best && (
+              <div className="lp-pricebar__row">
+                <b>{vnd(unitPrice(best))}</b>
+              </div>
+            )}
+            {best && bestOff > 0 && (
+              <div className="lp-pricebar__sub">
+                <s>{vnd(best.price)}</s>
+                <em>-{bestOff}%</em>
+              </div>
+            )}
+          </div>
+        </div>
         {(page.promo_text || countdown) && (
-          <div className="lp-flash">
-            <div className="lp-flash__l">
-              <b>⚡ Flash Sale</b>
-              {page.promo_text && <span>{page.promo_text}</span>}
-            </div>
+          <div className="lp-pricebar__r">
+            <div className="lp-pricebar__t"><IcBolt /><span>{page.promo_text || 'Ưu đãi có hạn'}</span></div>
             {countdown && (
-              <div className="lp-flash__t" aria-label="Thời gian ưu đãi còn lại">
+              <div className="lp-pricebar__c" aria-label="Thời gian ưu đãi còn lại">
                 <small>Kết thúc sau</small>
-                <span className="lp-countdown">
-                  {countdown.d > 0 && <b>{countdown.d}d</b>}
-                  <b>{pad2(countdown.h)}</b><i>:</i><b>{pad2(countdown.m)}</b><i>:</i><b>{pad2(countdown.s)}</b>
-                </span>
+                <span><b>{pad2(hoursLeft)}</b><i>Giờ</i></span>
+                <span><b>{pad2(countdown.m)}</b><i>Phút</i></span>
+                <span><b>{pad2(countdown.s)}</b><i>Giây</i></span>
               </div>
             )}
           </div>
         )}
-        <div className="lp-buy__body">
-          {best && (
-            <div className="lp-priceRow">
-              <b>{vnd(unitPrice(best))}</b>
-              {unitPrice(best) < best.price && (
-                <>
-                  <s>{vnd(best.price)}</s>
-                  <em>-{Math.round((1 - unitPrice(best) / best.price) * 100)}%</em>
-                </>
-              )}
-              {products.length > 1 && <span className="lp-priceRow__from">giá từ</span>}
-            </div>
-          )}
+      </div>
+
+      <section className="lp-block lp-info">
+        <div className="lp-info__title">
           <h1>{page.headline}</h1>
-          {page.subheadline && <p className="lp-buy__sub">{page.subheadline}</p>}
+          <IcBookmark />
+        </div>
+        <div className="lp-info__meta">
+          {rated > 0 ? (
+            <span className="lp-rate"><IcStar /><b>{rated.toFixed(1)}</b>/5<small>({page.testimonials.length} đánh giá)</small></span>
+          ) : <span />}
+          <span className="lp-freeship"><IcTruck /> Miễn phí vận chuyển</span>
         </div>
       </section>
 
-      <section className="lp-card-block lp-perks">
-        <div><span>🚚</span>Miễn phí vận chuyển đơn từ {vnd(shop.shippingThreshold)}</div>
-        <div><span>💵</span>Thanh toán khi nhận hàng (COD) hoặc chuyển khoản QR</div>
-        <div><span>🔍</span>Được kiểm tra hàng trước khi thanh toán</div>
+      <section className="lp-block lp-chips" aria-label="Ưu điểm mua hàng">
+        <span><IcShield /> Thanh toán an toàn</span>
+        <span><IcEye /> Được kiểm tra hàng</span>
+        {shop.phone && <span><IcPhone /> Hỗ trợ {shop.phone}</span>}
       </section>
 
-      {page.benefits.length > 0 && (
-        <section className="lp-card-block">
-          <h2 className="lp-h2">Cam kết của shop</h2>
-          <ul className="lp-promises">
-            {page.benefits.map((b, i) => (
-              <li key={i}>
-                <span aria-hidden="true">✓</span>
-                <div><b>{b.title}</b>{b.text && <small>{b.text}</small>}</div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <section className="lp-block lp-rows">
+        <button type="button" className="lp-row" onClick={toProducts}>
+          <span>Chọn các tuỳ chọn</span>
+          <span className="lp-row__r">{products.length} mẫu <IcChevron dir="right" /></span>
+        </button>
+        <div className="lp-row lp-row--static">
+          <span>Vận chuyển</span>
+          <span className="lp-row__r"><s>{vnd(shop.shippingFee)}</s></span>
+        </div>
+        <p className="lp-voucher">
+          <span className="lp-tag">Freeship</span> Miễn phí vận chuyển cho đơn từ {vnd(shop.shippingThreshold)}. Thanh toán khi nhận hàng (COD) hoặc chuyển khoản QR.
+        </p>
+      </section>
 
-      <section className="lp-card-block" id="san-pham">
+      <section className="lp-block" id="san-pham">
         <h2 className="lp-h2">Chọn mẫu bạn thích</h2>
         {products.length === 0 ? (
           <p className="lp-muted">Sản phẩm đang được cập nhật, vui lòng quay lại sau.</p>
@@ -407,26 +511,50 @@ export default function LandingClient({ page, products, shop }: { page: PageData
       </section>
 
       {page.testimonials.length > 0 && (
-        <section className="lp-card-block">
-          <h2 className="lp-h2">Đánh giá của khách hàng ({page.testimonials.length})</h2>
+        <section className="lp-block">
+          <div className="lp-h2 lp-h2--row">
+            <h2>Đánh giá của khách hàng ({page.testimonials.length})</h2>
+          </div>
+          <div className="lp-rate lp-rate--big"><b>{rated.toFixed(1)}</b>/5 <Stars n={Math.round(rated)} /></div>
           <div className="lp-reviews">
             {page.testimonials.map((t, i) => (
               <figure className="lp-review" key={i}>
-                <div className="lp-review__head">
-                  <span className="lp-avatar" aria-hidden="true">{(t.name || '?').trim().charAt(0).toUpperCase()}</span>
-                  <div><b>{t.name}</b><Stars n={t.rating || 5} /></div>
+                <span className="lp-avatar" aria-hidden="true">{(t.name || '?').trim().charAt(0).toUpperCase()}</span>
+                <div className="lp-review__body">
+                  <div className="lp-review__head"><b>{t.name}</b><Stars n={t.rating || 5} /></div>
+                  <blockquote>{t.text}</blockquote>
                 </div>
-                <blockquote>{t.text}</blockquote>
               </figure>
             ))}
           </div>
         </section>
       )}
 
-      {page.faqs.length > 0 && (
-        <section className="lp-card-block">
-          <h2 className="lp-h2">Câu hỏi thường gặp</h2>
+      <section className="lp-block lp-shopcard">
+        <span className="lp-shopcard__logo" aria-hidden="true">{shop.name.trim().charAt(0).toUpperCase()}</span>
+        <div>
+          <b>{shop.name}</b>
+          <small>{shopHost}</small>
+        </div>
+        <a className="lp-btn lp-btn--ghost lp-btn--sm" href={shop.mainSite} rel="noopener">Truy cập</a>
+      </section>
+
+      <section className="lp-block lp-desc">
+        <h2 className="lp-h2">Mô tả sản phẩm</h2>
+        {page.subheadline && <p>{page.subheadline}</p>}
+        {page.benefits.length > 0 && (
+          <ul className="lp-promises">
+            {page.benefits.map((b, i) => (
+              <li key={i}>
+                <span aria-hidden="true"><IcCheck /></span>
+                <div><b>{b.title}</b>{b.text && <small>{b.text}</small>}</div>
+              </li>
+            ))}
+          </ul>
+        )}
+        {page.faqs.length > 0 && (
           <div className="lp-faq">
+            <h3 className="lp-h3">Câu hỏi thường gặp</h3>
             {page.faqs.map((f, i) => (
               <details key={i}>
                 <summary>{f.question}</summary>
@@ -434,20 +562,23 @@ export default function LandingClient({ page, products, shop }: { page: PageData
               </details>
             ))}
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
       <footer className="lp-footer">
         <div>© {new Date().getFullYear()} {shop.name}</div>
-        <a href={shop.mainSite} rel="noopener">{shop.mainSite.replace(/^https?:\/\//, '')}</a>
+        <a href={shop.mainSite} rel="noopener">{shopHost}</a>
       </footer>
 
       {/* Bottom buy bar */}
       <div className="lp-sticky">
-        <a className="lp-sticky__ico" href={shop.mainSite} rel="noopener"><span>🏬</span>Cửa hàng</a>
+        <a className="lp-sticky__ico" href={shop.mainSite} rel="noopener"><IcStore />Cửa hàng</a>
         {shop.phone ? (
-          <a className="lp-sticky__ico" href={`tel:${shop.phone}`}><span>📞</span>Gọi shop</a>
+          <a className="lp-sticky__ico" href={`tel:${shop.phone}`}><IcPhone />Gọi shop</a>
         ) : null}
+        {products.length > 1 && (
+          <button type="button" className="lp-btn lp-btn--outline lp-sticky__alt" onClick={toProducts}>Xem mẫu</button>
+        )}
         <button className="lp-btn lp-btn--primary lp-sticky__buy" onClick={mainCta}>
           {lines.length > 0 ? `${page.cta_text} · ${vnd(total)}` : page.cta_text}
         </button>
@@ -457,13 +588,13 @@ export default function LandingClient({ page, products, shop }: { page: PageData
       {open && (
         <div className="lp-overlay" onClick={closeAll}>
           <div className="lp-dialog" role="dialog" aria-modal="true" aria-label="Đặt hàng" onClick={(e) => e.stopPropagation()}>
-            <button className="lp-close" onClick={closeAll} aria-label="Đóng">×</button>
+            <button className="lp-close" onClick={closeAll} aria-label="Đóng"><IcClose /></button>
 
             {order ? (
               <div className="lp-done">
                 {paid ? (
                   <>
-                    <div className="lp-done__icon lp-done__icon--ok">✓</div>
+                    <div className="lp-done__icon lp-done__icon--ok"><IcCheck /></div>
                     <h3>Thanh toán thành công!</h3>
                     <p>Chúng tôi đã nhận được tiền và đang chuẩn bị đơn hàng của bạn.</p>
                   </>
@@ -498,7 +629,7 @@ export default function LandingClient({ page, products, shop }: { page: PageData
                   </>
                 ) : (
                   <>
-                    <div className="lp-done__icon lp-done__icon--ok">✓</div>
+                    <div className="lp-done__icon lp-done__icon--ok"><IcCheck /></div>
                     <h3>Đặt hàng thành công!</h3>
                     <p>Nhân viên sẽ gọi xác nhận đơn trong thời gian sớm nhất. Bạn thanh toán khi nhận hàng.</p>
                   </>
