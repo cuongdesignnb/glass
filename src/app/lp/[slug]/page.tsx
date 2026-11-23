@@ -73,7 +73,10 @@ export default async function LandingPage({ params }: { params: { slug: string }
         promo_text: page.promo_text || '',
         promo_ends_at: page.promo_ends_at || null,
         benefits: page.benefits || [],
-        testimonials: page.testimonials || [],
+        testimonials: (page.testimonials || []).map((t: any) => ({
+          ...t,
+          images: (t.images || []).map((u: string) => imageUrl(u)).filter(Boolean),
+        })),
         faqs: page.faqs || [],
         fb_pixel_id: page.fb_pixel_id || '',
         tiktok_pixel_id: page.tiktok_pixel_id || '',

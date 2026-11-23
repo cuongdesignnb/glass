@@ -173,6 +173,9 @@ button.lp-row { cursor: pointer; }
   width: 40px; height: 40px; border-radius: 50%; background: #ffe9ee; color: var(--lp-accent);
   display: flex; align-items: center; justify-content: center; font-weight: 800; flex: none;
 }
+.lp-review__var { display: block; color: var(--lp-muted); font-size: .75rem; margin-top: 2px; }
+.lp-review__imgs { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.lp-review__imgs img { width: 72px; height: 72px; object-fit: cover; border-radius: 4px; }
 .lp-review blockquote { margin: 4px 0 0; font-size: .875rem; }
 
 /* Shop card */
