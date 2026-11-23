@@ -24,7 +24,7 @@ const toLocalInput = (iso?: string | null) => {
 };
 
 type Benefit = { title: string; text: string };
-type Testimonial = { name: string; text: string; rating: number };
+type Testimonial = { name: string; text: string; rating: number; variant?: string; images?: string[] };
 type Faq = { question: string; answer: string };
 
 const emptyForm = {
@@ -65,6 +65,8 @@ export default function AdminLandingPagesPage() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [showMedia, setShowMedia] = useState(false);
+  const [showReviewMedia, setShowReviewMedia] = useState(false);
+  const [reviewIdx, setReviewIdx] = useState(0);
 
   // Product picker (ordered list)
   const [selectedProducts, setSelectedProducts] = useState<any[]>([]);
@@ -401,7 +403,7 @@ export default function AdminLandingPagesPage() {
 
               {/* Testimonials */}
               <div className="admin-form__group">
-                <div style={sectionTitle}>Đánh giá khách hàng ({form.testimonials.length}/10)</div>
+                <div style={sectionTitle}>Đánh giá khách hàng ({form.testimonials.length}/30)</div>
                 {form.testimonials.map((t, i) => (
                   <div key={i} style={rowBox}>
                     <div style={{ display: 'flex', gap: '8px' }}>
@@ -417,15 +419,35 @@ export default function AdminLandingPagesPage() {
                     <textarea className="admin-form__input" rows={2} value={t.text}
                       onChange={(e) => updateItem('testimonials', i, { text: e.target.value })}
                       placeholder="Nội dung đánh giá" />
+                    <input className="admin-form__input" value={t.variant || ''}
+                      onChange={(e) => updateItem('testimonials', i, { variant: e.target.value })}
+                      placeholder="Khách đã mua (VD: Gọng TR1264, 1 cái) - không bắt buộc" />
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      {(t.images || []).map((src, k) => (
+                        <div key={k} style={{ position: 'relative' }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={src} alt="" style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '6px' }} />
+                          <button type="button" title="Bỏ ảnh"
+                            onClick={() => updateItem('testimonials', i, { images: (t.images || []).filter((_, x) => x !== k) })}
+                            style={{ position: 'absolute', top: '-6px', right: '-6px', width: '18px', height: '18px', borderRadius: '50%', border: 0, background: '#ef4444', color: '#fff', fontSize: '11px', cursor: 'pointer', lineHeight: 1 }}>×</button>
+                        </div>
+                      ))}
+                      {(t.images || []).length < 4 && (
+                        <button type="button" className="admin-btn admin-btn--secondary admin-btn--sm"
+                          onClick={() => { setReviewIdx(i); setShowReviewMedia(true); }}>
+                          <FiImage /> Ảnh khách gửi
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
-                {form.testimonials.length < 10 && (
+                {form.testimonials.length < 30 && (
                   <button type="button" className="admin-btn admin-btn--secondary admin-btn--sm"
                     onClick={() => setForm({ ...form, testimonials: [...form.testimonials, { name: '', text: '', rating: 5 }] })}>
                     <FiPlus /> Thêm đánh giá
                   </button>
                 )}
-                <span style={hint}>Chỉ nhập đánh giá có thật từ khách của bạn.</span>
+                <span style={hint}>Chỉ nhập đánh giá và ảnh có thật từ khách của bạn (nên lưu lại tin nhắn gốc làm bằng chứng).</span>
               </div>
 
               {/* FAQ */}
@@ -555,6 +577,21 @@ export default function AdminLandingPagesPage() {
         </div>
       </div>
 
+      <MediaPicker
+        isOpen={showReviewMedia}
+        multiple
+        onClose={() => setShowReviewMedia(false)}
+        onSelect={() => setShowReviewMedia(false)}
+        onSelectMultiple={(urls) => {
+          setForm((f) => ({
+            ...f,
+            testimonials: f.testimonials.map((t, i) =>
+              i === reviewIdx ? { ...t, images: [...(t.images || []), ...urls].slice(0, 4) } : t),
+          }));
+          setShowReviewMedia(false);
+        }}
+        uploadFolder="landing-reviews"
+      />
       <MediaPicker
         isOpen={showMedia}
         onClose={() => setShowMedia(false)}

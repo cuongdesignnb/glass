@@ -5,7 +5,7 @@ import Script from 'next/script';
 import { publicApi } from '@/lib/api';
 
 type Benefit = { title: string; text?: string };
-type Testimonial = { name: string; text: string; rating?: number };
+type Testimonial = { name: string; text: string; rating?: number; variant?: string; images?: string[] };
 type Faq = { question: string; answer: string };
 type Product = { id: number; name: string; price: number; sale_price: number; image: string };
 
@@ -522,7 +522,16 @@ export default function LandingClient({ page, products, shop }: { page: PageData
                 <span className="lp-avatar" aria-hidden="true">{(t.name || '?').trim().charAt(0).toUpperCase()}</span>
                 <div className="lp-review__body">
                   <div className="lp-review__head"><b>{t.name}</b><Stars n={t.rating || 5} /></div>
+                  {t.variant && <small className="lp-review__var">Đã mua: {t.variant}</small>}
                   <blockquote>{t.text}</blockquote>
+                  {t.images && t.images.length > 0 && (
+                    <div className="lp-review__imgs">
+                      {t.images.map((src, k) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img key={k} src={src} alt={`Ảnh đánh giá của ${t.name}`} loading="lazy" />
+                      ))}
+                    </div>
+                  )}
                 </div>
               </figure>
             ))}

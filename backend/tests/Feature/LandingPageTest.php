@@ -65,6 +65,29 @@ class LandingPageTest extends TestCase
         $this->assertSame('kinh-mat-mua-he-2', $res2->json('slug'));
     }
 
+    public function test_testimonials_keep_variant_and_images_and_cap_images(): void
+    {
+        Sanctum::actingAs($this->admin());
+
+        $ok = $this->postJson('/api/landing-pages', [
+            'title' => 'Reviews',
+            'testimonials' => [[
+                'name' => 'Khach A', 'text' => 'Dep', 'rating' => 5,
+                'variant' => 'Gong TR1264', 'images' => ['/storage/a.jpg', '/storage/b.jpg'],
+            ]],
+        ])->assertCreated();
+        $this->assertSame('Gong TR1264', $ok->json('testimonials.0.variant'));
+        $this->assertCount(2, $ok->json('testimonials.0.images'));
+
+        $this->postJson('/api/landing-pages', [
+            'title' => 'Too many',
+            'testimonials' => [[
+                'name' => 'B', 'text' => 'x',
+                'images' => ['1', '2', '3', '4', '5'],
+            ]],
+        ])->assertStatus(422)->assertJsonValidationErrors('testimonials.0.images');
+    }
+
     public function test_pixel_ids_reject_script_injection(): void
     {
         Sanctum::actingAs($this->admin());
