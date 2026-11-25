@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Helpers\VietnameseSlug;
 use App\Http\Controllers\Controller;
+use App\Models\AddonOptionConstraint;
 use App\Models\LandingPage;
+use App\Models\Product;
 use Illuminate\Http\Request;
 
 class LandingPageController extends Controller
@@ -46,7 +48,7 @@ class LandingPageController extends Controller
         $data['slug'] = $this->uniqueSlug($data['slug'] ?? $data['title']);
 
         $page = LandingPage::create($this->attributes($data));
-        $this->syncProducts($page, $data['product_ids'] ?? []);
+        $this->syncProducts($page, $data);
 
         return response()->json($this->payload($page->refresh(), false), 201);
     }
@@ -62,8 +64,8 @@ class LandingPageController extends Controller
         }
 
         $landing_page->update($this->attributes($data));
-        if (array_key_exists('product_ids', $data)) {
-            $this->syncProducts($landing_page, $data['product_ids'] ?? []);
+        if (array_key_exists('products', $data) || array_key_exists('product_ids', $data)) {
+            $this->syncProducts($landing_page, $data);
         }
 
         return response()->json($this->payload($landing_page->refresh(), false));
@@ -111,12 +113,17 @@ class LandingPageController extends Controller
             'is_active' => 'sometimes|boolean',
             'product_ids' => 'sometimes|array|max:60',
             'product_ids.*' => 'integer|distinct|exists:products,id',
+            // Preferred over product_ids: ordered list with optional landing-only prices.
+            'products' => 'sometimes|array|max:60',
+            'products.*.id' => 'required|integer|distinct|exists:products,id',
+            'products.*.price_override' => 'nullable|numeric|min:0|max:1000000000',
+            'products.*.sale_price_override' => 'nullable|numeric|min:0|max:1000000000',
         ]);
     }
 
     private function attributes(array $data): array
     {
-        unset($data['product_ids']);
+        unset($data['product_ids'], $data['products']);
 
         return $data;
     }
@@ -136,11 +143,16 @@ class LandingPageController extends Controller
         return $candidate;
     }
 
-    private function syncProducts(LandingPage $page, array $ids): void
+    private function syncProducts(LandingPage $page, array $data): void
     {
+        $rows = $data['products'] ?? array_map(fn ($id) => ['id' => $id], $data['product_ids'] ?? []);
         $sync = [];
-        foreach (array_values($ids) as $position => $id) {
-            $sync[$id] = ['order' => $position];
+        foreach (array_values($rows) as $position => $row) {
+            $sync[(int) $row['id']] = [
+                'order' => $position,
+                'price_override' => $row['price_override'] ?? null,
+                'sale_price_override' => $row['sale_price_override'] ?? null,
+            ];
         }
         $page->products()->sync($sync);
     }
@@ -149,20 +161,70 @@ class LandingPageController extends Controller
     {
         $products = $page->products()
             ->when($publicOnly, fn ($q) => $q->where('products.is_active', true))
+            ->with(['addonGroups.options', 'addonPrices'])
             ->get();
 
         $out = $page->toArray();
-        $out['products'] = $products->map(fn ($p) => [
-            'id' => $p->id,
-            'name' => $p->name,
-            'slug' => $p->slug,
-            'price' => $p->price,
-            'sale_price' => $p->sale_price,
-            'thumbnail' => $p->thumbnail,
-            'images' => $p->images,
-            'is_active' => (bool) $p->is_active,
-        ])->values()->all();
+        $out['products'] = $products->map(function ($p) use ($publicOnly) {
+            [$price, $sale] = LandingPage::effectivePrices($p);
+
+            $row = [
+                'id' => $p->id,
+                'name' => $p->name,
+                'slug' => $p->slug,
+                'price' => $publicOnly ? $price : $p->price,
+                'sale_price' => $publicOnly ? $sale : $p->sale_price,
+                'thumbnail' => $p->thumbnail,
+                'images' => $p->images,
+                'is_active' => (bool) $p->is_active,
+            ];
+
+            if (! $publicOnly) {
+                $row['price_override'] = $p->pivot->price_override;
+                $row['sale_price_override'] = $p->pivot->sale_price_override;
+
+                return $row;
+            }
+
+            $row['colors'] = $p->colors ?? [];
+            $row['color_names'] = $p->color_names ?? [];
+            $row['color_variants'] = $p->color_variants ?? [];
+            $row['addon_groups'] = $p->addonGroups->map(fn ($g) => [
+                'id' => $g->id,
+                'name' => $g->name,
+                'is_required' => (bool) $g->is_required,
+                'options' => $g->options->map(fn ($o) => ['id' => $o->id, 'name' => $o->name])->values()->all(),
+            ])->values()->all();
+            $row['addon_prices'] = $p->addonPrices->map(fn ($r) => [
+                'option_id' => $r->option_id,
+                'additional_price' => (float) $r->additional_price,
+                'is_available' => (bool) $r->is_available,
+            ])->values()->all();
+            $row['addon_constraints'] = $this->constraintsFor($p);
+
+            return $row;
+        })->values()->all();
 
         return $out;
+    }
+
+    /** Same rule as the product page: per-product constraints win over global ones. */
+    private function constraintsFor(Product $product): array
+    {
+        $optionIds = $product->addonGroups->pluck('options')->flatten()->pluck('id')->all();
+        if ($optionIds === []) {
+            return [];
+        }
+
+        $scope = fn ($q) => $q->where(
+            fn ($w) => $w->whereIn('option_id', $optionIds)->orWhereIn('blocked_option_id', $optionIds)
+        );
+        $rows = AddonOptionConstraint::where('product_id', $product->id)->tap($scope)->get();
+        if ($rows->isEmpty()) {
+            $rows = AddonOptionConstraint::whereNull('product_id')->tap($scope)->get();
+        }
+
+        return $rows->map(fn ($c) => ['option_id' => $c->option_id, 'blocked_option_id' => $c->blocked_option_id])
+            ->values()->all();
     }
 }

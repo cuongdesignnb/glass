@@ -47,8 +47,16 @@ class OrderController extends Controller
      *
      * @throws ValidationException
      */
-    private function repriceItems(array $items): array
+    private function repriceItems(array $items, ?string $source = null): array
     {
+        // Landing pages may carry their own admin-set prices. They are resolved
+        // here from the landing slug, never taken from the request body.
+        $landing = null;
+        if ($source !== null && str_starts_with($source, 'landing:')) {
+            $landing = \App\Models\LandingPage::where('slug', substr($source, 8))->where('is_active', true)->first();
+        }
+        $landingProducts = $landing ? $landing->products()->get()->keyBy('id') : collect();
+
         $products = Product::query()
             ->active()
             ->with(['addonGroups.options', 'addonPrices'])
@@ -67,7 +75,12 @@ class OrderController extends Controller
                 ]);
             }
 
-            $unitPrice = (float) ($product->sale_price > 0 ? $product->sale_price : $product->price);
+            $regular = (float) $product->price;
+            $sale = (float) $product->sale_price;
+            if ($landingProducts->has($product->id)) {
+                [$regular, $sale] = \App\Models\LandingPage::effectivePrices($landingProducts->get($product->id));
+            }
+            $unitPrice = $sale > 0 ? $sale : $regular;
 
             $addons = [];
             $addonTotal = 0.0;
@@ -154,7 +167,7 @@ class OrderController extends Controller
 
         // Rebuild every line from the catalogue so a tampered request cannot
         // set its own price.
-        $data['items'] = $this->repriceItems($data['items']);
+        $data['items'] = $this->repriceItems($data['items'], $data['source'] ?? null);
 
         // Calculate totals
         $subtotal = collect($data['items'])->sum(fn($item) => $item['price'] * $item['quantity']);

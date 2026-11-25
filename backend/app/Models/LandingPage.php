@@ -24,8 +24,23 @@ class LandingPage extends Model
     public function products(): BelongsToMany
     {
         return $this->belongsToMany(Product::class, 'landing_page_product')
-            ->withPivot('order')
+            ->withPivot('order', 'price_override', 'sale_price_override')
             ->orderByPivot('order')
             ->withTimestamps();
+    }
+
+    /**
+     * Price actually charged for a product on this landing page: the admin's
+     * landing-only price when set, otherwise the catalogue price.
+     *
+     * @return array{0: float, 1: float} [regular price, sale price (0 = none)]
+     */
+    public static function effectivePrices(Product $product): array
+    {
+        $pivot = $product->pivot ?? null;
+        $price = $pivot && $pivot->price_override !== null ? (float) $pivot->price_override : (float) $product->price;
+        $sale = $pivot && $pivot->sale_price_override !== null ? (float) $pivot->sale_price_override : (float) $product->sale_price;
+
+        return [$price, $sale];
     }
 }
