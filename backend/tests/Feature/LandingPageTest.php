@@ -120,6 +120,38 @@ class LandingPageTest extends TestCase
         $this->getJson('/api/public/landing-pages/he')->assertNotFound();
     }
 
+    public function test_landing_price_override_applies_only_to_that_landing(): void
+    {
+        $p = $this->product(['price' => 500000, 'sale_price' => 0]);
+
+        Sanctum::actingAs($this->admin());
+        $made = $this->postJson('/api/landing-pages', [
+            'title' => 'Gia rieng', 'slug' => 'gia-rieng', 'is_active' => true,
+            'products' => [['id' => $p->id, 'price_override' => 300000, 'sale_price_override' => 150000]],
+        ])->assertCreated();
+        $this->assertEquals(150000, $made->json('products.0.sale_price_override'));
+        $this->assertEquals(500000, $made->json('products.0.price'));
+
+        $public = $this->getJson('/api/public/landing-pages/gia-rieng')->assertOk();
+        $this->assertEquals(150000, $public->json('products.0.sale_price'));
+        $this->assertEquals(300000, $public->json('products.0.price'));
+
+        $payload = [
+            'customer_name' => 'K', 'customer_phone' => '0900000000', 'address' => 'x',
+            'payment_method' => 'cod',
+            'items' => [['product_id' => $p->id, 'quantity' => 2, 'price' => 1]],
+        ];
+
+        $landing = $this->postJson('/api/public/orders', $payload + ['source' => 'landing:gia-rieng'])->assertCreated();
+        $this->assertEquals(150000, $landing->json('items.0.price'));
+
+        // Same product from the main site or another landing keeps the catalogue price.
+        $web = $this->postJson('/api/public/orders', $payload)->assertCreated();
+        $this->assertEquals(500000, $web->json('items.0.price'));
+        $other = $this->postJson('/api/public/orders', $payload + ['source' => 'landing:khac'])->assertCreated();
+        $this->assertEquals(500000, $other->json('items.0.price'));
+    }
+
     public function test_order_records_landing_source_and_rejects_odd_source(): void
     {
         $p = $this->product();

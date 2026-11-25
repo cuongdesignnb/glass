@@ -7,7 +7,21 @@ import { publicApi } from '@/lib/api';
 type Benefit = { title: string; text?: string };
 type Testimonial = { name: string; text: string; rating?: number; variant?: string; images?: string[] };
 type Faq = { question: string; answer: string };
-type Product = { id: number; name: string; price: number; sale_price: number; image: string };
+type AddonOption = { id: number; name: string; price: number; available: boolean };
+type AddonGroup = { id: number; name: string; required: boolean; options: AddonOption[] };
+type Product = {
+  id: number;
+  name: string;
+  price: number;
+  sale_price: number;
+  image: string;
+  images: string[];
+  colors: string[];
+  colorNames: string[];
+  colorImages: Record<string, string[]>;
+  groups: AddonGroup[];
+  constraints: { option_id: number; blocked_option_id: number }[];
+};
 
 type PageData = {
   slug: string;
@@ -179,8 +193,18 @@ function Stars({ n = 5 }: { n?: number }) {
   );
 }
 
+const swatch = (c: string) => (c === 'transparent' || !c ? '#f5f5dc' : c);
+
 export default function LandingClient({ page, products, shop }: { page: PageData; products: Product[]; shop: Shop }) {
-  const [cart, setCart] = useState<Record<number, number>>({});
+  // ---- what the customer picked: one product (kiểu) + colour + add-ons + qty ----
+  const [selId, setSelId] = useState<number>(products[0]?.id ?? 0);
+  const [colorIdx, setColorIdx] = useState(0);
+  const [addons, setAddons] = useState<Record<number, number | null>>({});
+  const [qty, setQty] = useState(1);
+  const [chosen, setChosen] = useState(false);
+  const [sheet, setSheet] = useState(false);
+  const [sheetError, setSheetError] = useState('');
+
   const [open, setOpen] = useState(false);
   const [method, setMethod] = useState<'cod' | 'bank_transfer'>('cod');
   const [form, setForm] = useState({ customer_name: '', customer_phone: '', address: '', note: '' });
@@ -193,18 +217,59 @@ export default function LandingClient({ page, products, shop }: { page: PageData
   const purchaseSent = useRef(false);
   const checkoutSent = useRef(false);
 
-  const lines = useMemo(
-    () => products.filter((p) => cart[p.id] > 0).map((p) => ({ p, qty: cart[p.id] })),
-    [products, cart],
-  );
-  const subtotal = lines.reduce((s, l) => s + unitPrice(l.p) * l.qty, 0);
+  const sel = products.find((p) => p.id === selId) || products[0] || null;
+  const color = sel && sel.colors.length ? sel.colors[Math.min(colorIdx, sel.colors.length - 1)] : '';
+  const colorName = sel && color ? sel.colorNames[sel.colors.indexOf(color)] || '' : '';
+
+  const addonList = useMemo(() => {
+    if (!sel) return [];
+    return sel.groups.flatMap((g) => {
+      const o = g.options.find((x) => x.id === addons[g.id]);
+      return o ? [{ groupName: g.name, optionName: o.name, price: o.price }] : [];
+    });
+  }, [sel, addons]);
+  const addonTotal = addonList.reduce((s, a) => s + a.price, 0);
+
+  const blocked = useMemo(() => {
+    const set = new Set<number>();
+    if (!sel) return set;
+    Object.values(addons).forEach((oid) => {
+      if (!oid) return;
+      sel.constraints.forEach((c) => { if (c.option_id === oid) set.add(c.blocked_option_id); });
+    });
+    return set;
+  }, [sel, addons]);
+
+  const unit = sel ? unitPrice(sel) + addonTotal : 0;
+  const subtotal = unit * qty;
   const shipping = subtotal === 0 || subtotal >= shop.shippingThreshold ? 0 : shop.shippingFee;
   const total = subtotal + shipping;
-  const trackLines = useCallback(
-    (ls: { p: Product; qty: number }[]): TrackLine[] =>
-      ls.map((l) => ({ id: l.p.id, name: l.p.name, price: unitPrice(l.p), qty: l.qty })),
-    [],
+  const hasChoices = products.length > 1 || (sel?.colors.length ?? 0) > 0 || (sel?.groups.length ?? 0) > 0;
+  const variantText = [colorName || (color && color !== 'transparent' ? color : ''), ...addonList.map((a) => a.optionName)]
+    .filter(Boolean).join(', ');
+
+  const trackLine = useCallback(
+    (): TrackLine[] => (sel ? [{ id: sel.id, name: sel.name, price: unit, qty }] : []),
+    [sel, unit, qty],
   );
+
+  const chooseProduct = (id: number) => {
+    setSelId(id);
+    setColorIdx(0);
+    setAddons({});
+    setSheetError('');
+  };
+
+  const pickOption = (g: AddonGroup, o: AddonOption) => {
+    if (!sel || !o.available || blocked.has(o.id)) return;
+    const next: Record<number, number | null> = { ...addons, [g.id]: addons[g.id] === o.id && !g.required ? null : o.id };
+    sel.constraints.forEach((c) => {
+      if (c.option_id !== o.id) return;
+      sel.groups.forEach((g2) => { if (next[g2.id] === c.blocked_option_id) next[g2.id] = null; });
+    });
+    setAddons(next);
+    setSheetError('');
+  };
 
   // ViewContent once on load.
   useEffect(() => {
@@ -215,72 +280,67 @@ export default function LandingClient({ page, products, shop }: { page: PageData
     return () => clearTimeout(t);
   }, [products]);
 
-  // Lock page scroll and support Esc while the order dialog is open.
+  // Lock page scroll and support Esc while a dialog is open.
+  const dialogOpen = open || sheet;
   useEffect(() => {
-    if (!open) return;
+    if (!dialogOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setOpen(false);
+      setSheet(false);
+    };
     window.addEventListener('keydown', onKey);
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener('keydown', onKey);
     };
-  }, [open]);
+  }, [dialogOpen]);
 
-  const openCheckout = (ls: { p: Product; qty: number }[]) => {
+  const startCheckout = () => {
+    if (!sel) return;
+    const missing = sel.groups.filter((g) => g.required && !addons[g.id]);
+    if (missing.length) {
+      setSheet(true);
+      setSheetError(`Vui lòng chọn ${missing.map((g) => g.name).join(', ')}.`);
+      return;
+    }
+    setChosen(true);
+    setSheet(false);
+    setOrder(null);
+    setError('');
     setOpen(true);
-    if (!checkoutSent.current && ls.length > 0) {
+    if (!checkoutSent.current) {
       checkoutSent.current = true;
-      track('checkout', trackLines(ls), { value: ls.reduce((s, l) => s + unitPrice(l.p) * l.qty, 0) });
+      track('checkout', trackLine(), { value: subtotal });
     }
   };
 
-  const buy = (p: Product) => {
-    const next = { ...cart, [p.id]: cart[p.id] > 0 ? cart[p.id] : 1 };
-    setCart(next);
-    setOrder(null);
-    setError('');
-    openCheckout(products.filter((x) => next[x.id] > 0).map((x) => ({ p: x, qty: next[x.id] })));
-  };
-
-  const setQty = (id: number, qty: number) =>
-    setCart((c) => {
-      const next = { ...c };
-      if (qty <= 0) delete next[id];
-      else next[id] = Math.min(qty, 10);
-      return next;
-    });
-
-  const scrollToProducts = () => {
-    setOpen(false);
-    setTimeout(() => document.getElementById('san-pham')?.scrollIntoView({ behavior: 'smooth' }), 50);
+  const openSheet = (id?: number) => {
+    if (id !== undefined && id !== selId) chooseProduct(id);
+    setSheetError('');
+    setSheet(true);
   };
 
   const mainCta = () => {
-    if (lines.length > 0) {
-      setOrder(null);
-      openCheckout(lines);
-    } else if (products.length === 1) {
-      buy(products[0]);
-    } else {
-      document.getElementById('san-pham')?.scrollIntoView({ behavior: 'smooth' });
-    }
+    if (hasChoices && !chosen) openSheet();
+    else startCheckout();
   };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     const phone = form.customer_phone.replace(/[\s.\-]/g, '');
+    if (!sel) return setError('Bạn chưa chọn sản phẩm nào.');
     if (!form.customer_name.trim()) return setError('Vui lòng nhập họ tên.');
     if (!/^(0|\+84)\d{9,10}$/.test(phone)) return setError('Số điện thoại chưa đúng, vui lòng kiểm tra lại.');
     if (form.address.trim().length < 8) return setError('Vui lòng nhập địa chỉ nhận hàng đầy đủ.');
-    if (lines.length === 0) return setError('Bạn chưa chọn sản phẩm nào.');
 
     setSubmitting(true);
     try {
-      // Prices are rebuilt from the catalogue on the server; only ids and
-      // quantities are sent.
+      // Prices are rebuilt on the server (landing price + add-on prices from
+      // the catalogue); only ids, names of the chosen options and quantity are sent.
       const result = await publicApi.createOrder({
         customer_name: form.customer_name.trim(),
         customer_phone: phone,
@@ -288,14 +348,20 @@ export default function LandingClient({ page, products, shop }: { page: PageData
         note: form.note.trim() || null,
         payment_method: method,
         source: `landing:${page.slug}`,
-        items: lines.map((l) => ({ product_id: l.p.id, quantity: l.qty })),
+        items: [{
+          product_id: sel.id,
+          quantity: qty,
+          image: sel.image || undefined,
+          color: color || undefined,
+          color_name: colorName || undefined,
+          addons: addonList.map((a) => ({ groupName: a.groupName, optionName: a.optionName })),
+        }],
       });
       setOrder(result);
       if (method === 'cod' && !purchaseSent.current) {
         purchaseSent.current = true;
-        track('purchase', trackLines(lines), { value: Number(result.total) || total, orderId: result.order_number });
+        track('purchase', trackLine(), { value: Number(result.total) || total, orderId: result.order_number });
       }
-      setCart({});
     } catch (err: any) {
       setError(err?.message || 'Có lỗi xảy ra, vui lòng thử lại hoặc gọi hotline.');
     } finally {
@@ -341,6 +407,8 @@ export default function LandingClient({ page, products, shop }: { page: PageData
     if (order) {
       setOrder(null);
       setPaid(false);
+      setChosen(false);
+      setQty(1);
       purchaseSent.current = false;
       checkoutSent.current = false;
     }
@@ -352,20 +420,31 @@ export default function LandingClient({ page, products, shop }: { page: PageData
     ? `https://img.vietqr.io/image/${encodeURIComponent(bank.bank_name)}-${encodeURIComponent(bank.account_number)}-compact.png?amount=${Math.round(Number(order.total) || 0)}&addInfo=${encodeURIComponent(bank.transfer_content || order.payment_code || '')}&accountName=${encodeURIComponent(bank.account_name || '')}`
     : '';
 
-  const best = products.length ? products.reduce((m, p) => (unitPrice(p) < unitPrice(m) ? p : m)) : null;
-  const bestOff = best && unitPrice(best) < best.price ? Math.round((1 - unitPrice(best) / best.price) * 100) : 0;
+  const basePrice = sel ? unitPrice(sel) : 0;
+  const off = sel && basePrice < sel.price ? Math.round((1 - basePrice / sel.price) * 100) : 0;
   const rated = page.testimonials.length
     ? page.testimonials.reduce((s, t) => s + (t.rating || 5), 0) / page.testimonials.length
     : 0;
   const hoursLeft = countdown ? countdown.d * 24 + countdown.h : 0;
   const shopHost = shop.mainSite.replace(/^https?:\/\//, '');
 
-  const gallery = useMemo(
-    () => Array.from(new Set([page.hero_image, ...products.map((p) => p.image)].filter(Boolean))),
-    [page.hero_image, products],
-  );
+  // Gallery: page hero, then the photos of the colour / product being viewed.
+  const gallery = useMemo(() => {
+    const list: string[] = [page.hero_image];
+    if (sel) {
+      if (color) list.push(...(sel.colorImages[color] || []));
+      list.push(...sel.images);
+      if (sel.image) list.push(sel.image);
+    }
+    if (list.filter(Boolean).length === 0) list.push(...products.map((p) => p.image));
+    return Array.from(new Set(list.filter(Boolean)));
+  }, [page.hero_image, sel, color, products]);
   const [slide, setSlide] = useState(0);
   const galRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    setSlide(0);
+    galRef.current?.scrollTo({ left: 0 });
+  }, [selId, color]);
   const goSlide = (i: number) => {
     const el = galRef.current;
     if (!el || gallery.length === 0) return;
@@ -377,7 +456,9 @@ export default function LandingClient({ page, products, shop }: { page: PageData
     const el = galRef.current;
     if (el && el.clientWidth) setSlide(Math.round(el.scrollLeft / el.clientWidth));
   };
-  const toProducts = () => document.getElementById('san-pham')?.scrollIntoView({ behavior: 'smooth' });
+  const toReviews = () => document.getElementById('danh-gia')?.scrollIntoView({ behavior: 'smooth' });
+
+  const sheetImg = (color && sel?.colorImages[color]?.[0]) || sel?.image || '';
 
   return (
     <div className="lp">
@@ -419,16 +500,15 @@ export default function LandingClient({ page, products, shop }: { page: PageData
         <div className="lp-pricebar__l">
           <IcTag />
           <div>
-            {products.length > 1 && <small>Giá chỉ từ</small>}
-            {best && (
+            {sel && (
               <div className="lp-pricebar__row">
-                <b>{vnd(unitPrice(best))}</b>
+                <b>{vnd(basePrice)}</b>
               </div>
             )}
-            {best && bestOff > 0 && (
+            {sel && off > 0 && (
               <div className="lp-pricebar__sub">
-                <s>{vnd(best.price)}</s>
-                <em>-{bestOff}%</em>
+                <s>{vnd(sel.price)}</s>
+                <em>-{off}%</em>
               </div>
             )}
           </div>
@@ -455,7 +535,10 @@ export default function LandingClient({ page, products, shop }: { page: PageData
         </div>
         <div className="lp-info__meta">
           {rated > 0 ? (
-            <span className="lp-rate"><IcStar /><b>{rated.toFixed(1)}</b>/5<small>({page.testimonials.length} đánh giá)</small></span>
+            <button type="button" className="lp-rate lp-rate--link" onClick={toReviews}>
+              <Stars n={Math.round(rated)} />
+              <b>{rated.toFixed(1)}</b>/5<small>({page.testimonials.length} đánh giá)</small>
+            </button>
           ) : <span />}
           <span className="lp-freeship"><IcTruck /> Miễn phí vận chuyển</span>
         </div>
@@ -468,9 +551,12 @@ export default function LandingClient({ page, products, shop }: { page: PageData
       </section>
 
       <section className="lp-block lp-rows">
-        <button type="button" className="lp-row" onClick={toProducts}>
-          <span>Chọn các tuỳ chọn</span>
-          <span className="lp-row__r">{products.length} mẫu <IcChevron dir="right" /></span>
+        <button type="button" className="lp-row" onClick={() => openSheet()}>
+          <span>Phân loại</span>
+          <span className="lp-row__r lp-row__sel">
+            {sel && (variantText || (products.length > 1 ? sel.name : '')) || 'Chọn phân loại'}
+            <IcChevron dir="right" />
+          </span>
         </button>
         <div className="lp-row lp-row--static">
           <span>Vận chuyển</span>
@@ -481,17 +567,15 @@ export default function LandingClient({ page, products, shop }: { page: PageData
         </p>
       </section>
 
-      <section className="lp-block" id="san-pham">
-        <h2 className="lp-h2">Chọn mẫu bạn thích</h2>
-        {products.length === 0 ? (
-          <p className="lp-muted">Sản phẩm đang được cập nhật, vui lòng quay lại sau.</p>
-        ) : (
+      {products.length > 1 && (
+        <section className="lp-block" id="san-pham">
+          <h2 className="lp-h2">Chọn kiểu bạn thích</h2>
           <div className="lp-grid">
             {products.map((p) => {
               const price = unitPrice(p);
-              const off = price < p.price ? Math.round((1 - price / p.price) * 100) : 0;
+              const poff = price < p.price ? Math.round((1 - price / p.price) * 100) : 0;
               return (
-                <article className="lp-card" key={p.id}>
+                <article className={`lp-card${p.id === selId ? ' is-on' : ''}`} key={p.id}>
                   <div className="lp-card__img">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     {p.image ? <img src={p.image} alt={p.name} loading="lazy" /> : <div className="lp-noimg" />}
@@ -499,19 +583,19 @@ export default function LandingClient({ page, products, shop }: { page: PageData
                   <h3 className="lp-card__name">{p.name}</h3>
                   <div className="lp-card__price">
                     <b>{vnd(price)}</b>
-                    {off > 0 && <em>-{off}%</em>}
+                    {poff > 0 && <em>-{poff}%</em>}
                   </div>
-                  {off > 0 && <s className="lp-card__old">{vnd(p.price)}</s>}
-                  <button className="lp-btn lp-btn--primary lp-btn--block lp-btn--sm" onClick={() => buy(p)}>Mua ngay</button>
+                  {poff > 0 && <s className="lp-card__old">{vnd(p.price)}</s>}
+                  <button className="lp-btn lp-btn--primary lp-btn--block lp-btn--sm" onClick={() => openSheet(p.id)}>Mua ngay</button>
                 </article>
               );
             })}
           </div>
-        )}
-      </section>
+        </section>
+      )}
 
       {page.testimonials.length > 0 && (
-        <section className="lp-block">
+        <section className="lp-block" id="danh-gia">
           <div className="lp-h2 lp-h2--row">
             <h2>Đánh giá của khách hàng ({page.testimonials.length})</h2>
           </div>
@@ -585,13 +669,98 @@ export default function LandingClient({ page, products, shop }: { page: PageData
         {shop.phone ? (
           <a className="lp-sticky__ico" href={`tel:${shop.phone}`}><IcPhone />Gọi shop</a>
         ) : null}
-        {products.length > 1 && (
-          <button type="button" className="lp-btn lp-btn--outline lp-sticky__alt" onClick={toProducts}>Xem mẫu</button>
+        {hasChoices && (
+          <button type="button" className="lp-btn lp-btn--outline lp-sticky__alt" onClick={() => openSheet()}>Phân loại</button>
         )}
         <button className="lp-btn lp-btn--primary lp-sticky__buy" onClick={mainCta}>
-          {lines.length > 0 ? `${page.cta_text} · ${vnd(total)}` : page.cta_text}
+          {chosen && sel ? `${page.cta_text} · ${vnd(total)}` : page.cta_text}
         </button>
       </div>
+
+      {/* Variant sheet: kiểu / màu / độ cận... */}
+      {sheet && sel && (
+        <div className="lp-overlay" onClick={() => setSheet(false)}>
+          <div className="lp-dialog lp-vs" role="dialog" aria-modal="true" aria-label="Chọn phân loại" onClick={(e) => e.stopPropagation()}>
+            <button className="lp-close" onClick={() => setSheet(false)} aria-label="Đóng"><IcClose /></button>
+
+            <div className="lp-vs__head">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {sheetImg ? <img src={sheetImg} alt="" /> : <span className="lp-vs__noimg" />}
+              <div>
+                <div className="lp-vs__price">
+                  <b>{vnd(unit)}</b>
+                  {off > 0 && <s>{vnd(sel.price + addonTotal)}</s>}
+                </div>
+                <small>{variantText || 'Chưa chọn phân loại'}</small>
+              </div>
+            </div>
+
+            <div className="lp-vs__body">
+              {products.length > 1 && (
+                <div className="lp-vs__group">
+                  <div className="lp-vs__label">Kiểu</div>
+                  <div className="lp-vs__chips">
+                    {products.map((p) => (
+                      <button type="button" key={p.id} className={`lp-chip lp-chip--prod${p.id === selId ? ' is-on' : ''}`} onClick={() => chooseProduct(p.id)}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        {p.image && <img src={p.image} alt="" />}
+                        <span>{p.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {sel.colors.length > 0 && (
+                <div className="lp-vs__group">
+                  <div className="lp-vs__label">Màu sắc{colorName ? `: ${colorName}` : ''}</div>
+                  <div className="lp-vs__chips">
+                    {sel.colors.map((c, i) => (
+                      <button type="button" key={c + i} className={`lp-chip${c === color ? ' is-on' : ''}`} onClick={() => setColorIdx(i)}>
+                        <i className="lp-dot" style={{ background: swatch(c) }} />
+                        {sel.colorNames[i] || c}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {sel.groups.map((g) => (
+                <div className="lp-vs__group" key={g.id}>
+                  <div className="lp-vs__label">{g.name}{g.required && <em> *</em>}</div>
+                  <div className="lp-vs__chips">
+                    {g.options.map((o) => {
+                      const dis = !o.available || blocked.has(o.id);
+                      return (
+                        <button type="button" key={o.id} disabled={dis}
+                          className={`lp-chip${addons[g.id] === o.id ? ' is-on' : ''}`} onClick={() => pickOption(g, o)}>
+                          {o.name}
+                          {o.price > 0 && <small>+{vnd(o.price)}</small>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              <div className="lp-vs__group lp-vs__qty">
+                <div className="lp-vs__label">Số lượng</div>
+                <div className="lp-qty">
+                  <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Giảm">−</button>
+                  <span>{qty}</span>
+                  <button type="button" onClick={() => setQty((q) => Math.min(10, q + 1))} aria-label="Tăng">+</button>
+                </div>
+              </div>
+
+              {sheetError && <p className="lp-error" role="alert">{sheetError}</p>}
+            </div>
+
+            <button className="lp-btn lp-btn--primary lp-btn--block lp-btn--lg" onClick={startCheckout}>
+              {page.cta_text} · {vnd(subtotal)}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Order dialog */}
       {open && (
@@ -650,28 +819,23 @@ export default function LandingClient({ page, products, shop }: { page: PageData
               <form onSubmit={submit} noValidate>
                 <h3 className="lp-dialog__title">Thông tin đặt hàng</h3>
 
-                {lines.length === 0 ? (
-                  <div className="lp-empty">
-                    <p>Bạn chưa chọn sản phẩm nào.</p>
-                    <button type="button" className="lp-btn lp-btn--primary" onClick={scrollToProducts}>Chọn sản phẩm</button>
-                  </div>
-                ) : (
+                {sel && (
                   <ul className="lp-lines">
-                    {lines.map(({ p, qty }) => (
-                      <li key={p.id}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        {p.image && <img src={p.image} alt="" />}
-                        <div className="lp-lines__info">
-                          <span>{p.name}</span>
-                          <b>{vnd(unitPrice(p))}</b>
-                        </div>
-                        <div className="lp-qty">
-                          <button type="button" onClick={() => setQty(p.id, qty - 1)} aria-label="Giảm">−</button>
-                          <span>{qty}</span>
-                          <button type="button" onClick={() => setQty(p.id, qty + 1)} aria-label="Tăng">+</button>
-                        </div>
-                      </li>
-                    ))}
+                    <li>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      {sheetImg && <img src={sheetImg} alt="" />}
+                      <div className="lp-lines__info">
+                        <span>{sel.name}</span>
+                        {variantText && <small>{variantText}</small>}
+                        <b>{vnd(unit)}</b>
+                        {hasChoices && <button type="button" className="lp-link" onClick={() => { setOpen(false); openSheet(); }}>Đổi phân loại</button>}
+                      </div>
+                      <div className="lp-qty">
+                        <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Giảm">−</button>
+                        <span>{qty}</span>
+                        <button type="button" onClick={() => setQty((q) => Math.min(10, q + 1))} aria-label="Tăng">+</button>
+                      </div>
+                    </li>
                   </ul>
                 )}
 
@@ -715,7 +879,7 @@ export default function LandingClient({ page, products, shop }: { page: PageData
 
                 {error && <p className="lp-error" role="alert">{error}</p>}
 
-                <button className="lp-btn lp-btn--primary lp-btn--block lp-btn--lg" disabled={submitting || lines.length === 0}>
+                <button className="lp-btn lp-btn--primary lp-btn--block lp-btn--lg" disabled={submitting || !sel}>
                   {submitting ? 'Đang gửi đơn...' : `Xác nhận đặt hàng · ${vnd(total)}`}
                 </button>
               </form>

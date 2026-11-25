@@ -159,7 +159,11 @@ export default function AdminLandingPagesPage() {
       const payload: any = {
         ...form,
         promo_ends_at: form.promo_ends_at ? new Date(form.promo_ends_at).toISOString() : null,
-        product_ids: selectedProducts.map((p) => p.id),
+        products: selectedProducts.map((p) => ({
+          id: p.id,
+          price_override: p.price_override === '' || p.price_override == null ? null : Number(p.price_override),
+          sale_price_override: p.sale_price_override === '' || p.sale_price_override == null ? null : Number(p.sale_price_override),
+        })),
       };
       if (editingId) await adminApi.updateLandingPage(token, editingId, payload);
       else await adminApi.createLandingPage(token, payload);
@@ -211,6 +215,8 @@ export default function AdminLandingPagesPage() {
     setProductSearch('');
     setProductResults([]);
   };
+  const setProductPrice = (id: number, patch: Record<string, any>) =>
+    setSelectedProducts(selectedProducts.map((p) => (p.id === id ? { ...p, ...patch } : p)));
   const removeProduct = (id: number) =>
     setSelectedProducts(selectedProducts.filter((p) => p.id !== id));
   const moveProduct = (i: number, dir: -1 | 1) => {
@@ -319,7 +325,7 @@ export default function AdminLandingPagesPage() {
               <div className="admin-form__group">
                 <div style={sectionTitle}>Sản phẩm bán trên trang ({selectedProducts.length})</div>
                 <span style={hint}>
-                  Giá luôn lấy trực tiếp từ sản phẩm, đổi giá ở trang Sản Phẩm là landing page đổi theo. Thứ tự bên dưới là thứ tự hiển thị.
+                  Mặc định giá lấy từ sản phẩm (đổi giá ở trang Sản Phẩm là landing đổi theo); có thể đặt giá riêng cho từng sản phẩm bên dưới. Thứ tự bên dưới là thứ tự hiển thị.
                 </span>
                 <div style={{ position: 'relative', marginTop: '8px' }}>
                   <input className="admin-form__input" value={productSearch}
@@ -363,16 +369,32 @@ export default function AdminLandingPagesPage() {
                           </span>
                         )}
                       </span>
-                      <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8125rem' }}>
-                        {formatVND(Number(p.sale_price) > 0 ? p.sale_price : p.price)}
-                      </span>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <label style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '0.6875rem', color: 'rgba(255,255,255,0.45)' }}>
+                          Giá bán
+                          <input className="admin-form__input" type="number" min={0} style={{ width: '110px', padding: '6px 8px' }}
+                            value={p.price_override ?? ''} placeholder={String(Math.round(Number(p.price) || 0))}
+                            onChange={(e) => setProductPrice(p.id, { price_override: e.target.value })} />
+                        </label>
+                        <label style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '0.6875rem', color: 'rgba(255,255,255,0.45)' }}>
+                          Giá giảm
+                          <input className="admin-form__input" type="number" min={0} style={{ width: '110px', padding: '6px 8px' }}
+                            value={p.sale_price_override ?? ''} placeholder={Number(p.sale_price) > 0 ? String(Math.round(Number(p.sale_price))) : '0'}
+                            onChange={(e) => setProductPrice(p.id, { sale_price_override: e.target.value })} />
+                        </label>
+                      </div>
                       <button type="button" className="admin-table__action" onClick={() => moveProduct(i, -1)} title="Lên"><FiArrowUp /></button>
                       <button type="button" className="admin-table__action" onClick={() => moveProduct(i, 1)} title="Xuống"><FiArrowDown /></button>
                       <button type="button" className="admin-table__action admin-table__action--danger" onClick={() => removeProduct(p.id)} title="Bỏ"><FiTrash2 /></button>
                     </div>
                   ))}
-                  {selectedProducts.length === 0 && (
+                  {selectedProducts.length === 0 ? (
                     <div style={hint}>Chưa chọn sản phẩm nào.</div>
+                  ) : (
+                    <div style={hint}>
+                      Để trống = lấy giá trên web (số mờ là giá web hiện tại). Nhập để đặt giá riêng chỉ cho landing này,
+                      khách đặt từ landing được tính đúng giá này. Nhập 0 ở ô Giá giảm = không giảm giá.
+                    </div>
                   )}
                 </div>
               </div>

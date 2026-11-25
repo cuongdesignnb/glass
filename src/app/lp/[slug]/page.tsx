@@ -53,13 +53,40 @@ export default async function LandingPage({ params }: { params: { slug: string }
   const [page, settings] = await Promise.all([loadPage(params.slug), getPublicSettings()]);
   if (!page) notFound();
 
-  const products = (page.products || []).map((p: any) => ({
-    id: p.id,
-    name: p.name,
-    price: Number(p.price) || 0,
-    sale_price: Number(p.sale_price) || 0,
-    image: imageUrl(p.thumbnail || p.images?.[0]),
-  }));
+  const products = (page.products || []).map((p: any) => {
+    const prices: Record<number, { price: number; available: boolean }> = {};
+    (p.addon_prices || []).forEach((r: any) => {
+      prices[r.option_id] = { price: Number(r.additional_price) || 0, available: r.is_available !== false };
+    });
+    const colorImages: Record<string, string[]> = {};
+    (p.color_variants || []).forEach((v: any) => {
+      if (v?.color) colorImages[v.color] = (v.images || []).map((u: string) => imageUrl(u)).filter(Boolean);
+    });
+
+    return {
+      id: p.id,
+      name: p.name,
+      price: Number(p.price) || 0,
+      sale_price: Number(p.sale_price) || 0,
+      image: imageUrl(p.thumbnail || p.images?.[0]),
+      images: (p.images || []).map((u: string) => imageUrl(u)).filter(Boolean),
+      colors: p.colors || [],
+      colorNames: p.color_names || [],
+      colorImages,
+      groups: (p.addon_groups || []).map((g: any) => ({
+        id: g.id,
+        name: g.name,
+        required: !!g.is_required,
+        options: (g.options || []).map((o: any) => ({
+          id: o.id,
+          name: o.name,
+          price: prices[o.id]?.price ?? 0,
+          available: prices[o.id]?.available ?? true,
+        })),
+      })),
+      constraints: p.addon_constraints || [],
+    };
+  });
 
   return (
     <LandingClient
@@ -68,7 +95,7 @@ export default async function LandingPage({ params }: { params: { slug: string }
         title: page.title,
         headline: page.headline || page.title,
         subheadline: page.subheadline || '',
-        hero_image: imageUrl(page.hero_image) || products[0]?.image || '',
+        hero_image: imageUrl(page.hero_image),
         cta_text: page.cta_text || 'Đặt hàng ngay',
         promo_text: page.promo_text || '',
         promo_ends_at: page.promo_ends_at || null,
