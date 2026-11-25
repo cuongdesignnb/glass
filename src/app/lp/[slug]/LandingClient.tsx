@@ -57,6 +57,8 @@ const unitPrice = (p: Product) => (p.sale_price > 0 && p.sale_price < p.price ? 
 // Ad pixels. IDs are validated server-side (digits / alphanumerics only) and
 // are additionally JSON-encoded here before being written into inline scripts.
 // ---------------------------------------------------------------------------
+const REVIEWS_SHOWN = 3;
+
 function Pixels({ fb, tt, ga }: { fb: string; tt: string; ga: string }) {
   return (
     <>
@@ -204,6 +206,9 @@ export default function LandingClient({ page, products, shop }: { page: PageData
   const [chosen, setChosen] = useState(false);
   const [sheet, setSheet] = useState(false);
   const [sheetError, setSheetError] = useState('');
+  const [allReviews, setAllReviews] = useState(false);
+  const [openReviews, setOpenReviews] = useState<Record<number, boolean>>({});
+  const [rx, setRx] = useState('');
 
   const [open, setOpen] = useState(false);
   const [method, setMethod] = useState<'cod' | 'bank_transfer'>('cod');
@@ -229,6 +234,9 @@ export default function LandingClient({ page, products, shop }: { page: PageData
     });
   }, [sel, addons]);
   const addonTotal = addonList.reduce((s, a) => s + a.price, 0);
+  // Options such as "2 Mắt lệch độ (ghi chú)" need the customer's prescription.
+  const needsRx = addonList.some((a) => /ghi\s*chú|lệch độ|bằng độ|loạn/i.test(a.optionName)
+    || (/độ/i.test(a.groupName) && !/không/i.test(a.optionName)));
 
   const blocked = useMemo(() => {
     const set = new Set<number>();
@@ -336,6 +344,7 @@ export default function LandingClient({ page, products, shop }: { page: PageData
     if (!form.customer_name.trim()) return setError('Vui lòng nhập họ tên.');
     if (!/^(0|\+84)\d{9,10}$/.test(phone)) return setError('Số điện thoại chưa đúng, vui lòng kiểm tra lại.');
     if (form.address.trim().length < 8) return setError('Vui lòng nhập địa chỉ nhận hàng đầy đủ.');
+    if (needsRx && rx.trim().length < 2) return setError('Vui lòng nhập số độ mắt để shop cắt tròng đúng.');
 
     setSubmitting(true);
     try {
@@ -345,7 +354,7 @@ export default function LandingClient({ page, products, shop }: { page: PageData
         customer_name: form.customer_name.trim(),
         customer_phone: phone,
         address: form.address.trim(),
-        note: form.note.trim() || null,
+        note: [needsRx && rx.trim() ? `Độ mắt: ${rx.trim()}` : '', form.note.trim()].filter(Boolean).join(' | ') || null,
         payment_method: method,
         source: `landing:${page.slug}`,
         items: [{
@@ -601,13 +610,21 @@ export default function LandingClient({ page, products, shop }: { page: PageData
           </div>
           <div className="lp-rate lp-rate--big"><b>{rated.toFixed(1)}</b>/5 <Stars n={Math.round(rated)} /></div>
           <div className="lp-reviews">
-            {page.testimonials.map((t, i) => (
+            {(allReviews ? page.testimonials : page.testimonials.slice(0, REVIEWS_SHOWN)).map((t, i) => (
               <figure className="lp-review" key={i}>
                 <span className="lp-avatar" aria-hidden="true">{(t.name || '?').trim().charAt(0).toUpperCase()}</span>
                 <div className="lp-review__body">
                   <div className="lp-review__head"><b>{t.name}</b><Stars n={t.rating || 5} /></div>
                   {t.variant && <small className="lp-review__var">Đã mua: {t.variant}</small>}
-                  <blockquote>{t.text}</blockquote>
+                  <blockquote
+                    className={openReviews[i] || (t.text || '').length <= 140 ? '' : 'is-clamped'}
+                    onClick={() => setOpenReviews((o) => ({ ...o, [i]: true }))}
+                  >
+                    {t.text}
+                  </blockquote>
+                  {!openReviews[i] && (t.text || '').length > 140 && (
+                    <button type="button" className="lp-link lp-review__more" onClick={() => setOpenReviews((o) => ({ ...o, [i]: true }))}>Xem thêm</button>
+                  )}
                   {t.images && t.images.length > 0 && (
                     <div className="lp-review__imgs">
                       {t.images.map((src, k) => (
@@ -620,6 +637,18 @@ export default function LandingClient({ page, products, shop }: { page: PageData
               </figure>
             ))}
           </div>
+          {page.testimonials.length > REVIEWS_SHOWN && (
+            <button
+              type="button"
+              className="lp-btn lp-btn--ghost lp-btn--block lp-reviews__toggle"
+              onClick={() => {
+                if (allReviews) document.getElementById('danh-gia')?.scrollIntoView({ block: 'start' });
+                setAllReviews((v) => !v);
+              }}
+            >
+              {allReviews ? 'Thu gọn đánh giá' : `Xem tất cả ${page.testimonials.length} đánh giá`}
+            </button>
+          )}
         </section>
       )}
 
@@ -851,6 +880,13 @@ export default function LandingClient({ page, products, shop }: { page: PageData
                   <span>Địa chỉ nhận hàng *</span>
                   <textarea rows={2} autoComplete="street-address" placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
                 </label>
+                {needsRx && (
+                  <label className="lp-field">
+                    <span>Số độ mắt *</span>
+                    <textarea rows={2} value={rx} onChange={(e) => setRx(e.target.value)}
+                      placeholder="VD: Mắt trái cận 2.0 độ, mắt phải cận 2.25 độ, loạn 0.5 độ. Chưa rõ thì ghi “shop gọi tư vấn”." />
+                  </label>
+                )}
                 <label className="lp-field">
                   <span>Ghi chú</span>
                   <input value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Không bắt buộc" />

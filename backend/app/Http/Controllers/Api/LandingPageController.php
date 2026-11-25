@@ -82,6 +82,7 @@ class LandingPageController extends Controller
     private function validated(Request $request, bool $partial): array
     {
         $required = $partial ? 'sometimes' : 'required';
+        $this->normalizePixelIds($request);
 
         return $request->validate([
             'title' => "$required|string|max:255",
@@ -119,6 +120,35 @@ class LandingPageController extends Controller
             'products.*.price_override' => 'nullable|numeric|min:0|max:1000000000',
             'products.*.sale_price_override' => 'nullable|numeric|min:0|max:1000000000',
         ]);
+    }
+
+    /**
+     * Ad platforms hand out a whole <script> snippet rather than a bare ID
+     * (TikTok in particular). Accept either and keep only the ID.
+     */
+    private function normalizePixelIds(Request $request): void
+    {
+        $patterns = [
+            'tiktok_pixel_id' => ['/ttq\.load\(\s*[\'"]([A-Za-z0-9]{5,30})[\'"]/', '/sdkid=([A-Za-z0-9]{5,30})/'],
+            'fb_pixel_id' => ['/fbq\(\s*[\'"]init[\'"]\s*,\s*[\'"](\d{5,20})[\'"]/', '/[?&]id=(\d{5,20})/'],
+            'google_ads_id' => ['/\b((?:AW|G)-[A-Za-z0-9]{5,20})\b/'],
+        ];
+        $merge = [];
+        foreach ($patterns as $field => $regexes) {
+            $raw = $request->input($field);
+            if (! is_string($raw)) {
+                continue;
+            }
+            $value = trim($raw);
+            foreach ($regexes as $regex) {
+                if (preg_match($regex, $value, $m)) {
+                    $value = $m[1];
+                    break;
+                }
+            }
+            $merge[$field] = $value === '' ? null : $value;
+        }
+        $request->merge($merge);
     }
 
     private function attributes(array $data): array

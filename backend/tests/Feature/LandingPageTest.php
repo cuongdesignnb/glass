@@ -101,6 +101,23 @@ class LandingPageTest extends TestCase
         ])->assertStatus(422)->assertJsonValidationErrors('google_ads_id');
     }
 
+    public function test_pasted_pixel_snippets_are_reduced_to_their_ids(): void
+    {
+        Sanctum::actingAs($this->admin());
+
+        $tiktok = "<!-- TikTok Pixel Code Start -->\n<script>\n!function (w, d, t) {\n  w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];\n  ttq.load('D4ABCDEFG1234567890');\n  ttq.page();\n}(window, document, 'ttq');\n</script>";
+        $fb = "<script>!function(f,b,e,v,n,t,s){}(window, document,'script');fbq('init', '1234567890123');fbq('track', 'PageView');</script>";
+
+        $res = $this->postJson('/api/landing-pages', [
+            'title' => 'Pixel', 'tiktok_pixel_id' => $tiktok, 'fb_pixel_id' => $fb,
+            'google_ads_id' => "gtag('config', 'AW-123456789');",
+        ])->assertCreated();
+
+        $this->assertSame('D4ABCDEFG1234567890', $res->json('tiktok_pixel_id'));
+        $this->assertSame('1234567890123', $res->json('fb_pixel_id'));
+        $this->assertSame('AW-123456789', $res->json('google_ads_id'));
+    }
+
     public function test_public_shows_only_active_pages_with_live_catalogue_prices(): void
     {
         $page = LandingPage::create(['title' => 'Hè', 'slug' => 'he', 'is_active' => true]);

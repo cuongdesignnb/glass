@@ -56,6 +56,21 @@ const rowBox: React.CSSProperties = {
   display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '8px',
 };
 
+// Ad platforms give a whole <script> snippet; keep only the ID from it.
+function extractPixelId(kind: 'fb' | 'tiktok' | 'google', raw: string): string {
+  const v = raw.trim();
+  const patterns: Record<'fb' | 'tiktok' | 'google', RegExp[]> = {
+    tiktok: [/ttq\.load\(\s*['"]([A-Za-z0-9]{5,30})['"]/, /sdkid=([A-Za-z0-9]{5,30})/],
+    fb: [/fbq\(\s*['"]init['"]\s*,\s*['"](\d{5,20})['"]/, /[?&]id=(\d{5,20})/],
+    google: [/\b((?:AW|G)-[A-Za-z0-9]{5,20})\b/],
+  };
+  for (const re of patterns[kind]) {
+    const m = v.match(re);
+    if (m) return m[1];
+  }
+  return v;
+}
+
 export default function AdminLandingPagesPage() {
   const { token } = useToken();
   const [pages, setPages] = useState<any[]>([]);
@@ -503,20 +518,21 @@ export default function AdminLandingPagesPage() {
                   <div className="admin-form__group">
                     <label className="admin-form__label">Facebook Pixel ID</label>
                     <input className="admin-form__input" value={form.fb_pixel_id}
-                      onChange={(e) => setForm({ ...form, fb_pixel_id: e.target.value.trim() })}
+                      onChange={(e) => setForm({ ...form, fb_pixel_id: extractPixelId('fb', e.target.value) })}
                       placeholder="VD: 1234567890123456" />
-                    <span style={hint}>Chỉ gồm chữ số</span>
+                    <span style={hint}>Dán ID hoặc cả đoạn mã Facebook đưa, hệ thống tự lấy ID</span>
                   </div>
                   <div className="admin-form__group">
                     <label className="admin-form__label">TikTok Pixel ID</label>
                     <input className="admin-form__input" value={form.tiktok_pixel_id}
-                      onChange={(e) => setForm({ ...form, tiktok_pixel_id: e.target.value.trim() })}
-                      placeholder="VD: C1A2B3D4E5F6" />
+                      onChange={(e) => setForm({ ...form, tiktok_pixel_id: extractPixelId('tiktok', e.target.value) })}
+                      placeholder="VD: D4ABCDEFG1234567890" />
+                    <span style={hint}>TikTok chỉ đưa đoạn mã: cứ dán cả đoạn vào đây, hệ thống tự lấy ID trong ttq.load(&apos;...&apos;)</span>
                   </div>
                   <div className="admin-form__group">
                     <label className="admin-form__label">Google Ads ID</label>
                     <input className="admin-form__input" value={form.google_ads_id}
-                      onChange={(e) => setForm({ ...form, google_ads_id: e.target.value.trim() })}
+                      onChange={(e) => setForm({ ...form, google_ads_id: extractPixelId('google', e.target.value) })}
                       placeholder="VD: AW-123456789" />
                     <span style={hint}>Bắt đầu bằng AW- hoặc G-</span>
                   </div>
