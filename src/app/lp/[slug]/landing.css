@@ -348,3 +348,14 @@ button.lp-row { cursor: pointer; }
 .lp-dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0, 0, 0, .2); display: inline-block; flex: none; }
 .lp-lines__info small { color: var(--lp-muted); font-size: .75rem; }
 .lp-link { align-self: flex-start; border: 0; background: none; padding: 2px 0 0; color: var(--lp-accent); font-size: .75rem; cursor: pointer; text-decoration: underline; }
+
+/* Collapsed reviews (long lists / long texts) */
+.lp-review blockquote.is-clamped {
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer;
+}
+.lp-review__more { margin-top: 2px; font-size: .8125rem; }
+.lp-reviews__toggle { margin-top: 8px; }
+
+/* Space between the promises list and the FAQ */
+.lp-desc .lp-faq { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--lp-line); }
+.lp-desc .lp-faq .lp-h3 { margin: 0 0 2px; }
